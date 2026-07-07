@@ -9,7 +9,7 @@ class SidebarMenu extends HTMLElement {
         this.basePath = this.getAttribute('base-path') || "";
         // const items = await this.fetchMenuItems();
         this.render();
-        // this.setupListeners();
+        this.setupListeners();
     }
     
     // metodo vacío primero debemos diseñamos el sidebar, luego lo hacemos dinámico.
@@ -21,8 +21,48 @@ class SidebarMenu extends HTMLElement {
         //return items;
     //}
 
-    // metodo vacío primero debemos diseñamos el sidebar, luego lo hacemos dinámico.
-    // setupListeners() {}
+    setupListeners() {
+        const links = this.shadowRoot.querySelectorAll(".menu-link");
+        const buttonsMenu = this.shadowRoot.querySelectorAll(".menu-button");
+        const menuGroups = this.shadowRoot.querySelectorAll(".menu-group");
+        
+        // recorremos los links, si se hace click en uno, le sacamos los estilos
+        // a los que estaba y le colocamos al link que clickeamos
+        
+        links.forEach(link => {
+            link.addEventListener("click", (event) => {
+               event.preventDefault();
+               
+               links.forEach(item => {
+                    item.classList.remove("active");
+                });
+                
+                link.classList.add("active");
+            });
+        });
+        
+        // recorremos los botones, si se hace click en uno, le sacamos los estilos
+        // a los que estaba y le colocamos al boton que clickeamos
+        
+        buttonsMenu.forEach(buttonMenu => {
+            buttonMenu.addEventListener("click", (event) => {
+                const menuGroup = buttonMenu.closest(".menu-group");
+                
+                const estaAbierto = menuGroup.classList.contains("open");
+
+                menuGroups.forEach(group => {
+                    group.classList.remove("open");
+                });
+                
+                if (!estaAbierto) {
+                    menuGroup.classList.add("open");
+                }
+                
+                
+            });
+        });
+        
+    }
     
     render() {
         this.shadowRoot.innerHTML = `
@@ -41,6 +81,7 @@ class SidebarMenu extends HTMLElement {
                         display: flex;
                         flex-direction: column;
                         font-family: 'Segoe UI', Arial, sans-serif;
+                        box-shadow:4px 0 12px rgba(0,0,0,.18);
                     }
                     
                     .logo-header {
@@ -113,7 +154,7 @@ class SidebarMenu extends HTMLElement {
                     
                     .menu-link.active,
                     .menu-button.active {
-                        background: #19b6ff;
+                        background: rgba(0, 122, 156, 1);
                     }
         
                     .menu-left {
@@ -135,7 +176,7 @@ class SidebarMenu extends HTMLElement {
                     .arrow {
                         display: flex;
                         align-items: center;
-                        transition: .25;
+                        transition: transform .25s ease;
                     }
         
                     .submenu {
@@ -161,10 +202,12 @@ class SidebarMenu extends HTMLElement {
                     
                     .menu-group.open .submenu{
                         display:flex;
+                        flex-direction: column;
+                        transition: transform .25s ease;
                     }
 
                     .menu-group.open .arrow{
-                        transform:rotate(180deg);
+                        transform:rotate(90deg);
                     }
 
                     /* ---------- FOOTER ---------- */
