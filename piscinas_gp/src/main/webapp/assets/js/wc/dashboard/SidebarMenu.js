@@ -157,7 +157,7 @@ class SidebarMenu extends HTMLElement {
                         background: rgba(0, 122, 156, 1);
                     }
         
-                    .menu-left {
+                    .menu-left, .submenu-left {
                         display: flex;
                         align-items: center;
                         gap: 14px;
@@ -173,6 +173,16 @@ class SidebarMenu extends HTMLElement {
                         font-weight: bold;
                     }
         
+                    .submenu-left img {
+                        width: 18px;
+                        height: 18px;
+                    }
+        
+                    .submenu-left span {
+                        font-size: 14px;
+                        font-weight: 600;
+                    }
+        
                     .arrow {
                         display: flex;
                         align-items: center;
@@ -183,8 +193,9 @@ class SidebarMenu extends HTMLElement {
                         display: none;
                         flex-direction: column;
                         margin-top: 6px;
-                        margin-left: 18px;
+                        margin-left: 27px;
                         gap: 5px;
+                        border-left: 2px solid rgba(255,255,255,1);
                     }
         
                     .submenu-link {
@@ -200,7 +211,8 @@ class SidebarMenu extends HTMLElement {
                         background: rgba(255,255,255,.08);
                     }
                     
-                    .menu-group.open .submenu{
+                    .menu-group.open .submenu {
+                        
                         display:flex;
                         flex-direction: column;
                         transition: transform .25s ease;
@@ -256,11 +268,17 @@ class SidebarMenu extends HTMLElement {
 
                             <div class="submenu">
                                 <a href="#" class="submenu-link">
-                                    <span>Historial</span>
+                                    <div class="submenu-left">
+                                        <img src="${this.basePath}/assets/img/iconos/notepad-text.svg" alt="icono historial">
+                                        <span>Historial</span>
+                                    </div>
                                 </a>
 
                                 <a href="#" class="submenu-link">
-                                    <span>Nueva Venta</span>
+                                    <div class="submenu-left">
+                                        <img src="${this.basePath}/assets/img/iconos/plus.svg" alt="icono signo más">
+                                        <span>Nueva Venta</span>
+                                    </div>
                                 </a>
                             </div>
                         </div>
@@ -282,11 +300,17 @@ class SidebarMenu extends HTMLElement {
 
                             <div class="submenu">
                                 <a href="#" class="submenu-link">
-                                    <span>Historial</span>
+                                    <div class="submenu-left">
+                                        <img src="${this.basePath}/assets/img/iconos/notepad-text.svg" alt="icono de historial">
+                                        <span>Historial</span>
+                                    </div>
                                 </a>
 
                                 <a href="#" class="submenu-link">
-                                    <span>Nuevo Servicio</span>
+                                    <div class="submenu-left">
+                                        <img src="${this.basePath}/assets/img/iconos/plus.svg" alt="icono de signo más">
+                                        <span>Nuevo Servicio</span>
+                                    </div>
                                 </a>
                             </div>
                         </div>
@@ -316,15 +340,23 @@ class SidebarMenu extends HTMLElement {
 
                             <div class="submenu">
                                 <a href="#" class="submenu-link">
-                                    <span>Clientes</span>
+                                    <div class="submenu-left">
+                                        <img src="${this.basePath}/assets/img/iconos/users.svg" alt="icono usuarios">
+                                        <span>Clientes</span>
+                                    </div>
                                 </a>
 
                                 <a href="#" class="submenu-link">
-                                    <span>Productos</span>
+                                    <div class="submenu-left">
+                                        <img src="${this.basePath}/assets/img/iconos/package.svg" alt="icono de producto">
+                                        <span>Productos</span>
+                                    </div>
                                 </a>
                             </div>
                         </div>
-                        
+                    </div>
+                    
+                    <div class="sidebar-footer">
                         <!-- ------------ ITEM ACERCA DE ------------ -->
                         
                         <a href="#" class="menu-link">
@@ -333,11 +365,9 @@ class SidebarMenu extends HTMLElement {
                                 <span>Acerca de</span>
                             </div> 
                         </a>
-                    </div>
-                    
-                    <!-- ------------ ITEM CERRAR SESIÓN  ------------ -->
-                    
-                    <div class="sidebar-footer">
+        
+                        <!-- ------------ ITEM CERRAR SESIÓN  ------------ -->
+                        
                         <a href="#" class="menu-link">
                             <div class="menu-left">
                                 <img src="${this.basePath}/assets/img/iconos/log-out.svg" alt="icono cerrar sesión">
