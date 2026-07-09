@@ -4,9 +4,9 @@ package com.mycompany.piscinas_gp.daos;
 import com.mycompany.piscinas_gp.config.DbConnection;
 import com.mycompany.piscinas_gp.exceptions.PersistenceException;
 import com.mycompany.piscinas_gp.generico.GenericoDAO;
-import com.mycompany.piscinas_gp.modelos.Cliente;
-import com.mycompany.piscinas_gp.modelos.EstadoVenta;
-import com.mycompany.piscinas_gp.modelos.MetodoPago;
+//import com.mycompany.piscinas_gp.modelos.Cliente;
+//import com.mycompany.piscinas_gp.modelos.EstadoVenta;
+//import com.mycompany.piscinas_gp.modelos.MetodoPago;
 import com.mycompany.piscinas_gp.modelos.Venta;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -121,13 +121,57 @@ public class VentaDAO extends GenericoDAO<Venta> {
     protected void setUpdateParams(PreparedStatement pstmt, Venta venta) throws PersistenceException {
         setVentaParams(pstmt, venta);
     }
-
+    
     @Override
 protected Venta mapResultSet(ResultSet rs) throws PersistenceException {
+    
     throw new UnsupportedOperationException(
-        "Pendiente de implementar cuando exista ClienteDAO, clienteempresaDAO y clienteparticularDAO."
-    );
+        "Pendiente de implementar cuando exista ClienteDAO.");
 }
+  // esto queda Pendiente de implementar cuando exista ClienteDAO,
+    // ya que Cliente es una clase abstracta y puede ser
+    // ClienteEmpresa o ClienteParticular.
+
+   /* 
+@Override
+protected Venta mapResultSet(ResultSet rs) throws PersistenceException {
+    try {
+
+        ClienteDAO clienteDAO = new ClienteDAO(dbConn);
+
+        Cliente cliente = clienteDAO.buscarPorId(rs.getLong("idCliente"));
+
+        EstadoVenta estadoVenta = new EstadoVenta(
+                rs.getLong("idEstadoVenta"),
+                null
+        );
+
+        MetodoPago metodoPago = new MetodoPago(
+                rs.getLong("idMetodoPago"),
+                null,
+                null
+        );
+
+        return new Venta(
+                rs.getLong("idVenta"),
+                cliente,
+                estadoVenta,
+                rs.getDate("fecha").toLocalDate(),
+                metodoPago,
+                rs.getString("observacion"),
+                rs.getBigDecimal("total"),
+                rs.getDate("fechaInicio").toLocalDate(),
+                rs.getDate("fechaCierre") != null
+                        ? rs.getDate("fechaCierre").toLocalDate()
+                        : null
+        );
+
+    } catch (SQLException e) {
+        throw new PersistenceException(
+                "Error al mapear la venta desde la base de datos", e);
+    }
+}
+*/
 
     private void setVentaParams(PreparedStatement pstmt, Venta venta) throws PersistenceException {
 

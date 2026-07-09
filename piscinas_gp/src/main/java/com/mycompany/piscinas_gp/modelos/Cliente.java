@@ -4,7 +4,7 @@ import com.mycompany.piscinas_gp.validadores.NumericFieldType;
 import com.mycompany.piscinas_gp.validadores.SetValidator;
 import com.mycompany.piscinas_gp.validadores.StringFieldType;
 
-abstract class Cliente implements Identifiable{
+public abstract class Cliente implements Identifiable{
     private Long idCliente;
     private String email;
     private String telefono;
