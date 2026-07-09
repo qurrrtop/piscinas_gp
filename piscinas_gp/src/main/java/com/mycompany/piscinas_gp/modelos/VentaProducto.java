@@ -15,13 +15,13 @@ public class VentaProducto extends Venta {
     public VentaProducto() {
     }
 
-    public VentaProducto(int descuentoGlobal, List<DetalleVenta> detallesVenta, Cliente cliente, String estadoVenta, LocalDate fecha, String metodoPago, String observacion, BigDecimal total, LocalDate fechaInicio, LocalDate fechaCierre) {
+    public VentaProducto(int descuentoGlobal, List<DetalleVenta> detallesVenta, Cliente cliente, EstadoVenta estadoVenta, LocalDate fecha, MetodoPago metodoPago, String observacion, BigDecimal total, LocalDate fechaInicio, LocalDate fechaCierre) {
         super(cliente, estadoVenta, fecha, metodoPago, observacion, total, fechaInicio, fechaCierre);
         setDescuentoGlobal(descuentoGlobal);
         setDetallesVenta(detallesVenta);
     }
 
-    public VentaProducto(int descuentoGlobal, List<DetalleVenta> detallesVenta, Long idVenta, Cliente cliente, String estadoVenta, LocalDate fecha, String metodoPago, String observacion, BigDecimal total, LocalDate fechaInicio, LocalDate fechaCierre) {
+    public VentaProducto(int descuentoGlobal, List<DetalleVenta> detallesVenta, Long idVenta, Cliente cliente, EstadoVenta estadoVenta, LocalDate fecha, MetodoPago metodoPago, String observacion, BigDecimal total, LocalDate fechaInicio, LocalDate fechaCierre) {
         super(idVenta, cliente, estadoVenta, fecha, metodoPago, observacion, total, fechaInicio, fechaCierre);
         this.descuentoGlobal = descuentoGlobal;
         this.detallesVenta = detallesVenta;
