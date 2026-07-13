@@ -1,5 +1,7 @@
 package com.mycompany.piscinas_gp.controladores;
 
+import com.google.gson.Gson;
+import com.mycompany.piscinas_gp.dtos.MenuItem;
 import java.io.IOException;
 import java.io.PrintWriter;
 import jakarta.servlet.ServletException;
@@ -7,6 +9,8 @@ import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import java.util.ArrayList;
+import java.util.List;
 
 @WebServlet(name = "ControladorDashboard", urlPatterns = {"/dashboard", "/dashboard/*"})
 public class DashboardControlador extends HttpServlet {
@@ -38,9 +42,49 @@ public class DashboardControlador extends HttpServlet {
         
         switch (action) {
             case "/dashboard" -> request.getRequestDispatcher("/WEB-INF/vistas/dashboard.jsp").forward(request, response);
+            case "/menu" -> handleMenu(request, response);
             default -> response.sendError(HttpServletResponse.SC_NOT_FOUND);
         }
         
+    }
+    
+    protected void handleMenu(HttpServletRequest request, HttpServletResponse response) 
+            throws ServletException, IOException {
+            
+        String path = request.getContextPath();
+        
+        List <MenuItem> items = new ArrayList<>();
+        
+        // creamos listas para guardar los items hijos de los menu desplegables
+        List <MenuItem> hijosVenta = List.of(
+                new MenuItem("Historial", "menu", "notepad-text.svg", "icono de historial", path + "/dashboard/ventas/historial", List.of()),
+                new MenuItem("Nueva Venta", "menu", "plus.svg", "icono de signo más", path + "/dashboard/ventas/nueva", List.of())
+        );
+        
+        List <MenuItem> hijosServicio = List.of(
+                new MenuItem("Historial", "menu", "notepad-text.svg", "icono de historial", path + "/dashboard/servicios/historial", List.of()),
+                new MenuItem("Nuevo Servicio", "menu", "plus.svg", "icono de signo más", path + "/dashboard/servicios/nuevo", List.of())
+        );
+        
+        List <MenuItem> hijosGestion = List.of(
+                new MenuItem("Clientes", "menu", "users.svg", "icono clientes", path + "/dashboard/gestion/clientes", List.of()),
+                new MenuItem("Productos", "menu", "package.svg", "icono productos", path + "/dashboard/gestion/productos", List.of())
+        );
+        
+        items.add(new MenuItem("Principal", "menu", "house.svg", "icono menu princial", path + "/dashboard/principal", List.of()));
+        items.add(new MenuItem("Ventas", "menu", "shopping-cart.svg", "icono ventas", null, hijosVenta));
+        items.add(new MenuItem("Servicios", "menu", "hammer.svg", "icono servicios", null, hijosServicio));
+        items.add(new MenuItem("Pendientes", "menu", "clipboard-list.svg", "icono pendientes", path + "/dashboard/pendientes", List.of()));
+        items.add(new MenuItem("Gestión", "menu", "settings.svg", "icono gestión", null, hijosGestion));
+        items.add(new MenuItem("Acerca de", "footer", "info.svg", "icono sugerencia", path + "/dashboard/acerca", List.of()));
+        items.add(new MenuItem("Cerrar Sesión", "footer", "log-out.svg", "icono cerrar sesión", path + "/auth/logout", List.of()));
+        
+        Gson gson = new Gson();
+        String json = gson.toJson(items);
+        
+        response.setContentType("application/json");
+        response.setCharacterEncoding("UTF-8");
+        response.getWriter().write(json);
     }
 
     @Override

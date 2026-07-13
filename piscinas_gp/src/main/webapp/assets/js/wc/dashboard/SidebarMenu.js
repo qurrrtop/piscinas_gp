@@ -7,19 +7,16 @@ class SidebarMenu extends HTMLElement {
     
     async connectedCallback() {
         this.basePath = this.getAttribute('base-path') || "";
-        // const items = await this.fetchMenuItems();
-        this.render();
+        const items = await this.fetchMenuItems();
+        this.render(items);
         this.setupListeners();
     }
     
-    // metodo vacío primero debemos diseñamos el sidebar, luego lo hacemos dinámico.
-    // esto traerá las opciones del menu dinamicamente.
-    
-    //async fetchMenuItems() {
-        //const response = await fetch(`${this.basePath}/dashboard/menu`);
-        //const items = await response.json();
-        //return items;
-    //}
+    async fetchMenuItems() {
+        const response = await fetch(`${this.basePath}/dashboard/menu`);
+        const items = await response.json();
+        return items;
+    }
 
     setupListeners() {
         const links = this.shadowRoot.querySelectorAll(".menu-link");
@@ -64,7 +61,10 @@ class SidebarMenu extends HTMLElement {
         
     }
     
-    render() {
+    render(items) {
+        const menuPrincipal = items.filter(item => item.seccion === "menu");
+        const menuFooter = items.filter(item => item.seccion === "footer");
+        
         this.shadowRoot.innerHTML = `
                 <style>
                     :host {
@@ -230,7 +230,6 @@ class SidebarMenu extends HTMLElement {
                     }
                 </style>
                 
-                
                 <div class="sidebar">
                     <div class="sidebar-header">
                         <img class="logo-header" src="${this.basePath}/assets/img/logos/logo-empresa-celeste.png" alt="logo de empresa PiscinasGP">
@@ -243,139 +242,56 @@ class SidebarMenu extends HTMLElement {
                     </div>
                     
                     <div class="menu-items">
-                        <!-- ------------ ITEM PRINCIPAL ------------ -->
-                        
-                        <a href="#" class="menu-link">
-                            <div class="menu-left">
-                                <img src="${this.basePath}/assets/img/iconos/house.svg" alt="icono house">
-                                <span>Principal</span>
-                            </div>
-                        </a>
-                        
-                        <!-- ------------ ITEM VENTAS ------------ -->
-                        
-                        <div class="menu-group">
-                            <button class="menu-button">
-                                <div class="menu-left">
-                                    <img src="${this.basePath}/assets/img/iconos/shopping-cart.svg" alt="icono de carrito de compra">
-                                    <span>Ventas</span>
+                        ${menuPrincipal.map(item => {
+                            if (item.hijos.length > 0) {
+                                return `
+                                <div class="menu-group">
+                                    <button class="menu-button">
+                                        <div class="menu-left">
+                                            <img src="${this.basePath}/assets/img/iconos/${item.icono}" alt="${item.alt}">
+                                            <span>${item.titulo}</span>
+                                        </div>
+
+                                        <span class="arrow">
+                                            <img src="${this.basePath}/assets/img/iconos/chevron-right.svg" alt="icono flecha">
+                                        </span>
+                                    </button>
+                                    
+                                    <div class="submenu">
+                                        ${item.hijos.map(hijo => `
+                                            <a href="${hijo.path}" class="submenu-link">
+                                                <div class="submenu-left">
+                                                    <img src="${this.basePath}/assets/img/iconos/${hijo.icono}" alt="${hijo.alt}">
+                                                    <span>${hijo.titulo}</span>
+                                                </div>
+                                            </a>
+                                    `   ).join("")}
+                                    </div>
                                 </div>
-
-                                <span class="arrow">
-                                    <img src="${this.basePath}/assets/img/iconos/chevron-right.svg" alt="icono flecha">
-                                </span>
-                            </button>
-
-                            <div class="submenu">
-                                <a href="#" class="submenu-link">
-                                    <div class="submenu-left">
-                                        <img src="${this.basePath}/assets/img/iconos/notepad-text.svg" alt="icono historial">
-                                        <span>Historial</span>
-                                    </div>
-                                </a>
-
-                                <a href="#" class="submenu-link">
-                                    <div class="submenu-left">
-                                        <img src="${this.basePath}/assets/img/iconos/plus.svg" alt="icono signo más">
-                                        <span>Nueva Venta</span>
-                                    </div>
-                                </a>
-                            </div>
-                        </div>
-        
-                        <!-- ------------ ITEM SERVICIOS ------------ -->
-                        
-                        <div class="menu-group">
-
-                            <button class="menu-button">
-                                <div class="menu-left">
-                                    <img src="${this.basePath}/assets/img/iconos/hammer.svg" alt="icono martillo">
-                                    <span>Servicios</span>
-                                </div>
-
-                                <span class="arrow">
-                                    <img src="${this.basePath}/assets/img/iconos/chevron-right.svg" alt="icono flecha">
-                                </span>
-                            </button>
-
-                            <div class="submenu">
-                                <a href="#" class="submenu-link">
-                                    <div class="submenu-left">
-                                        <img src="${this.basePath}/assets/img/iconos/notepad-text.svg" alt="icono de historial">
-                                        <span>Historial</span>
-                                    </div>
-                                </a>
-
-                                <a href="#" class="submenu-link">
-                                    <div class="submenu-left">
-                                        <img src="${this.basePath}/assets/img/iconos/plus.svg" alt="icono de signo más">
-                                        <span>Nuevo Servicio</span>
-                                    </div>
-                                </a>
-                            </div>
-                        </div>
-        
-                        <!-- ------------ ITEM PENDIENTES ------------ -->
-                        
-                        <a href="#" class="menu-link">
-                            <div class="menu-left">
-                                <img src="${this.basePath}/assets/img/iconos/clipboard-list.svg" alt="icono pendientes">
-                                <span>Pendientes</span>
-                            </div>
-                        </a>
-                        
-                        <!-- ------------ ITEM GESTIÓN ------------ -->
-                        
-                        <div class="menu-group">
-                            <button class="menu-button">
-                                <div class="menu-left">
-                                    <img src="${this.basePath}/assets/img/iconos/settings.svg" alt="icono gestión">
-                                    <span>Gestión</span>
-                                </div>
-
-                                <span class="arrow">
-                                    <img src="${this.basePath}/assets/img/iconos/chevron-right.svg" alt="icono flecha">
-                                </span>
-                            </button>
-
-                            <div class="submenu">
-                                <a href="#" class="submenu-link">
-                                    <div class="submenu-left">
-                                        <img src="${this.basePath}/assets/img/iconos/users.svg" alt="icono usuarios">
-                                        <span>Clientes</span>
-                                    </div>
-                                </a>
-
-                                <a href="#" class="submenu-link">
-                                    <div class="submenu-left">
-                                        <img src="${this.basePath}/assets/img/iconos/package.svg" alt="icono de producto">
-                                        <span>Productos</span>
-                                    </div>
-                                </a>
-                            </div>
-                        </div>
+                                `;
+                            } else {
+                                return `
+                                    <a href="${item.path}" class="menu-link">
+                                        <div class="menu-left">
+                                            <img src="${this.basePath}/assets/img/iconos/${item.icono}" alt="${item.alt}">
+                                            <span>${item.titulo}</span>
+                                        </div>
+                                    </a>
+                                `;
+                            }
+                        }).join("")}
                     </div>
                     
                     <div class="sidebar-footer">
-                        <!-- ------------ ITEM ACERCA DE ------------ -->
-                        
-                        <a href="#" class="menu-link">
-                            <div class="menu-left">
-                                <img src="${this.basePath}/assets/img/iconos/info.svg" alt="icono info">
-                                <span>Acerca de</span>
-                            </div> 
-                        </a>
-        
-                        <!-- ------------ ITEM CERRAR SESIÓN  ------------ -->
-                        
-                        <a href="#" class="menu-link">
-                            <div class="menu-left">
-                                <img src="${this.basePath}/assets/img/iconos/log-out.svg" alt="icono cerrar sesión">
-                                <span>Cerrar Sesión</span>
-                            </div>
-                        </a>
+                        ${menuFooter.map(item => `
+                            <a href="${item.path}" class="menu-link">
+                                <div class="menu-left">
+                                    <img src="${this.basePath}/assets/img/iconos/${item.icono}" alt="${item.alt}">
+                                    <span>${item.titulo}</span>
+                                </div>
+                            </a>
+    `                   ).join("")}
                     </div>
-                </div
         `;
     }
 }
