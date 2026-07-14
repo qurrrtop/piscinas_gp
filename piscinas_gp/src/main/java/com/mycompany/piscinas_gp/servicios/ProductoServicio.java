@@ -16,7 +16,7 @@ public class ProductoServicio {
     public ProductoServicio(ProductoDAO productoDAO) {
         this.productoDAO = productoDAO;
     }
-
+    // Busca un producto mediante su ID y controla si existe o no.
     public Producto buscarProductoPorId(Long idProducto) throws AppException {
         logger.debug("Buscando producto con ID: {}", idProducto);
 
@@ -38,7 +38,7 @@ public class ProductoServicio {
             throw new AppException("Error al buscar el producto", e);
         }
     }
-
+    // Obtiene la lista completa de productos registrados.
     public List<Producto> buscarTodosLosProductos() throws AppException {
         logger.debug("Buscando todos los productos");
 
@@ -57,7 +57,7 @@ public class ProductoServicio {
             throw new AppException("Error al recuperar los productos", e);
         }
     }
-
+    // Crea un nuevo producto y lo guarda en la base de datos.
     public Producto crearProducto(Producto producto) throws AppException {
         logger.debug("Creando producto");
 
@@ -74,7 +74,7 @@ public class ProductoServicio {
             throw new AppException("Error al crear el producto", e);
         }
     }
-
+    // Actualiza los datos de un producto existente.
     public Producto actualizarProducto(Producto producto) throws AppException {
         logger.debug("Actualizando producto con ID {}", producto.getId());
 
@@ -91,7 +91,7 @@ public class ProductoServicio {
             throw new AppException("Error al actualizar el producto", e);
         }
     }
-
+    // Elimina un producto utilizando su ID.
     public boolean eliminarProducto(Long idProducto) throws AppException {
         logger.debug("Eliminando producto con ID {}", idProducto);
 
