@@ -19,6 +19,19 @@ class SidebarMenu extends HTMLElement {
     }
 
     setupListeners() {
+        this.shadowRoot.querySelectorAll("a").forEach(link => {
+           link.addEventListener("click", (event) => {
+              event.preventDefault();
+              console.log("Click en:", link.getAttribute("href"));
+              
+              const path = link.getAttribute("href");
+
+                document.dispatchEvent(new CustomEvent("navigateTo", {
+                    detail: { path }
+                }));
+           });
+        });
+        
         const links = this.shadowRoot.querySelectorAll(".menu-link");
         const buttonsMenu = this.shadowRoot.querySelectorAll(".menu-button");
         const menuGroups = this.shadowRoot.querySelectorAll(".menu-group");

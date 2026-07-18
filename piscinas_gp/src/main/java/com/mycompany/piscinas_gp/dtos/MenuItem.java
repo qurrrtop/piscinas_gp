@@ -14,7 +14,7 @@ public class MenuItem {
     private final String path;
     private final List<MenuItem> hijos;
 
-    public MenuItem(String titulo, String seccion, String icono, String path, String alt, List<MenuItem> hijos) {
+    public MenuItem(String titulo, String seccion, String icono, String alt, String path, List<MenuItem> hijos) {
         this.titulo = titulo;
         this.seccion = seccion;
         this.icono = icono;

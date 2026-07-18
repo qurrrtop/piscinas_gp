@@ -3,13 +3,20 @@
 <html>
     <head>
         <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
-        <link rel="stylesheet" href="${pageContext.request.contextPath}/assets/css/style.css"/>
+        <link rel="stylesheet" href="${pageContext.request.contextPath}/assets/css/dashboard-style.css"/>
         <script src="${pageContext.request.contextPath}/assets/js/wc/dashboard/SidebarMenu.js" type="module" defer></script>
+        <script src="${pageContext.request.contextPath}/assets/js/wc/dashboard/DashboardSection.js" type="module" defer></script>
         <title>PiscinasGP</title>
     </head>
     <body>
-        <nav>
-            <sidebar-menu base-path="${pageContext.request.contextPath}"></sidebar-menu>
-        </nav>
+        <main class="dashboard-layout">
+            <nav>
+                <sidebar-menu base-path="${pageContext.request.contextPath}"></sidebar-menu>
+            </nav>
+
+            <section>
+                <dashboard-section base-path="${pageContext.request.contextPath}"></dashboard-section>
+            </section>
+        </main>
     </body>
 </html>

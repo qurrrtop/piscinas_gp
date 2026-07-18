@@ -17,3 +17,12 @@ body {
 body {
     min-height: 100vh;
 }
+
+.dashboard-layout{
+    display:flex;
+    min-height:100vh;
+}
+
+section{
+    flex:1;
+}
