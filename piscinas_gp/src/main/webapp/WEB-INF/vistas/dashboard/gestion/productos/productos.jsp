@@ -3,12 +3,19 @@
 <link rel="stylesheet" href="${pageContext.request.contextPath}/assets/css/dashboard/gestion/productos/productos-style.css"/>
 
 
+
 <div class="page productos-page">
 
     <div class="page-background"></div>
     
     <div class="page-content">
-        
+        <dashboard-header 
+            base-path="${pageContext.request.contextPath}"
+            titulo="Productos"
+            icono="package.svg"
+            descripcion="Catálogo completo de productos del negocio"
+            botonTexto="+ Nuevo producto"
+            ></dashboard-header>
     </div>
 
 </div>

@@ -6,6 +6,7 @@
         <link rel="stylesheet" href="${pageContext.request.contextPath}/assets/css/dashboard-style.css"/>
         <script src="${pageContext.request.contextPath}/assets/js/wc/dashboard/SidebarMenu.js" type="module" defer></script>
         <script src="${pageContext.request.contextPath}/assets/js/wc/dashboard/DashboardSection.js" type="module" defer></script>
+        <script src="${pageContext.request.contextPath}/assets/js/wc/dashboard/DashboardHeader.js" type="module" defer></script>
         <title>PiscinasGP</title>
     </head>
     <body>
