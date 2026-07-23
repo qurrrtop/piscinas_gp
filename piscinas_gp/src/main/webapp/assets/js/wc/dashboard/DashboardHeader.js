@@ -16,6 +16,22 @@ class DashboardHeader extends HTMLElement {
         this.basePath = this.getAttribute("base-path") || "";
         this.render();
     }
+    
+    setupListeners() {
+        const button = this.shadowRoot.querySelector("button");
+
+        if (!button) return;
+
+        button.addEventListener("click", () => {
+            this.dispatchEvent(new CustomEvent("header-action", {
+                bubbles: true,
+                composed: true,
+                detail: {
+                    action: "nuevo-producto"
+                }
+            }));
+        });
+    }
 
     render() {
         this.shadowRoot.innerHTML = `
@@ -86,10 +102,12 @@ class DashboardHeader extends HTMLElement {
                 <p>${this.descripcion}</p>
             </div>
 
-            <button>${this.botonTexto}</button>
+            ${this.botonTexto ? `<button>${this.botonTexto}</button>` : ""}
 
             </header>
         `;
+        
+        this.setupListeners();
     }
 
 }

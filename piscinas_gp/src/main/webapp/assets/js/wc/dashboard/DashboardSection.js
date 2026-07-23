@@ -20,6 +20,18 @@ class DashboardSection extends HTMLElement {
             
             this.loadContent(path);
         });
+        
+       document.addEventListener("header-action", (event) => {
+            if (event.detail.action === "nuevo-producto") {
+                
+            const modal = document.createElement("modal-component");
+            const productForm = document.createElement("formulario-producto");
+
+            modal.appendChild(productForm);
+            document.body.appendChild(modal);
+    }
+
+});
     }
     
     async loadContent(path) {

@@ -7,6 +7,8 @@
         <script src="${pageContext.request.contextPath}/assets/js/wc/dashboard/SidebarMenu.js" type="module" defer></script>
         <script src="${pageContext.request.contextPath}/assets/js/wc/dashboard/DashboardSection.js" type="module" defer></script>
         <script src="${pageContext.request.contextPath}/assets/js/wc/dashboard/DashboardHeader.js" type="module" defer></script>
+        <script src="${pageContext.request.contextPath}/assets/js/wc/dashboard/ModalComponent.js" type="module" defer></script>
+        <script src="${pageContext.request.contextPath}/assets/js/wc/productos/FormularioProducto.js" type="module" defer></script>
         <title>PiscinasGP</title>
     </head>
     <body>
