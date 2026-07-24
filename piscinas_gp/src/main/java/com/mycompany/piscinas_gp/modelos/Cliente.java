@@ -11,13 +11,13 @@ public abstract class Cliente implements Identifiable{
     private String calleYnumero;
     private String ciudad;
     private String provincia;
-    private int codigoPostal;
+    private String codigoPostal;
     private String observaciones;
 
     public Cliente() {       
     }
 
-    public Cliente(String email, String telefono, String calleYnumero, String ciudad, String provincia, int codigoPostal, String observaciones) {
+    public Cliente(String email, String telefono, String calleYnumero, String ciudad, String provincia, String codigoPostal, String observaciones) {
         setEmail(email);
         setTelefono (telefono);
         setCalleYnumero(calleYnumero);
@@ -27,7 +27,7 @@ public abstract class Cliente implements Identifiable{
         setObservaciones(observaciones);
     }
 
-    public Cliente(Long idCliente, String email, String telefono, String calleYnumero, String ciudad, String provincia, int codigoPostal, String observaciones) {
+    public Cliente(Long idCliente, String email, String telefono, String calleYnumero, String ciudad, String provincia, String codigoPostal, String observaciones) {
         this.idCliente = idCliente;
         this.email = email;
         this.telefono = telefono;
@@ -46,7 +46,7 @@ public abstract class Cliente implements Identifiable{
     public String getCalleYnumero() { return calleYnumero; }
     public String getCiudad() { return ciudad; }
     public String getProvincia() { return provincia; }
-    public int getCodigoPostal() { return codigoPostal; }
+    public String getCodigoPostal() { return codigoPostal; }
     public String getObservaciones() { return observaciones; }
 
     
@@ -88,7 +88,7 @@ public abstract class Cliente implements Identifiable{
         this.provincia = provincia;
     }
 
-    public void setCodigoPostal(int codigoPostal) {
+    public void setCodigoPostal(String codigoPostal) {
         SetValidator.validar(codigoPostal, NumericFieldType.CODIGO_POSTAL);
         
         this.codigoPostal = codigoPostal;

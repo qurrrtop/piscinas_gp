@@ -4,9 +4,9 @@ package com.mycompany.piscinas_gp.daos;
 import com.mycompany.piscinas_gp.config.DbConnection;
 import com.mycompany.piscinas_gp.exceptions.PersistenceException;
 import com.mycompany.piscinas_gp.generico.GenericoDAO;
-//import com.mycompany.piscinas_gp.modelos.Cliente;
-//import com.mycompany.piscinas_gp.modelos.EstadoVenta;
-//import com.mycompany.piscinas_gp.modelos.MetodoPago;
+import com.mycompany.piscinas_gp.modelos.Cliente;
+import com.mycompany.piscinas_gp.modelos.EstadoVenta;
+import com.mycompany.piscinas_gp.modelos.MetodoPago;
 import com.mycompany.piscinas_gp.modelos.Venta;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -14,8 +14,8 @@ import java.sql.SQLException;
 
 public class VentaDAO extends GenericoDAO<Venta> {
 
-    private static final String TABLE_NAME = "venta";
-    private static final String PRIMARY_KEY = "idVenta";
+    private static final String TABLE_NAME = "ventas";
+    private static final String PRIMARY_KEY = "id";
 
     private static final String[] COLUMNS_FOR_INSERT = {
         "idCliente",
@@ -122,47 +122,36 @@ public class VentaDAO extends GenericoDAO<Venta> {
         setVentaParams(pstmt, venta);
     }
     
-    @Override
-protected Venta mapResultSet(ResultSet rs) throws PersistenceException {
-    
-    throw new UnsupportedOperationException(
-        "Pendiente de implementar cuando exista ClienteDAO.");
-}
-  // esto queda Pendiente de implementar cuando exista ClienteDAO,
-    // ya que Cliente es una clase abstracta y puede ser
-    // ClienteEmpresa o ClienteParticular.
-
-   /* 
-@Override
+  @Override
 protected Venta mapResultSet(ResultSet rs) throws PersistenceException {
     try {
 
         ClienteDAO clienteDAO = new ClienteDAO(dbConn);
 
-        Cliente cliente = clienteDAO.buscarPorId(rs.getLong("idCliente"));
+        Cliente cliente = clienteDAO.buscarPorId(rs.getLong("cliente_id"));
 
         EstadoVenta estadoVenta = new EstadoVenta(
-                rs.getLong("idEstadoVenta"),
+                rs.getLong("estado_venta_id"),
                 null
         );
 
         MetodoPago metodoPago = new MetodoPago(
-                rs.getLong("idMetodoPago"),
+                rs.getLong("metodo_pago_id"),
                 null,
                 null
         );
 
         return new Venta(
-                rs.getLong("idVenta"),
+                rs.getLong("id"),
                 cliente,
                 estadoVenta,
                 rs.getDate("fecha").toLocalDate(),
                 metodoPago,
                 rs.getString("observacion"),
                 rs.getBigDecimal("total"),
-                rs.getDate("fechaInicio").toLocalDate(),
-                rs.getDate("fechaCierre") != null
-                        ? rs.getDate("fechaCierre").toLocalDate()
+                rs.getDate("fecha_inicio").toLocalDate(),
+                rs.getDate("fecha_cierre") != null
+                        ? rs.getDate("fecha_cierre").toLocalDate()
                         : null
         );
 
@@ -171,7 +160,6 @@ protected Venta mapResultSet(ResultSet rs) throws PersistenceException {
                 "Error al mapear la venta desde la base de datos", e);
     }
 }
-*/
 
     private void setVentaParams(PreparedStatement pstmt, Venta venta) throws PersistenceException {
 

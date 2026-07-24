@@ -14,7 +14,7 @@ public class ClienteEmpresa extends Cliente {
     }
 
     public ClienteEmpresa(String razonSocial, String nombreFantasia, String rubro, String cuit, String email,
-                          String telefono, String calleYnumero, String ciudad, String provincia, int codigoPostal,
+                          String telefono, String calleYnumero, String ciudad, String provincia, String codigoPostal,
                           String observaciones) {
         
         super(email, telefono, calleYnumero, ciudad, provincia, codigoPostal, observaciones);
@@ -27,7 +27,7 @@ public class ClienteEmpresa extends Cliente {
     
     public ClienteEmpresa(Long idCliente, String razonSocial, String nombreFantasia, String rubro, 
                              String cuit, String email, String telefono, String calleYnumero, 
-                             String ciudad, String provincia, int codigoPostal, String observaciones) {
+                             String ciudad, String provincia, String codigoPostal, String observaciones) {
         
         // Enviamos todos los datos (incluido el ID) al constructor completo de la clase padre
         super(idCliente, email, telefono, calleYnumero, ciudad, provincia, codigoPostal, observaciones);
