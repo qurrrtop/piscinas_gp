@@ -24,14 +24,26 @@ class DashboardSection extends HTMLElement {
        document.addEventListener("header-action", (event) => {
             if (event.detail.action === "nuevo-producto") {
                 
-            const modal = document.createElement("modal-component");
-            const productForm = document.createElement("formulario-producto");
+                const modal = document.createElement("modal-component");
+            
+                modal.setAttribute("subTitulo", "NUEVO PRODUCTO");
+                modal.setAttribute("titulo", "COMPLETE LOS DATOS");
+            
+                const productForm = document.createElement("formulario-producto");
 
-            modal.appendChild(productForm);
-            document.body.appendChild(modal);
-    }
+                modal.appendChild(productForm);
+                document.body.appendChild(modal);
+            }
 
-});
+        });
+        
+        document.addEventListener("cerrar-modal", () => {
+            const modal = document.querySelector("modal-component");
+            
+            if (modal) {
+                modal.remove();
+            }
+        });
     }
     
     async loadContent(path) {

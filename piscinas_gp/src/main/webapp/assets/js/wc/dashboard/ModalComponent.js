@@ -6,6 +6,9 @@ class ModalComponent extends HTMLElement {
     }
 
     connectedCallback() {
+        this.titulo = this.getAttribute("titulo") || "";
+        this.subTitulo = this.getAttribute("subTitulo") || "";
+        
         this.render();
     }
     
@@ -52,12 +55,15 @@ class ModalComponent extends HTMLElement {
                 }
 
                 .modal {
-                    width: 600px;
-                    min-height: 300px;
-
+                    width: 650px;
+                    display: flex;
+                    flex-direction: column;
+                    max-height: 80vh;
+                    overflow: hidden;
                     background: white;
                     border-radius: 10px;
-                    padding: 1.5rem;
+                    border: 1px solid rgba(112, 112, 112, 1);
+                    padding: 1.2rem;
                     background-color: rgba(5, 68, 141, 1);
                 }
         
@@ -72,11 +78,20 @@ class ModalComponent extends HTMLElement {
                 .header-text {
                     display: flex;
                     flex-direction: column;
-                    gap: .5rem;
                 }
                 
                 .header-text h2 {
                     margin: 0;
+                }
+        
+                .circle-button {
+                    background-color: rgba(181, 181, 181, 1);
+                    display: flex;
+                    justify-content: center;
+                    align-items: center;
+                    width: 2.2rem;
+                    height: 2.2rem;
+                    border-radius: 30px;
                 }
 
                 .close-button {
@@ -85,6 +100,29 @@ class ModalComponent extends HTMLElement {
                     font-size: 1.6rem;
                     cursor: pointer;
                 }
+        
+                span {
+                    margin:0;
+                    font-size:.8rem;
+                    font-weight: 600;
+                    color: rgba(255, 255, 255, 0.5);
+                    letter-spacing:.08em;
+                    font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+                }
+        
+                h2 {
+                    margin: 0;
+                    font-size:2rem;
+                    font-weight:700;
+                    color:white;
+                    font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+                }
+        
+                .modal-body {
+                    flex: 1;
+                    overflow-y: auto;
+                    padding-right: 1rem;
+                }
             </style>
             
             <div class="overlay">
@@ -92,10 +130,13 @@ class ModalComponent extends HTMLElement {
                     <div class="modal-header">
 
                         <div class="header-text">
-                            <slot name="header"></slot>
+                            <span>${this.subTitulo}</span>
+                            <h2>${this.titulo}</h2>
                         </div>
-
-                        <button class="close-button">&times;</button>
+                        
+                        <div class="circle-button">
+                            <button class="close-button">&times;</button>
+                        </div>
 
                     </div>
 

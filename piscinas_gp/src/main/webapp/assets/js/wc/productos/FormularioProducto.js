@@ -7,6 +7,18 @@ class FormularioProducto extends HTMLElement {
 
     connectedCallback() {
         this.render();
+        this.setupListeners();
+    }
+    
+    setupListeners() {
+        const btnVolver = this.shadowRoot.querySelector(".btn-volver");
+        
+        btnVolver.addEventListener("click", () => {
+            this.dispatchEvent(new CustomEvent("cerrar-modal", {
+                bubbles: true,
+                composed: true
+            }));
+        });
     }
 
     render() {
@@ -17,41 +29,144 @@ class FormularioProducto extends HTMLElement {
                 form {
                     display: flex;
                     flex-direction: column;
-                    gap: 1.8rem;
+                    gap: 1rem;
                     color: white;
-                    font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
-                }
-        
-                h2 {
-                    margin:0;
-                    font-size:.8rem;
-                    font-weight: heavy;
-                    color: rgba(255, 255, 255, 0.5);
-                    letter-spacing:.08em;
-                    font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
-                }
-
-                h1 {
-                    margin: 0 0 2rem 0;
-                    font-size:2rem;
-                    font-weight:700;
-                    color:white;
                     font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
                 }
 
                 h3 {
-                    margin:0 0 1rem 0;
+                    margin: 0;
                     font-size:.9rem;
                     font-weight:600;
                     color:#B8D7FF;
                     text-transform:uppercase;
                     font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
                 }
-            </style>
-            
-            <h2>NUEVO PRODUCTO</h2>
+        
+                .stock-section {
+                    display: grid;
+                    grid-template-columns: repeat(3, 1fr);
+                    gap: 1.5rem;
+                    border-bottom: 1px solid rgba(196, 196, 196, .50);
+                    padding-bottom: 1rem;
+                }
+        
+                .product-section {
+                    display: grid;
+                    grid-template-columns: repeat(2, 1fr);
+                    gap: 1.5rem;
+                }
+        
+                .product-section h3 {
+                    grid-column: 1/-1;
+                }
+        
+                .form-group.full-width {
+                    grid-column: 1/-1;
+                }
+        
+                .form-group {
+                    display: flex;
+                    flex-direction: column;
+                    gap: .45rem;
+                }
 
-            <h1>COMPLETE LOS DATOS</h1>
+                .actions {
+                    display: flex;
+                    justify-content: flex-end;
+                    gap: 1rem;
+                    margin-top: .5rem;
+                    padding-top: 1rem;
+                    border-top: 1px solid rgba(196, 196, 196, .50);
+                }
+        
+                .form-group input, 
+                .form-group select, 
+                .form-group textarea {
+                    width: 100%;
+                    box-sizing: border-box;
+                }
+        
+                .form-group small {
+                    font-size: .75rem;
+                    color: rgba(255,255,255,.8);
+                }
+        
+                label {
+                    font-size: .8rem;
+                    font-weight: 600;
+                }
+        
+                input {
+                    padding: .4rem 0;
+                    outline: none;
+                    background-color: rgba(255, 255, 255, 0.2);
+                    border: 1px solid rgba(196, 196, 196, 1);
+                    border-radius: 5px;
+                    color: white;
+                    padding-left: .7rem;
+                }
+        
+                .form-group select {
+                    padding: .4rem .2rem;
+                    border: 2px solid rgba(255,255,255,.15);
+                    border-radius: 8px;
+                    background: rgba(255,255,255,.08);
+                    color: white;
+                    font-size: .95rem;
+                    font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+                    outline: none;
+                    transition: .2s;
+                    padding-right: 2.5rem;
+                }
+        
+                input::placeholder {
+                    color: white;
+                }
+        
+                textarea {
+                    outline: none;
+                    background-color: rgba(255, 255, 255, 0.2);
+                    border: 1px solid rgba(196, 196, 196, 1);
+                    border-radius: 5px;
+                    color: white;
+                    padding-left: .7rem;
+                }
+        
+                textarea::placeholder {
+                    color: white;
+                }
+                
+                .actions button:first-child{
+                    background:transparent;
+                    color:white;
+                    border:1px solid rgba(255,255,255,.25);
+                    padding:.6rem 1.6rem;
+                    border-radius:8px;
+                    cursor:pointer;
+                    transition:.2s;
+                }
+        
+                .actions button:first-child:hover {
+                    background:rgba(255,255,255,.08);
+                }
+        
+                .actions button:last-child{
+                    background:#37A4FF;
+                    color:white;
+                    border:none;
+                    padding:.6rem 1.8rem;
+                    border-radius:8px;
+                    font-weight:600;
+                    cursor:pointer;
+                    transition:.2s;
+                }
+        
+                .actions button:last-child:hover{
+                    background:#2398FB;
+                }
+        
+            </style>
         
             <form>
                 <div class="stock-section">
@@ -64,7 +179,7 @@ class FormularioProducto extends HTMLElement {
                     <div class="form-group">
                         <label>STOCK MÍNIMO (ALERTA)</label>
                         <input type="number" id="stockMin" name="stockMin" placeholder="ej: 5">
-                        <span>Cuando el stock baje de este número, aparecerá una alerta.</span>
+                        <small>Cuando el stock baje de este número, aparecerá una alerta.</small>
                     </div>
         
                     <div class="form-group">
@@ -72,11 +187,11 @@ class FormularioProducto extends HTMLElement {
                         <input type="number" id="precio" name="precio" required placeholder="25.000">
                     </div>
                 </div>
-        
+
                 <div class="product-section">
                     <h3>INFORMACIÓN DEL PRODUCTO</h3>
                     
-                    <div class="form-group">
+                    <div class="form-group full-width">
                         <label>NOMBRE DEL PRODUCTO</label>
                         <input type="text" id="nombreProducto" name="nombreProducto" required placeholder="Ej: cloro granulado 1kg">
                     </div>
@@ -105,15 +220,15 @@ class FormularioProducto extends HTMLElement {
                         </select>
                     </div>
         
-                    <div class="form-group">
+                    <div class="form-group full-width">
                         <label>DESCRIPCIÓN</label>
         
-                        <textarea id="descripcion" name="descripcion" placeholder="Descripción, características, presentación..."></textarea>
+                        <textarea id="descripcion" name="descripcion" rows="4" cols="50" placeholder="Descripción, características, presentación..."></textarea>
                     </div>
                 </div>
         
                 <div class="actions">
-                    <button type="button">Volver</button>
+                    <button class="btn-volver" type="button">Volver</button>
                     <button type="submit">Guardar producto</button>
                 </div>
             </form>
