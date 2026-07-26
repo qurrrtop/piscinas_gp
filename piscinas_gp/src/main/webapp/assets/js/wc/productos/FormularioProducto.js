@@ -11,7 +11,14 @@ class FormularioProducto extends HTMLElement {
     }
     
     setupListeners() {
+        const form = this.shadowRoot.querySelector("form");
         const btnVolver = this.shadowRoot.querySelector(".btn-volver");
+        
+        form.addEventListener("submit", (event) => {
+            event.preventDefault();
+            const producto = this.obtenerDatosDelForm();
+            console.log(producto);
+        });
         
         btnVolver.addEventListener("click", () => {
             this.dispatchEvent(new CustomEvent("cerrar-modal", {
@@ -19,6 +26,22 @@ class FormularioProducto extends HTMLElement {
                 composed: true
             }));
         });
+    }
+    
+    obtenerDatosDelForm() {
+        const producto = {
+            stock: this.shadowRoot.querySelector("#stock").value,
+            stockMin: this.shadowRoot.querySelector("#stockMin").value,
+            precio: this.shadowRoot.querySelector("#precio").value,
+            nombre: this.shadowRoot.querySelector("#nombreProducto").value,
+            categoria: this.shadowRoot.querySelector("#categoria").value,
+            marca: this.shadowRoot.querySelector("#marca").value,
+            uniMedida: this.shadowRoot.querySelector("#uniMedida").value,
+            contenido: this.shadowRoot.querySelector("#contenido").value,
+            descripcion: this.shadowRoot.querySelector("#descripcion").value
+        };
+        
+        return producto;
     }
 
     render() {
@@ -98,7 +121,7 @@ class FormularioProducto extends HTMLElement {
                 }
         
                 input {
-                    padding: .4rem 0;
+                    padding: .5rem 0;
                     outline: none;
                     background-color: rgba(255, 255, 255, 0.2);
                     border: 1px solid rgba(196, 196, 196, 1);
@@ -108,7 +131,7 @@ class FormularioProducto extends HTMLElement {
                 }
         
                 .form-group select {
-                    padding: .4rem .2rem;
+                    padding: .2rem .2rem;
                     border: 2px solid rgba(255,255,255,.15);
                     border-radius: 8px;
                     background: rgba(255,255,255,.08);
@@ -131,6 +154,7 @@ class FormularioProducto extends HTMLElement {
                     border-radius: 5px;
                     color: white;
                     padding-left: .7rem;
+                    font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
                 }
         
                 textarea::placeholder {
@@ -166,6 +190,15 @@ class FormularioProducto extends HTMLElement {
                     background:#2398FB;
                 }
         
+                .form-group select option {
+                    color: black;
+                    background: white;
+                }
+        
+                .required {
+                    color: #ff4d4d;
+                    font-weight: bold;
+                }
             </style>
         
             <form>
@@ -178,12 +211,12 @@ class FormularioProducto extends HTMLElement {
         
                     <div class="form-group">
                         <label>STOCK MÍNIMO (ALERTA)</label>
-                        <input type="number" id="stockMin" name="stockMin" placeholder="ej: 5">
+                        <input type="number" id="stockMin" name="stockMin" placeholder="Ej: 5">
                         <small>Cuando el stock baje de este número, aparecerá una alerta.</small>
                     </div>
         
                     <div class="form-group">
-                        <label>PRECIO UNITARIO</label>
+                        <label>PRECIO UNITARIO <span class="required">*</span></label>
                         <input type="number" id="precio" name="precio" required placeholder="25.000">
                     </div>
                 </div>
@@ -192,32 +225,54 @@ class FormularioProducto extends HTMLElement {
                     <h3>INFORMACIÓN DEL PRODUCTO</h3>
                     
                     <div class="form-group full-width">
-                        <label>NOMBRE DEL PRODUCTO</label>
+                        <label>NOMBRE DEL PRODUCTO <span class="required">*</span></label>
                         <input type="text" id="nombreProducto" name="nombreProducto" required placeholder="Ej: cloro granulado 1kg">
                     </div>
         
                     <div class="form-group">
-                        <label>CATEGORÍA</label>
+                        <label>CATEGORÍA <span class="required">*</span></label>
         
                         <select id="categoria" name="categoria" required>
-                            <option>Seleccione una categoría</option>
+                            <option value="">Seleccione una categoría</option>
+                            <option value="Químico">Químico</option>
+                            <option value="Accesorio">Accesorio de instalación</option>
+                            <option value="Repuesto">Repuesto</option>
+
                         </select>
                     </div>
         
                     <div class="form-group">
-                        <label>MARCA</label>
+                        <label>MARCA <span class="required">*</span></label>
         
                         <select id="marca" name="marca" required>
-                            <option>Seleccione una marca</option>
+                            <option value="">Seleccione una marca</option>
+                            <option value="Nataclor">Nataclor</option>
+                            <option value="Clorotec">Clorotec</option>
+                            <option value="Vulcano">Vulcano</option>
+                            <option value="AstralPool">AstralPool</option>
+                            <option value="Hayward">Hayward</option>
+                            <option value="Pentair">Pentair</option>
                         </select>
                     </div>
         
                     <div class="form-group">
-                        <label>UNIDAD DE MEDIDA</label>
+                        <label>UNIDAD DE MEDIDA <span class="required">*</span></label>
         
                         <select id="uniMedida" name="uniMedida" required>
-                            <option>Seleccione una unidad de medida</option>
+                            <option value="">Seleccione una unidad de medida</option>
+                            <option value="unidad">Unidad</option>
+                            <option value="kilogramo">Kilogramo (kg)</option>
+                            <option value="gramo">Gramo (g)</option>
+                            <option value="litro">Litro (lt)</option>
+                            <option value="partes Por Millón">Partes por millón (ppm)</option>
+                            <option value="metros cubicos por hora">Metros cúbicos por hora (m³/h)</option>
+                            <option value="pulgadas">Pulgadas (”)</option>
                         </select>
+                    </div>
+        
+                    <div class="form-group">
+                        <label>CONTENIDO (UNI. MEDIDA) <span class="required">*</span></label>
+                        <input type="number" id="contenido" name="contenido" required placeholder="Ej: 5kg, 1lt, 12w" required>
                     </div>
         
                     <div class="form-group full-width">

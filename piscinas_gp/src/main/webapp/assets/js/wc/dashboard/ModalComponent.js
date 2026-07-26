@@ -59,7 +59,7 @@ class ModalComponent extends HTMLElement {
                     display: flex;
                     flex-direction: column;
                     max-height: 80vh;
-                    overflow: hidden;
+                    overflow: visible;
                     background: white;
                     border-radius: 10px;
                     border: 1px solid rgba(112, 112, 112, 1);
