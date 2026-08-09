@@ -9,8 +9,11 @@ class FormularioProducto extends HTMLElement {
     }
 
     connectedCallback() {
+        console.log("hola entré");
         this.render();
+        console.log("hola pasó render");
         this.setupListeners();
+        console.log("hola pasó setup");
     }
     
     setupListeners() {
@@ -51,7 +54,7 @@ class FormularioProducto extends HTMLElement {
 
         });
         
-        form.addEventListener("submit", (event) => {
+        form.addEventListener("submit", async (event) => {
             event.preventDefault();
             console.log("submit presionado");
             
@@ -63,7 +66,7 @@ class FormularioProducto extends HTMLElement {
 
             const producto = this.obtenerDatosDelForm();
 
-            console.log(producto);
+            await this.registrarProducto(producto);
         });
         
         btnVolver.addEventListener("click", () => {
@@ -72,6 +75,27 @@ class FormularioProducto extends HTMLElement {
                 composed: true
             }));
         });
+    }
+    
+    async registrarProducto(producto) {
+        try {
+            const response = await fetch("productos", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify(producto)
+            });
+            
+            if (!response.ok) {
+                throw new Error("Error al registrar el producto");
+            }
+            
+            console.log("Producto enviado correctamente");
+            
+        } catch (error) {
+            console.error("Error:", error);
+        }
     }
     
     validarFormulario() {

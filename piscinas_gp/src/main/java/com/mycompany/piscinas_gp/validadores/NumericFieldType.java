@@ -12,6 +12,7 @@ public enum NumericFieldType implements FieldType< Number > {
     STOCK("stock", 0, 999999, false),
     UMBRAL_STOCK("umbral de stock", 0, 999999, false),
     PRECIO_ACTUAL("precio actual", 0, 999999999, false),
+    CONTENIDO("contenido", 0.01, 999999, false),
     
     //detalleVenta
     CANTIDAD("cantidad", 1, 999999, false),
