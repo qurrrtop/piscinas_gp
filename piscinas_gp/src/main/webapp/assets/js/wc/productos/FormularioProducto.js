@@ -1,3 +1,6 @@
+import Rules from '../../Rules.js';
+import SetValidator from '../../SetValidator.js';
+
 class FormularioProducto extends HTMLElement {
 
     constructor() {
@@ -14,9 +17,52 @@ class FormularioProducto extends HTMLElement {
         const form = this.shadowRoot.querySelector("form");
         const btnVolver = this.shadowRoot.querySelector(".btn-volver");
         
+        const fields = [
+            { input: "#nombreProducto", rule: Rules.provisions.NOMBRE_PRODUCTO },
+            { input: "#stock", rule: Rules.provisions.STOCK },
+            { input: "#stockMin", rule: Rules.provisions.STOCK_MIN },
+            { input: "#precio", rule: Rules.provisions.PRECIO },
+            { input: "#contenido", rule: Rules.provisions.CONTENIDO },
+            { input: "#categoria", rule: Rules.provisions.CATEGORIA },
+            { input: "#marca", rule: Rules.provisions.MARCA },
+            { input: "#uniMedida", rule: Rules.provisions.UNIDAD_MEDIDA }
+        ];
+        
+        fields.forEach(field => {
+            const input = this.shadowRoot.querySelector(field.input);
+
+            input?.addEventListener("input", () => {
+                const error = SetValidator.validate(
+                    input.value,
+                    field.rule
+                );
+
+                this.checkResult(input, error);
+            });
+
+            input?.addEventListener("change", () => {
+                const error = SetValidator.validate(
+                    input.value,
+                    field.rule
+                );
+
+                this.checkResult(input, error);
+            });
+
+        });
+        
         form.addEventListener("submit", (event) => {
             event.preventDefault();
+            console.log("submit presionado");
+            
+            const esValido = this.validarFormulario();
+
+            if (!esValido) {
+                return;
+            }
+
             const producto = this.obtenerDatosDelForm();
+
             console.log(producto);
         });
         
@@ -26,6 +72,56 @@ class FormularioProducto extends HTMLElement {
                 composed: true
             }));
         });
+    }
+    
+    validarFormulario() {
+        let formularioValido = true;
+
+        const fields = [
+            { input: "#nombreProducto", rule: Rules.provisions.NOMBRE_PRODUCTO },
+            { input: "#stock", rule: Rules.provisions.STOCK, optional: true },
+            { input: "#stockMin", rule: Rules.provisions.STOCK_MIN, optional: true },
+            { input: "#precio", rule: Rules.provisions.PRECIO },
+            { input: "#contenido", rule: Rules.provisions.CONTENIDO },
+            { input: "#categoria", rule: Rules.provisions.CATEGORIA },
+            { input: "#marca", rule: Rules.provisions.MARCA },
+            { input: "#uniMedida", rule: Rules.provisions.UNIDAD_MEDIDA }
+        ];
+
+        fields.forEach(field => {
+            const input = this.shadowRoot.querySelector(field.input);
+            
+            if (field.optional && input.value === "") {
+                this.checkResult(input, null);
+                return;
+            }
+
+            const error = SetValidator.validate(
+                input.value,
+                field.rule
+            );
+
+            this.checkResult(input, error);
+
+            if (error) {
+                formularioValido = false;
+            }
+        });
+
+        return formularioValido;
+    }
+    
+    checkResult(inputElement, error) {
+        const container = inputElement.closest(".form-group");
+        
+        if (!container) return;
+            const errorMessage = container.querySelector(".error-message");
+            
+            if (error) {
+                errorMessage.textContent = error;    
+            } else {
+                errorMessage.textContent = "";
+            }
     }
     
     obtenerDatosDelForm() {
@@ -199,6 +295,12 @@ class FormularioProducto extends HTMLElement {
                     color: #ff4d4d;
                     font-weight: bold;
                 }
+        
+                .error-message {
+                    color: #ff6b6b;
+                    font-size: .75rem;
+                    min-height: 1rem;
+                }
             </style>
         
             <form>
@@ -207,17 +309,20 @@ class FormularioProducto extends HTMLElement {
                     <div class="form-group">
                         <label>UNIDADES EN STOCK</label>
                         <input type="number" id="stock" name="stock" placeholder="0">
+                        <small class="error-message"></small>
                     </div>
         
                     <div class="form-group">
                         <label>STOCK MÍNIMO (ALERTA)</label>
                         <input type="number" id="stockMin" name="stockMin" placeholder="Ej: 5">
                         <small>Cuando el stock baje de este número, aparecerá una alerta.</small>
+                        <small class="error-message"></small>
                     </div>
         
                     <div class="form-group">
                         <label>PRECIO UNITARIO <span class="required">*</span></label>
                         <input type="number" id="precio" name="precio" required placeholder="25.000">
+                        <small class="error-message"></small>
                     </div>
                 </div>
 
@@ -227,6 +332,7 @@ class FormularioProducto extends HTMLElement {
                     <div class="form-group full-width">
                         <label>NOMBRE DEL PRODUCTO <span class="required">*</span></label>
                         <input type="text" id="nombreProducto" name="nombreProducto" required placeholder="Ej: cloro granulado 1kg">
+                        <small class="error-message"></small>
                     </div>
         
                     <div class="form-group">
@@ -239,6 +345,7 @@ class FormularioProducto extends HTMLElement {
                             <option value="Repuesto">Repuesto</option>
 
                         </select>
+                        <small class="error-message"></small>
                     </div>
         
                     <div class="form-group">
@@ -253,6 +360,7 @@ class FormularioProducto extends HTMLElement {
                             <option value="Hayward">Hayward</option>
                             <option value="Pentair">Pentair</option>
                         </select>
+                        <small class="error-message"></small>
                     </div>
         
                     <div class="form-group">
@@ -268,11 +376,13 @@ class FormularioProducto extends HTMLElement {
                             <option value="metros cubicos por hora">Metros cúbicos por hora (m³/h)</option>
                             <option value="pulgadas">Pulgadas (”)</option>
                         </select>
+                        <small class="error-message"></small>
                     </div>
         
                     <div class="form-group">
                         <label>CONTENIDO (UNI. MEDIDA) <span class="required">*</span></label>
                         <input type="number" id="contenido" name="contenido" required placeholder="Ej: 5kg, 1lt, 12w" required>
+                        <small class="error-message"></small>
                     </div>
         
                     <div class="form-group full-width">
