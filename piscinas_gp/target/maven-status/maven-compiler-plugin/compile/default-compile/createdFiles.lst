@@ -33,6 +33,7 @@ com\mycompany\piscinas_gp\modelos\Cliente.class
 com\mycompany\piscinas_gp\validadores\StringFieldType.class
 com\mycompany\piscinas_gp\modelos\EstadoVenta.class
 com\mycompany\piscinas_gp\modelos\Venta.class
+com\mycompany\piscinas_gp\dtos\ProductoDTO.class
 com\mycompany\piscinas_gp\JakartaRestConfiguration.class
 com\mycompany\piscinas_gp\exceptions\PersistenceException.class
 com\mycompany\piscinas_gp\generico\GenericoDAO.class

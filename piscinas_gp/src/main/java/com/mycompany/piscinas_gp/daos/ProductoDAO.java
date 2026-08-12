@@ -11,23 +11,23 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.List;
 
-//mati y su amigo 
-
 public class ProductoDAO extends GenericoDAO<Producto> {
 
-    private static final String TABLE_NAME = "producto";
-    private static final String PRIMARY_KEY = "idProducto";
+    private static final String TABLE_NAME = "productos";
+    private static final String PRIMARY_KEY = "id";
     private static final String[] COLUMNS_FOR_INSERT = {
         "nombre",
         "descripcion",
         "stock",
-        "umbralStock",
-        "precioActual",
-        "unidadMedida",
-        "idMarcaProducto",
-        "idCategoriaProducto"
+        "umbral_stock",
+        "precio_actual",
+        "contenido",
+        "unidad_medida",
+        "marca_producto_id",
+        "categoria_producto_id"
     };
     private static final String[] PLACEHOLDER_VALUES = {
+        "?",
         "?",
         "?",
         "?",
@@ -38,33 +38,35 @@ public class ProductoDAO extends GenericoDAO<Producto> {
         "?"
     };
     private static final String[] COLUMNS_FOR_SELECT = {
-        "idProducto",
+        "id",
         "nombre",
         "descripcion",
         "stock",
-        "umbralStock",
-        "precioActual",
-        "unidadMedida",
-        "idMarcaProducto",
-        "idCategoriaProducto"
+        "umbral_stock",
+        "precio_actual",
+        "contenido",
+        "unidad_medida",
+        "marca_producto_id",
+        "categoria_producto_id"
     };
     private static final String[] COLUMNS_FOR_UPDATE = {
         "nombre = ?",
         "descripcion = ?",
         "stock = ?",
-        "umbralStock = ?",
-        "precioActual = ?",
-        "unidadMedida = ?",
-        "idMarcaProducto = ?",
-        "idCategoriaProducto = ?"
+        "umbral_stock = ?",
+        "precio_actual = ?",
+        "contenido = ?",
+        "unidad_medida = ?",
+        "marca_producto_id = ?",
+        "categoria_producto_id = ?"
     };
 
     public ProductoDAO(DbConnection dbConn) {
         super(dbConn);
     }
 
-    public Producto buscarPorId(Long idProducto) throws PersistenceException {
-        return findById(idProducto);
+    public Producto buscarPorId(Long id) throws PersistenceException {
+        return findById(id);
     }
 
     public Producto crear(Producto producto) throws PersistenceException {
@@ -75,12 +77,14 @@ public class ProductoDAO extends GenericoDAO<Producto> {
         return updateObject(PRIMARY_KEY, producto);
     }
 
-    public boolean eliminarPorId(Long idProducto) throws PersistenceException {
-        return deleteObject(PRIMARY_KEY, idProducto);
+    public boolean eliminarPorId(Long id) throws PersistenceException {
+        return deleteObject(PRIMARY_KEY, id);
     }
+
     public List<Producto> buscarTodos() throws PersistenceException {
         return findAllObjects("nombre");
     }
+
     @Override
     protected String getTableName() {
         return TABLE_NAME;
@@ -125,23 +129,24 @@ public class ProductoDAO extends GenericoDAO<Producto> {
     protected Producto mapResultSet(ResultSet rs) throws PersistenceException {
         try {
             MarcaProducto marcaProducto = new MarcaProducto(
-                    rs.getLong("idMarcaProducto"),
+                    rs.getLong("marca_producto_id"),
                     null
             );
             CategoriaProducto categoriaProducto = new CategoriaProducto(
-                    rs.getLong("idCategoriaProducto"),
+                    rs.getLong("categoria_producto_id"),
                     null,
                     null
             );
 
             return new Producto(
-                    rs.getLong("idProducto"),
+                    rs.getLong("id"),
                     rs.getString("nombre"),
                     rs.getString("descripcion"),
                     rs.getInt("stock"),
-                    rs.getInt("umbralStock"),
-                    rs.getBigDecimal("precioActual"),
-                    rs.getString("unidadMedida"),
+                    rs.getInt("umbral_stock"),
+                    rs.getBigDecimal("precio_actual"),
+                    rs.getString("unidad_medida"),
+                    rs.getBigDecimal("contenido"),
                     marcaProducto,
                     categoriaProducto
             );
@@ -159,9 +164,10 @@ public class ProductoDAO extends GenericoDAO<Producto> {
             pstmt.setInt(3, producto.getStock());
             pstmt.setInt(4, producto.getUmbralStock());
             pstmt.setBigDecimal(5, producto.getPrecioActual());
-            pstmt.setString(6, producto.getUnidadMedida());
-            pstmt.setLong(7, producto.getMarcaProducto().getId());
-            pstmt.setLong(8, producto.getCategoriaProducto().getId());
+            pstmt.setBigDecimal(6, producto.getContenido());
+            pstmt.setString(7, producto.getUnidadMedida());
+            pstmt.setLong(8, producto.getMarcaProducto().getId());
+            pstmt.setLong(9, producto.getCategoriaProducto().getId());
         } catch (SQLException e) {
             throw new PersistenceException("Error al asignar los parametros del producto", e);
         }
@@ -176,5 +182,4 @@ public class ProductoDAO extends GenericoDAO<Producto> {
             throw new PersistenceException("El producto debe tener una categoria con ID asignado");
         }
     }
-    
 }

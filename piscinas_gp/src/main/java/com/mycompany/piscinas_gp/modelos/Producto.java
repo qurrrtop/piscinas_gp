@@ -35,7 +35,7 @@ public class Producto implements Identifiable {
         setCategoriaProducto(categoriaProducto);
     }
 
-    public Producto(Long idProducto, String nombre, String descripcion, int stock, int umbralStock, BigDecimal precioActual, String unidadMedida, MarcaProducto marcaProducto, CategoriaProducto categoriaProducto) {
+    public Producto(Long idProducto, String nombre, String descripcion, int stock, int umbralStock, BigDecimal precioActual, String unidadMedida, BigDecimal contenido, MarcaProducto marcaProducto, CategoriaProducto categoriaProducto) {
         this.idProducto = idProducto;
         this.nombre = nombre;
         this.descripcion = descripcion;
@@ -43,6 +43,7 @@ public class Producto implements Identifiable {
         this.umbralStock = umbralStock;
         this.precioActual = precioActual;
         this.unidadMedida = unidadMedida;
+        this.contenido = contenido;
         this.marcaProducto = marcaProducto;
         this.categoriaProducto = categoriaProducto;
     }

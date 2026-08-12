@@ -21,18 +21,20 @@ create table productos (
     stock int unsigned not null default 0,
     umbral_stock int unsigned not null default 0,
     precio_actual decimal(10, 2) not null default 0,
+    contenido decimal(10, 2) not null default 0,
     descripcion text null,
     marca_producto_id int unsigned not null,
     categoria_producto_id int unsigned not null,
-    constraint fk_productos_marca foreign key (marca_producto_id) references categoria_productos (id) on update cascade on delete restrict
+    constraint fk_productos_marca foreign key (marca_producto_id) references marca_productos (id) on update cascade on delete restrict,
+    constraint fk_productos_categoria foreign key (categoria_producto_id) references categoria_productos (id) on update cascade on delete restrict
 );
 
-create metodo_pagos (
+create table metodo_pagos (
     id int unsigned primary key auto_increment,
-    nombre varchar(30) not null unique,
+    nombre varchar(30) not null unique
 );
 
-create estado_ventas (
+create table estado_ventas (
     id int unsigned primary key auto_increment,
     nombre varchar(30) not null unique
 );
