@@ -12,6 +12,8 @@ class FormularioProducto extends HTMLElement {
         console.log("hola entré");
         this.render();
         console.log("hola pasó render");
+        await this.cargarSelects();
+        console.log("hola ya cargó los select");
         this.setupListeners();
         console.log("hola pasó setup");
     }
@@ -75,6 +77,39 @@ class FormularioProducto extends HTMLElement {
                 composed: true
             }));
         });
+    }
+    
+    async cargarSelects() {
+        try {
+            const [resMarcas, resCategorias] = await Promise.all([
+                fetch("marcas"),
+                fetch("categorias")
+            ]);
+
+            const marcas = await resMarcas.json();
+            const categorias = await resCategorias.json();
+
+            const selectMarca = this.shadowRoot.querySelector("#marca");
+            
+            marcas.forEach(marca => {
+                const option = document.createElement("option");
+                option.value = marca.id;
+                option.textContent = marca.nombre;
+                selectMarca.appendChild(option);
+            });
+
+            const selectCategoria = this.shadowRoot.querySelector("#categoria");
+            
+            categorias.forEach(categoria => {
+                const option = document.createElement("option");
+                option.value = categoria.id;
+                option.textContent = categoria.nombre;
+                selectCategoria.appendChild(option);
+            });
+
+        } catch (error) {
+            console.error("Error al cargar marcas/categorias:", error);
+        }
     }
     
     async registrarProducto(producto) {
@@ -154,8 +189,8 @@ class FormularioProducto extends HTMLElement {
             stockMin: this.shadowRoot.querySelector("#stockMin").value,
             precio: this.shadowRoot.querySelector("#precio").value,
             nombre: this.shadowRoot.querySelector("#nombreProducto").value,
-            categoria: this.shadowRoot.querySelector("#categoria").value,
-            marca: this.shadowRoot.querySelector("#marca").value,
+            categoriaId: this.shadowRoot.querySelector("#categoria").value,
+            marcaId: this.shadowRoot.querySelector("#marca").value,
             uniMedida: this.shadowRoot.querySelector("#uniMedida").value,
             contenido: this.shadowRoot.querySelector("#contenido").value,
             descripcion: this.shadowRoot.querySelector("#descripcion").value
@@ -361,28 +396,16 @@ class FormularioProducto extends HTMLElement {
         
                     <div class="form-group">
                         <label>CATEGORÍA <span class="required">*</span></label>
-        
                         <select id="categoria" name="categoria" required>
                             <option value="">Seleccione una categoría</option>
-                            <option value="Químico">Químico</option>
-                            <option value="Accesorio">Accesorio de instalación</option>
-                            <option value="Repuesto">Repuesto</option>
-
                         </select>
                         <small class="error-message"></small>
                     </div>
-        
+
                     <div class="form-group">
                         <label>MARCA <span class="required">*</span></label>
-        
                         <select id="marca" name="marca" required>
                             <option value="">Seleccione una marca</option>
-                            <option value="Nataclor">Nataclor</option>
-                            <option value="Clorotec">Clorotec</option>
-                            <option value="Vulcano">Vulcano</option>
-                            <option value="AstralPool">AstralPool</option>
-                            <option value="Hayward">Hayward</option>
-                            <option value="Pentair">Pentair</option>
                         </select>
                         <small class="error-message"></small>
                     </div>

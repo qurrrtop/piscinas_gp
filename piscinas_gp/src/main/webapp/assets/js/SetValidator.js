@@ -146,5 +146,3 @@ export default class SetValidator {
         return null;
     }
 }
-
-

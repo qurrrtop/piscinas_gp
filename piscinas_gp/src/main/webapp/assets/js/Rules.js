@@ -89,12 +89,12 @@ export default class Rules {
 
         CATEGORIA: {
             validation: "categoria",
-            type: "string"
+            type: "list"
         },
 
         MARCA: {
             validation: "marca",
-            type: "string"
+            type: "list"
         },
 
         UNIDAD_MEDIDA: {

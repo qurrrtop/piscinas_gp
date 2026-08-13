@@ -34,7 +34,11 @@ public enum StringFieldType implements FieldType< String > {
     
     //marca y categoria
     NOMBRE_MARCA("nombre de la marca", 2, 80, "^[a-zA-ZÀ-ÿ0-9\\\\s:º°'.-]+$"),
-    NOMBRE_CATEGORIA("nombre de la categoria", 3, 80, "^[a-zA-ZÀ-ÿ0-9\\\\s:º°'.-]+$");
+    NOMBRE_CATEGORIA("nombre de la categoria", 3, 80, "^[a-zA-ZÀ-ÿ0-9\\\\s:º°'.-]+$"),
+    
+    //unidad de medida
+    NOMBRE_UNIDAD_MEDIDA("nombre de la unidad de medida", 3, 50, "^[a-zA-ZÀ-ÿ0-9\\\\s:º°'.-]+$"),
+    ABREVIATURA_UNIDAD_MEDIDA("abreviatura de la unidad de medida", 1, 10, null);
     
     private final String displayName;
     private final int minLength;
