@@ -14,7 +14,7 @@ public class Producto implements Identifiable {
     private int stock;
     private int umbralStock;
     private BigDecimal precioActual;
-    private String unidadMedida;
+    private UnidadMedida unidadMedida;
     // el nuevo atributo "contenido", sirve para decir la cantidad de esa unidad de medida.
     private BigDecimal contenido;
     private MarcaProducto marcaProducto;
@@ -23,7 +23,7 @@ public class Producto implements Identifiable {
     public Producto() {
     }
 
-    public Producto(String nombre, String descripcion, int stock, int umbralStock, BigDecimal precioActual, String unidadMedida, BigDecimal contenido, MarcaProducto marcaProducto, CategoriaProducto categoriaProducto) {
+    public Producto(String nombre, String descripcion, int stock, int umbralStock, BigDecimal precioActual, UnidadMedida unidadMedida, BigDecimal contenido, MarcaProducto marcaProducto, CategoriaProducto categoriaProducto) {
         setNombre(nombre);
         setDescripcion(descripcion);
         setStock(stock);
@@ -35,7 +35,7 @@ public class Producto implements Identifiable {
         setCategoriaProducto(categoriaProducto);
     }
 
-    public Producto(Long idProducto, String nombre, String descripcion, int stock, int umbralStock, BigDecimal precioActual, String unidadMedida, BigDecimal contenido, MarcaProducto marcaProducto, CategoriaProducto categoriaProducto) {
+    public Producto(Long idProducto, String nombre, String descripcion, int stock, int umbralStock, BigDecimal precioActual, UnidadMedida unidadMedida, BigDecimal contenido, MarcaProducto marcaProducto, CategoriaProducto categoriaProducto) {
         this.idProducto = idProducto;
         this.nombre = nombre;
         this.descripcion = descripcion;
@@ -56,7 +56,7 @@ public class Producto implements Identifiable {
     public int getStock() { return stock; }
     public int getUmbralStock() { return umbralStock; }
     public BigDecimal getPrecioActual() { return precioActual; }
-    public String getUnidadMedida() { return unidadMedida; }
+    public UnidadMedida getUnidadMedida() { return unidadMedida; }
     public BigDecimal getContenido() { return contenido; }
     public MarcaProducto getMarcaProducto() { return marcaProducto; }
     public CategoriaProducto getCategoriaProducto() { return categoriaProducto; }
@@ -103,17 +103,11 @@ public class Producto implements Identifiable {
         this.precioActual = precioActual;
     }
 
-    public void setUnidadMedida(String unidadMedida) {
-        if (unidadMedida == null || unidadMedida.isBlank()) {
-            throw new IllegalArgumentException("La unidad de medida no puede estar vacia");
+    public void setUnidadMedida(UnidadMedida unidadMedida) {
+        if(unidadMedida == null) {
+            throw new IllegalArgumentException("La unidad de medida del producto no puede estar vacio");
         }
-        //agregar/cambiar depende lo q diga despues el profe
-        if (!unidadMedida.equals("Unidad")
-                && !unidadMedida.equals("Kg")
-                && !unidadMedida.equals("Litro")) {
-            throw new IllegalArgumentException("La unidad de medida seleccionada no es valida");
-        }
-
+        
         this.unidadMedida = unidadMedida;
     }
     

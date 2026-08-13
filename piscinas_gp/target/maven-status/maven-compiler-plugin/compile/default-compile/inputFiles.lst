@@ -1,10 +1,16 @@
 C:\Users\Estudiante\OneDrive\Documentos\piscinas_gp\piscinas_gp\src\main\java\com\mycompany\piscinas_gp\config\DbConnection.java
 C:\Users\Estudiante\OneDrive\Documentos\piscinas_gp\piscinas_gp\src\main\java\com\mycompany\piscinas_gp\controladores\AutorizacionControlador.java
+C:\Users\Estudiante\OneDrive\Documentos\piscinas_gp\piscinas_gp\src\main\java\com\mycompany\piscinas_gp\controladores\CategoriaProductoControlador.java
 C:\Users\Estudiante\OneDrive\Documentos\piscinas_gp\piscinas_gp\src\main\java\com\mycompany\piscinas_gp\controladores\ControladorFrontal.java
 C:\Users\Estudiante\OneDrive\Documentos\piscinas_gp\piscinas_gp\src\main\java\com\mycompany\piscinas_gp\controladores\DashboardControlador.java
+C:\Users\Estudiante\OneDrive\Documentos\piscinas_gp\piscinas_gp\src\main\java\com\mycompany\piscinas_gp\controladores\MarcaProductoControlador.java
 C:\Users\Estudiante\OneDrive\Documentos\piscinas_gp\piscinas_gp\src\main\java\com\mycompany\piscinas_gp\controladores\ProductoControlador.java
+C:\Users\Estudiante\OneDrive\Documentos\piscinas_gp\piscinas_gp\src\main\java\com\mycompany\piscinas_gp\controladores\UnidadMedidaControlador.java
+C:\Users\Estudiante\OneDrive\Documentos\piscinas_gp\piscinas_gp\src\main\java\com\mycompany\piscinas_gp\daos\CategoriaProductoDAO.java
 C:\Users\Estudiante\OneDrive\Documentos\piscinas_gp\piscinas_gp\src\main\java\com\mycompany\piscinas_gp\daos\ClienteDAO.java
+C:\Users\Estudiante\OneDrive\Documentos\piscinas_gp\piscinas_gp\src\main\java\com\mycompany\piscinas_gp\daos\MarcaProductoDAO.java
 C:\Users\Estudiante\OneDrive\Documentos\piscinas_gp\piscinas_gp\src\main\java\com\mycompany\piscinas_gp\daos\ProductoDAO.java
+C:\Users\Estudiante\OneDrive\Documentos\piscinas_gp\piscinas_gp\src\main\java\com\mycompany\piscinas_gp\daos\UnidadMedidaDAO.java
 C:\Users\Estudiante\OneDrive\Documentos\piscinas_gp\piscinas_gp\src\main\java\com\mycompany\piscinas_gp\daos\VentaDAO.java
 C:\Users\Estudiante\OneDrive\Documentos\piscinas_gp\piscinas_gp\src\main\java\com\mycompany\piscinas_gp\dtos\MenuItem.java
 C:\Users\Estudiante\OneDrive\Documentos\piscinas_gp\piscinas_gp\src\main\java\com\mycompany\piscinas_gp\dtos\ProductoDTO.java
@@ -21,6 +27,7 @@ C:\Users\Estudiante\OneDrive\Documentos\piscinas_gp\piscinas_gp\src\main\java\co
 C:\Users\Estudiante\OneDrive\Documentos\piscinas_gp\piscinas_gp\src\main\java\com\mycompany\piscinas_gp\modelos\MarcaProducto.java
 C:\Users\Estudiante\OneDrive\Documentos\piscinas_gp\piscinas_gp\src\main\java\com\mycompany\piscinas_gp\modelos\MetodoPago.java
 C:\Users\Estudiante\OneDrive\Documentos\piscinas_gp\piscinas_gp\src\main\java\com\mycompany\piscinas_gp\modelos\Producto.java
+C:\Users\Estudiante\OneDrive\Documentos\piscinas_gp\piscinas_gp\src\main\java\com\mycompany\piscinas_gp\modelos\UnidadMedida.java
 C:\Users\Estudiante\OneDrive\Documentos\piscinas_gp\piscinas_gp\src\main\java\com\mycompany\piscinas_gp\modelos\Venta.java
 C:\Users\Estudiante\OneDrive\Documentos\piscinas_gp\piscinas_gp\src\main\java\com\mycompany\piscinas_gp\modelos\VentaAsesoramiento.java
 C:\Users\Estudiante\OneDrive\Documentos\piscinas_gp\piscinas_gp\src\main\java\com\mycompany\piscinas_gp\modelos\VentaProducto.java

@@ -6,6 +6,7 @@ import com.mycompany.piscinas_gp.generico.GenericoDAO;
 import com.mycompany.piscinas_gp.modelos.CategoriaProducto;
 import com.mycompany.piscinas_gp.modelos.MarcaProducto;
 import com.mycompany.piscinas_gp.modelos.Producto;
+import com.mycompany.piscinas_gp.modelos.UnidadMedida;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -22,7 +23,7 @@ public class ProductoDAO extends GenericoDAO<Producto> {
         "umbral_stock",
         "precio_actual",
         "contenido",
-        "unidad_medida",
+        "unidad_medida_id",
         "marca_producto_id",
         "categoria_producto_id"
     };
@@ -45,7 +46,7 @@ public class ProductoDAO extends GenericoDAO<Producto> {
         "umbral_stock",
         "precio_actual",
         "contenido",
-        "unidad_medida",
+        "unidad_medida_id",
         "marca_producto_id",
         "categoria_producto_id"
     };
@@ -56,7 +57,7 @@ public class ProductoDAO extends GenericoDAO<Producto> {
         "umbral_stock = ?",
         "precio_actual = ?",
         "contenido = ?",
-        "unidad_medida = ?",
+        "unidad_medida_id = ?",
         "marca_producto_id = ?",
         "categoria_producto_id = ?"
     };
@@ -137,6 +138,11 @@ public class ProductoDAO extends GenericoDAO<Producto> {
                     null,
                     null
             );
+            UnidadMedida unidadMedida = new UnidadMedida(
+                    rs.getLong("unidad_medida_id"),
+                    null,
+                    null
+            );
 
             return new Producto(
                     rs.getLong("id"),
@@ -145,7 +151,7 @@ public class ProductoDAO extends GenericoDAO<Producto> {
                     rs.getInt("stock"),
                     rs.getInt("umbral_stock"),
                     rs.getBigDecimal("precio_actual"),
-                    rs.getString("unidad_medida"),
+                    unidadMedida,
                     rs.getBigDecimal("contenido"),
                     marcaProducto,
                     categoriaProducto
@@ -165,7 +171,7 @@ public class ProductoDAO extends GenericoDAO<Producto> {
             pstmt.setInt(4, producto.getUmbralStock());
             pstmt.setBigDecimal(5, producto.getPrecioActual());
             pstmt.setBigDecimal(6, producto.getContenido());
-            pstmt.setString(7, producto.getUnidadMedida());
+            pstmt.setLong(7, producto.getUnidadMedida().getId());
             pstmt.setLong(8, producto.getMarcaProducto().getId());
             pstmt.setLong(9, producto.getCategoriaProducto().getId());
         } catch (SQLException e) {
@@ -180,6 +186,10 @@ public class ProductoDAO extends GenericoDAO<Producto> {
 
         if (producto.getCategoriaProducto() == null || producto.getCategoriaProducto().getId() == null) {
             throw new PersistenceException("El producto debe tener una categoria con ID asignado");
+        }
+
+        if (producto.getUnidadMedida() == null || producto.getUnidadMedida().getId() == null) {
+            throw new PersistenceException("El producto debe tener una unidad de medida con ID asignada");
         }
     }
 }

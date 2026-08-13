@@ -99,7 +99,7 @@ export default class Rules {
 
         UNIDAD_MEDIDA: {
             validation: "unidadMedida",
-            type: "string"
+            type: "list"
         },
 
         DESCRIPCION: {

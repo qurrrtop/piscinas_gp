@@ -8,7 +8,7 @@ class FormularioProducto extends HTMLElement {
         this.attachShadow({mode: "open"});
     }
 
-    connectedCallback() {
+    async connectedCallback() {
         console.log("hola entré");
         this.render();
         console.log("hola pasó render");
@@ -81,13 +81,15 @@ class FormularioProducto extends HTMLElement {
     
     async cargarSelects() {
         try {
-            const [resMarcas, resCategorias] = await Promise.all([
+            const [resMarcas, resCategorias, resUnidades] = await Promise.all([
                 fetch("marcas"),
-                fetch("categorias")
+                fetch("categorias"),
+                fetch("unidades-medida")
             ]);
 
             const marcas = await resMarcas.json();
             const categorias = await resCategorias.json();
+            const unidades = await resUnidades.json();
 
             const selectMarca = this.shadowRoot.querySelector("#marca");
             
@@ -106,9 +108,18 @@ class FormularioProducto extends HTMLElement {
                 option.textContent = categoria.nombre;
                 selectCategoria.appendChild(option);
             });
+            
+            const selectUniMedida = this.shadowRoot.querySelector("#uniMedida");
+            
+            unidades.forEach(unidad => {
+                const option = document.createElement("option");
+                option.value = unidad.id;
+                option.textContent = unidad.nombre;
+                selectUniMedida.appendChild(option);
+            });
 
         } catch (error) {
-            console.error("Error al cargar marcas/categorias:", error);
+            console.error("Error al cargar marcas/categorias/unidades:", error);
         }
     }
     
@@ -191,7 +202,7 @@ class FormularioProducto extends HTMLElement {
             nombre: this.shadowRoot.querySelector("#nombreProducto").value,
             categoriaId: this.shadowRoot.querySelector("#categoria").value,
             marcaId: this.shadowRoot.querySelector("#marca").value,
-            uniMedida: this.shadowRoot.querySelector("#uniMedida").value,
+            uniMedidaId: this.shadowRoot.querySelector("#uniMedida").value,
             contenido: this.shadowRoot.querySelector("#contenido").value,
             descripcion: this.shadowRoot.querySelector("#descripcion").value
         };
@@ -412,16 +423,9 @@ class FormularioProducto extends HTMLElement {
         
                     <div class="form-group">
                         <label>UNIDAD DE MEDIDA <span class="required">*</span></label>
-        
+
                         <select id="uniMedida" name="uniMedida" required>
                             <option value="">Seleccione una unidad de medida</option>
-                            <option value="unidad">Unidad</option>
-                            <option value="kilogramo">Kilogramo (kg)</option>
-                            <option value="gramo">Gramo (g)</option>
-                            <option value="litro">Litro (lt)</option>
-                            <option value="partes Por Millón">Partes por millón (ppm)</option>
-                            <option value="metros cubicos por hora">Metros cúbicos por hora (m³/h)</option>
-                            <option value="pulgadas">Pulgadas (”)</option>
                         </select>
                         <small class="error-message"></small>
                     </div>

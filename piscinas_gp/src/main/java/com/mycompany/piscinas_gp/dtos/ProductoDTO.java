@@ -9,7 +9,7 @@ public class ProductoDTO {
     private int stockMin;
     private BigDecimal precio;
     private BigDecimal contenido;
-    private String uniMedida;
+    private Long uniMedidaId;
     private Long marcaId;
     private Long categoriaId;
 
@@ -64,12 +64,12 @@ public class ProductoDTO {
         this.contenido = contenido;
     }
 
-    public String getUniMedida() {
-        return uniMedida;
+    public Long getUniMedidaId() {
+        return uniMedidaId;
     }
 
-    public void setUniMedida(String uniMedida) {
-        this.uniMedida = uniMedida;
+    public void setUniMedidaId(Long uniMedidaId) {
+        this.uniMedidaId = uniMedidaId;
     }
 
     public Long getMarcaId() {
