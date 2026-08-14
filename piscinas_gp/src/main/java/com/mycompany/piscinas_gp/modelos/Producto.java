@@ -74,7 +74,7 @@ public class Producto implements Identifiable {
     }
 
     public void setNombre(String nombre) {
-        SetValidator.validar(nombre, StringFieldType.NOMBRE);
+        SetValidator.validar(nombre, StringFieldType.NOMBRE_PRODUCTO);
         
         this.nombre = nombre;
     }

@@ -124,25 +124,27 @@ class FormularioProducto extends HTMLElement {
     }
     
     async registrarProducto(producto) {
-        try {
-            const response = await fetch("productos", {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json"
-                },
-                body: JSON.stringify(producto)
-            });
-            
-            if (!response.ok) {
-                throw new Error("Error al registrar el producto");
-            }
-            
-            console.log("Producto enviado correctamente");
-            
-        } catch (error) {
-            console.error("Error:", error);
+    try {
+        const response = await fetch("productos", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify(producto)
+        });
+        
+        const data = await response.json();
+        
+        if (!response.ok) {
+            throw new Error(data.error || "Error al registrar el producto");
         }
+        
+        console.log("Producto enviado correctamente", data);
+        
+    } catch (error) {
+        console.error("Error:", error);
     }
+}
     
     validarFormulario() {
         let formularioValido = true;

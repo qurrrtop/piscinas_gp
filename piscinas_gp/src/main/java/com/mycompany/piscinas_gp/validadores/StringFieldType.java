@@ -8,36 +8,36 @@ public enum StringFieldType implements FieldType< String > {
     //cliente
     EMAIL("email", 3, 80, "^[_a-z0-9-]+(\\\\.[_a-z0-9-]+)*@[a-z0-9-]+(\\\\.[a-z0-9-]+)*(\\\\.[a-z]{2,4})$"),
     TELEFONO("telefono", 8, 15, "^[0-9+]+$"),
-    CALLE_Y_NUMERO("calle y numero", 3, 60, "^[A-Za-zÁÉÍÓÚáéíóúÑñ\\\\s'.-]+$"),
-    CIUDAD("ciudad", 3, 60, "^[A-Za-zÁÉÍÓÚáéíóúÑñ\\\\s'.-]+$"),
-    PROVINCIA("provincia", 3, 60, "^[A-Za-zÁÉÍÓÚáéíóúÑñ\\\\s'.-]+$"),
-    OBSERVACIONES("observaciones", 0, 250, "^[a-zA-ZÀ-ÿ0-9\\\\s:º°',.-]*$"),
+    CALLE_Y_NUMERO("calle y numero", 3, 60, "^[A-Za-zÁÉÍÓÚáéíóúÑñ\\s'.-]+$"),
+    CIUDAD("ciudad", 3, 60, "^[A-Za-zÁÉÍÓÚáéíóúÑñ\\s'.-]+$"),
+    PROVINCIA("provincia", 3, 60, "^[A-Za-zÁÉÍÓÚáéíóúÑñ\\s'.-]+$"),
+    OBSERVACIONES("observaciones", 0, 250, "^[a-zA-ZÀ-ÿ0-9\\s:º°',.-]*$"),
     
     //clienteParticular
-    NOMBRE("nombre", 3, 80, "^[A-Za-zÁÉÍÓÚáéíóúÑñ\\\\s'-]+$"),
-    APELLIDO("apellido", 3, 80, "^[A-Za-zÁÉÍÓÚáéíóúÑñ\\\\s'-]+$"),
+    NOMBRE("nombre", 3, 80, "^[A-Za-zÁÉÍÓÚáéíóúÑñ\\s'-]+$"),
+    APELLIDO("apellido", 3, 80, "^[A-Za-zÁÉÍÓÚáéíóúÑñ\\s'-]+$"),
     CUIL("cuil", 11, 11, "^[0-9]+$"),
     
     //clienteEmpresa
-    RAZON_SOCIAL("razon social", 3, 100, "^[a-zA-ZÀ-ÿ0-9\\\\s:º°'.-]+$"),
-    NOMBRE_FANTASIA("nombre de fantasia", 3, 100, "^[a-zA-ZÀ-ÿ0-9\\\\s:º°'.-]+$"),
-    RUBRO("rubro", 3, 80, "^[a-zA-ZÀ-ÿ0-9\\\\s:º°'.-]+$"),
+    RAZON_SOCIAL("razon social", 3, 100, "^[a-zA-ZÀ-ÿ0-9\\s:º°'.-]+$"),
+    NOMBRE_FANTASIA("nombre de fantasia", 3, 100, "^[a-zA-ZÀ-ÿ0-9\\s:º°'.-]+$"),
+    RUBRO("rubro", 3, 80, "^[a-zA-ZÀ-ÿ0-9\\s:º°'.-]+$"),
     CUIT("cuit", 11, 11, "^[0-9]+$"),
 
     //venta
-    PROBLEMA("problema", 3, 250, "^[a-zA-ZÀ-ÿ0-9\\\\s:º°',.-]+$"),
-    DIAGNOSTICO("diagnostico", 3, 250, "^[a-zA-ZÀ-ÿ0-9\\\\s:º°',.-]+$"),
+    PROBLEMA("problema", 3, 250, "^[a-zA-ZÀ-ÿ0-9\\s:º°',.-]+$"),
+    DIAGNOSTICO("diagnostico", 3, 250, "^[a-zA-ZÀ-ÿ0-9\\s:º°',.-]+$"),
     
     //producto
-    NOMBRE_PRODUCTO("nombre del producto", 3, 100, "^[a-zA-ZÀ-ÿ0-9\\\\s:º°'.-]+$"),
-    DESCRIPCION("descripcion", 3, 250, "^[a-zA-ZÀ-ÿ0-9\\\\s:º°',.-]+$"),
+    NOMBRE_PRODUCTO("nombre del producto", 3, 100, "^[a-zA-ZÀ-ÿ0-9\\s:º°'.-]+$"),
+    DESCRIPCION("descripcion", 3, 250, "^[a-zA-ZÀ-ÿ0-9\\s:º°',.-]+$"),
     
     //marca y categoria
-    NOMBRE_MARCA("nombre de la marca", 2, 80, "^[a-zA-ZÀ-ÿ0-9\\\\s:º°'.-]+$"),
-    NOMBRE_CATEGORIA("nombre de la categoria", 3, 80, "^[a-zA-ZÀ-ÿ0-9\\\\s:º°'.-]+$"),
+    NOMBRE_MARCA("nombre de la marca", 2, 80, "^[a-zA-ZÀ-ÿ0-9\\s:º°'.-]+$"),
+    NOMBRE_CATEGORIA("nombre de la categoria", 3, 80, "^[a-zA-ZÀ-ÿ0-9\\s:º°'.-]+$"),
     
     //unidad de medida
-    NOMBRE_UNIDAD_MEDIDA("nombre de la unidad de medida", 3, 50, "^[a-zA-ZÀ-ÿ0-9\\\\s:º°'.-]+$"),
+    NOMBRE_UNIDAD_MEDIDA("nombre de la unidad de medida", 3, 50, "^[a-zA-ZÀ-ÿ0-9\\s:º°'.-]+$"),
     ABREVIATURA_UNIDAD_MEDIDA("abreviatura de la unidad de medida", 1, 10, null);
     
     private final String displayName;
