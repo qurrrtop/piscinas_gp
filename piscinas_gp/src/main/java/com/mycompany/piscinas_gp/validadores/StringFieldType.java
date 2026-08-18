@@ -30,7 +30,7 @@ public enum StringFieldType implements FieldType< String > {
     
     //producto
     NOMBRE_PRODUCTO("nombre del producto", 3, 100, "^[a-zA-ZÀ-ÿ0-9\\s:º°'.-]+$"),
-    DESCRIPCION("descripcion", 3, 250, "^[a-zA-ZÀ-ÿ0-9\\s:º°',.-]+$"),
+    DESCRIPCION("descripcion", 3, 250, "^[a-zA-ZÀ-ÿ0-9\\s:º°',.()-]+$"),
     
     //marca y categoria
     NOMBRE_MARCA("nombre de la marca", 2, 80, "^[a-zA-ZÀ-ÿ0-9\\s:º°'.-]+$"),

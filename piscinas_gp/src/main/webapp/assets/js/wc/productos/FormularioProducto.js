@@ -124,27 +124,49 @@ class FormularioProducto extends HTMLElement {
     }
     
     async registrarProducto(producto) {
-    try {
-        const response = await fetch("productos", {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json"
-            },
-            body: JSON.stringify(producto)
-        });
+        try {
+            const response = await fetch("productos", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify(producto)
+            });
         
-        const data = await response.json();
+            const data = await response.json();
         
-        if (!response.ok) {
-            throw new Error(data.error || "Error al registrar el producto");
+            if (!response.ok) {
+                throw new Error(data.error || "Error al registrar el producto");
+            }
+        
+            document.dispatchEvent(new CustomEvent("mostrar-notificacion", {
+                detail: { mensaje: "Producto creado correctamente", tipo: "exito" }
+            }));
+
+            this.limpiarFormulario();
+
+            this.dispatchEvent(new CustomEvent("producto-guardado", {
+                bubbles: true,
+                composed: true
+            }));
+
+            this.dispatchEvent(new CustomEvent("cerrar-modal", {
+                bubbles: true,
+                composed: true
+            }));
+        
+        } catch (error) {
+            document.dispatchEvent(new CustomEvent("mostrar-notificacion", {
+                detail: { mensaje: error.message, tipo: "error" }
+            }));
         }
-        
-        console.log("Producto enviado correctamente", data);
-        
-    } catch (error) {
-        console.error("Error:", error);
     }
-}
+
+    limpiarFormulario() {
+        const form = this.shadowRoot.querySelector("form");
+        form.reset();
+        this.shadowRoot.querySelectorAll(".error-message").forEach(el => el.textContent = "");
+    }
     
     validarFormulario() {
         let formularioValido = true;

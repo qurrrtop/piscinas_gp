@@ -1,11 +1,7 @@
 <%@page contentType="text/html" pageEncoding="UTF-8"%>
 <link rel="stylesheet" href="${pageContext.request.contextPath}/assets/css/dashboard/main-style.css"/>
 <link rel="stylesheet" href="${pageContext.request.contextPath}/assets/css/dashboard/gestion/productos/productos-style.css"/>
-
-
-
 <div class="page productos-page">
-
     <div class="page-background"></div>
     
     <div class="page-content">
@@ -16,6 +12,7 @@
             descripcion="Catálogo completo de productos del negocio"
             botonTexto="+ Nuevo producto"
             ></dashboard-header>
-    </div>
 
+        <listado-productos></listado-productos>
+    </div>
 </div>

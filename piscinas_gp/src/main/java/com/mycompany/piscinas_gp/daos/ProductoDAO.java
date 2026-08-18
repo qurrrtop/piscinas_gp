@@ -11,6 +11,8 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.List;
+import java.sql.Connection; 
+import java.util.ArrayList;
 
 public class ProductoDAO extends GenericoDAO<Producto> {
 
@@ -83,7 +85,65 @@ public class ProductoDAO extends GenericoDAO<Producto> {
     }
 
     public List<Producto> buscarTodos() throws PersistenceException {
-        return findAllObjects("nombre");
+        String sql = "SELECT p.id, p.nombre, p.descripcion, p.stock, p.umbral_stock, p.precio_actual, p.contenido, "
+                + "p.marca_producto_id, mp.nombre AS marca_nombre, "
+                + "p.categoria_producto_id, cp.nombre AS categoria_nombre, "
+                + "p.unidad_medida_id, um.nombre AS unidad_nombre, um.abreviatura AS unidad_abreviatura "
+                + "FROM productos p "
+                + "JOIN marca_productos mp ON p.marca_producto_id = mp.id "
+                + "JOIN categoria_productos cp ON p.categoria_producto_id = cp.id "
+                + "JOIN unidades_medida um ON p.unidad_medida_id = um.id "
+                + "ORDER BY p.nombre";
+
+        List<Producto> productos = new ArrayList<>();
+
+        try (Connection conn = dbConn.getConnection();
+                PreparedStatement pstmt = conn.prepareStatement(sql);
+                ResultSet rs = pstmt.executeQuery()) {
+
+            while (rs.next()) {
+                productos.add(mapResultSetConNombres(rs));
+            }
+
+        } catch (SQLException e) {
+            throw new PersistenceException("Error al recuperar los productos con sus datos relacionados", e);
+        }
+
+        return productos;
+    }
+
+    private Producto mapResultSetConNombres(ResultSet rs) throws PersistenceException {
+        try {
+            MarcaProducto marcaProducto = new MarcaProducto(
+                    rs.getLong("marca_producto_id"),
+                    rs.getString("marca_nombre")
+            );
+            CategoriaProducto categoriaProducto = new CategoriaProducto(
+                    rs.getLong("categoria_producto_id"),
+                    rs.getString("categoria_nombre"),
+                    null
+            );
+            UnidadMedida unidadMedida = new UnidadMedida(
+                    rs.getLong("unidad_medida_id"),
+                    rs.getString("unidad_nombre"),
+                    rs.getString("unidad_abreviatura")
+            );
+
+            return new Producto(
+                    rs.getLong("id"),
+                    rs.getString("nombre"),
+                    rs.getString("descripcion"),
+                    rs.getInt("stock"),
+                    rs.getInt("umbral_stock"),
+                    rs.getBigDecimal("precio_actual"),
+                    unidadMedida,
+                    rs.getBigDecimal("contenido"),
+                    marcaProducto,
+                    categoriaProducto
+            );
+        } catch (SQLException e) {
+            throw new PersistenceException("Error al mapear el producto con sus datos relacionados", e);
+        }
     }
 
     @Override

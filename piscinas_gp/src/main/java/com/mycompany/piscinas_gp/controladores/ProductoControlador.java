@@ -19,6 +19,7 @@ import com.mycompany.piscinas_gp.modelos.MarcaProducto;
 import com.mycompany.piscinas_gp.modelos.Producto;
 import com.mycompany.piscinas_gp.modelos.UnidadMedida;
 import com.mycompany.piscinas_gp.servicios.ProductoServicio;
+import java.util.List;
 
 @WebServlet(name = "ProductoControlador", urlPatterns = {"/productos"})
 public class ProductoControlador extends HttpServlet {
@@ -66,6 +67,25 @@ public class ProductoControlador extends HttpServlet {
 
         } catch (IllegalArgumentException | AppException e) {
             response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
+            response.getWriter().write("{\"error\":\"" + e.getMessage() + "\"}");
+        }
+    }
+    
+    @Override
+    protected void doGet(HttpServletRequest request, HttpServletResponse response)
+            throws ServletException, IOException {
+
+        response.setContentType("application/json");
+        response.setCharacterEncoding("UTF-8");
+
+        ObjectMapper mapper = new ObjectMapper();
+
+        try {
+            List<Producto> productos = productoServicio.buscarTodosLosProductos();
+            response.setStatus(HttpServletResponse.SC_OK);
+            mapper.writeValue(response.getWriter(), productos);
+        } catch (AppException e) {
+            response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
             response.getWriter().write("{\"error\":\"" + e.getMessage() + "\"}");
         }
     }

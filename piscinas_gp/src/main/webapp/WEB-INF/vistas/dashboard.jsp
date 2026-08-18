@@ -9,6 +9,11 @@
         <script src="${pageContext.request.contextPath}/assets/js/wc/dashboard/DashboardHeader.js" type="module" defer></script>
         <script src="${pageContext.request.contextPath}/assets/js/wc/dashboard/ModalComponent.js" type="module" defer></script>
         <script src="${pageContext.request.contextPath}/assets/js/wc/productos/FormularioProducto.js" type="module" defer></script>
+        <script src="${pageContext.request.contextPath}/assets/js/wc/TablaGenerica.js" type="module" defer></script>
+        <script src="${pageContext.request.contextPath}/assets/js/wc/productos/ListadoProductos.js" type="module" defer></script>
+        <script src="${pageContext.request.contextPath}/assets/js/wc/TarjetasResumen.js" type="module" defer></script>
+        <script src="${pageContext.request.contextPath}/assets/js/wc/NotificacionToast.js" type="module" defer></script>
+        
         <title>PiscinasGP</title>
     </head>
     <body>
@@ -21,5 +26,7 @@
                 <dashboard-section base-path="${pageContext.request.contextPath}"></dashboard-section>
             </section>
         </main>
+            
+        <notificacion-toast></notificacion-toast>
     </body>
 </html>
