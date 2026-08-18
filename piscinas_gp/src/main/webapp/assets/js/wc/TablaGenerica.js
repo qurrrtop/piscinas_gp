@@ -60,8 +60,8 @@ class TablaGenerica extends HTMLElement {
                     font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
                     font-size: .9rem;
                 }
-                
-                thead {
+        
+                thead { 
                     background-color: rgba(1, 49, 104, 1);
                 }
 
@@ -76,7 +76,7 @@ class TablaGenerica extends HTMLElement {
                 }
         
                 tbody {
-                    background-color: rgba(188, 188, 188, 0.9);
+                    background-color: rgba(188,188,188,0.9);
                 }
 
                 tbody td {
@@ -84,14 +84,19 @@ class TablaGenerica extends HTMLElement {
                     border-bottom: 1px solid rgba(196, 196, 196, .2);
                 }
 
+                tbody tr {
+                    cursor: pointer;
+                }
+
                 tbody tr:hover {
-                    background: rgba(255, 255, 255, .05);
+                    background: rgba(255, 255, 255, .08);
                 }
 
                 .sin-datos {
                     text-align: center;
                     padding: 2rem;
                     color: rgba(255, 255, 255, .6);
+                    cursor: default;
                 }
             </style>
 
@@ -103,8 +108,8 @@ class TablaGenerica extends HTMLElement {
                 </thead>
                 <tbody>
                     ${hayDatos
-                        ? this._datos.map(fila => `
-                            <tr>
+                        ? this._datos.map((fila, index) => `
+                            <tr data-index="${index}">
                                 ${this._columnas.map(col => `<td>${this.formatearCelda(fila, col)}</td>`).join("")}
                             </tr>
                         `).join("")
@@ -113,6 +118,21 @@ class TablaGenerica extends HTMLElement {
                 </tbody>
             </table>
         `;
+
+        this.setupListeners();
+    }
+
+    setupListeners() {
+        this.shadowRoot.querySelectorAll("tbody tr[data-index]").forEach(fila => {
+            fila.addEventListener("click", () => {
+                const index = Number(fila.dataset.index);
+                this.dispatchEvent(new CustomEvent("fila-clickeada", {
+                    detail: this._datos[index],
+                    bubbles: true,
+                    composed: true
+                }));
+            });
+        });
     }
 }
 

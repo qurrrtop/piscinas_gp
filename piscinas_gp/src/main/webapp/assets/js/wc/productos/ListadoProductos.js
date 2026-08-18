@@ -148,6 +148,10 @@ class ListadoProductos extends HTMLElement {
     }
 
     setupListeners() {
+        this.shadowRoot.querySelector("tabla-generica").addEventListener("fila-clickeada", (evento) => {
+            this.abrirDetalleProducto(evento.detail);
+        });
+        
         this.shadowRoot.querySelectorAll(".tab-categoria").forEach(tab => {
             tab.addEventListener("click", () => {
                 const valor = tab.dataset.valorReal;
@@ -179,6 +183,18 @@ class ListadoProductos extends HTMLElement {
             this._orden = e.target.value;
             this.actualizarTabla();
         });
+    }
+    
+    abrirDetalleProducto(producto) {
+        const modal = document.createElement("modal-component");
+        modal.setAttribute("titulo", producto.nombre);
+        modal.setAttribute("subTitulo", producto.categoriaProducto.nombre);
+
+        const detalle = document.createElement("detalle-producto");
+        detalle.producto = producto;
+
+        modal.appendChild(detalle);
+        document.body.appendChild(modal);
     }
 
     renderShell() {
