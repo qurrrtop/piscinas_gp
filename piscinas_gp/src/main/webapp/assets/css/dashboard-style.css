@@ -18,11 +18,14 @@ body {
     min-height: 100vh;
 }
 
-.dashboard-layout{
-    display:flex;
-    min-height:100vh;
+.dashboard-layout {
+    display: flex;
+    height: 100vh;
+    overflow: hidden;
 }
 
-section{
-    flex:1;
+section {
+    flex: 1;
+    min-width: 0;
+    height: 100%;
 }

@@ -5,6 +5,8 @@ class TablaGenerica extends HTMLElement {
         this.attachShadow({ mode: "open" });
         this._columnas = [];
         this._datos = [];
+        this._porPagina = 10;
+        this._paginaActual = 0;
     }
 
     set columnas(valor) {
@@ -18,6 +20,7 @@ class TablaGenerica extends HTMLElement {
 
     set datos(valor) {
         this._datos = valor || [];
+        this._paginaActual = 0;
         this.render();
     }
 
@@ -31,7 +34,7 @@ class TablaGenerica extends HTMLElement {
 
     obtenerValorAnidado(objeto, clave) {
         return clave.split(".").reduce((valor, parte) => {
-            return valor !== null ? valor[parte] : undefined;
+            return valor != null ? valor[parte] : undefined;
         }, objeto);
     }
 
@@ -42,11 +45,27 @@ class TablaGenerica extends HTMLElement {
             return columna.formato(valorCrudo, fila);
         }
 
-        return valorCrudo !== null ? valorCrudo : "";
+        return valorCrudo != null ? valorCrudo : "";
+    }
+
+    get totalPaginas() {
+        return Math.max(1, Math.ceil(this._datos.length / this._porPagina));
+    }
+
+    get datosPaginaActual() {
+        const inicio = this._paginaActual * this._porPagina;
+        return this._datos.slice(inicio, inicio + this._porPagina);
+    }
+
+    irAPagina(numero) {
+        if (numero < 0 || numero >= this.totalPaginas) return;
+        this._paginaActual = numero;
+        this.render();
     }
 
     render() {
-        const hayDatos = this._datos.length > 0;
+        const datosPagina = this.datosPaginaActual;
+        const hayDatos = datosPagina.length > 0;
 
         this.shadowRoot.innerHTML = `
             <style>
@@ -98,6 +117,38 @@ class TablaGenerica extends HTMLElement {
                     color: rgba(255, 255, 255, .6);
                     cursor: default;
                 }
+        
+                .paginacion {
+                    display: flex;
+                    justify-content: center;
+                    align-items: center;
+                    gap: 1rem;
+                    padding: 1rem 0 .25rem;
+                    font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+                    color: white;
+                    font-size: .85rem;
+                }
+
+                .paginacion button {
+                    background: rgba(1, 49, 104, 1);
+                    border: 1px solid rgba(255,255,255,.2);
+                    color: white;
+                    width: 2.2rem;
+                    height: 2.2rem;
+                    border-radius: 6px;
+                    cursor: pointer;
+                    font-size: 1rem;
+                    transition: .2s;
+                }
+
+                .paginacion button:hover:not(:disabled) {
+                    background: rgba(1, 49, 104, .5);
+                }
+
+                .paginacion button:disabled {
+                    opacity: .35;
+                    cursor: default;
+                }
             </style>
 
             <table>
@@ -108,7 +159,7 @@ class TablaGenerica extends HTMLElement {
                 </thead>
                 <tbody>
                     ${hayDatos
-                        ? this._datos.map((fila, index) => `
+                        ? datosPagina.map((fila, index) => `
                             <tr data-index="${index}">
                                 ${this._columnas.map(col => `<td>${this.formatearCelda(fila, col)}</td>`).join("")}
                             </tr>
@@ -117,6 +168,14 @@ class TablaGenerica extends HTMLElement {
                     }
                 </tbody>
             </table>
+
+            ${this._datos.length > this._porPagina ? `
+                <div class="paginacion">
+                    <button class="btn-anterior" ${this._paginaActual === 0 ? "disabled" : ""}>&larr;</button>
+                    <span>Página ${this._paginaActual + 1} de ${this.totalPaginas}</span>
+                    <button class="btn-siguiente" ${this._paginaActual >= this.totalPaginas - 1 ? "disabled" : ""}>&rarr;</button>
+                </div>
+            ` : ""}
         `;
 
         this.setupListeners();
@@ -127,11 +186,19 @@ class TablaGenerica extends HTMLElement {
             fila.addEventListener("click", () => {
                 const index = Number(fila.dataset.index);
                 this.dispatchEvent(new CustomEvent("fila-clickeada", {
-                    detail: this._datos[index],
+                    detail: this.datosPaginaActual[index],
                     bubbles: true,
                     composed: true
                 }));
             });
+        });
+
+        this.shadowRoot.querySelector(".btn-anterior")?.addEventListener("click", () => {
+            this.irAPagina(this._paginaActual - 1);
+        });
+
+        this.shadowRoot.querySelector(".btn-siguiente")?.addEventListener("click", () => {
+            this.irAPagina(this._paginaActual + 1);
         });
     }
 }

@@ -112,40 +112,79 @@ class ListadoProductos extends HTMLElement {
     }
 
     actualizarTabla() {
-        const tabla = this.shadowRoot.querySelector("tabla-generica");
-        tabla.columnas = [
-            { 
-                clave: "nombre", 
-                titulo: "Producto", 
-                formato: (valor, fila) => 
-                    `${valor} - ${fila.contenido} ${fila.unidadMedida.abreviatura}`
-            },
-            { clave: "categoriaProducto.nombre", titulo: "Categoría" },
-            { clave: "marcaProducto.nombre", titulo: "Marca" },
-            { clave: "stock", titulo: "Stock"
-            },
-            {
-                clave: "stock",
-                titulo: "Estado stock",
-                formato: (valor, fila) => {
-                    const estado = this.estadoStockDe(fila);
-                    const etiquetas = {
-                        disponible: "Disponible",
-                        stock_bajo: "Stock bajo",
-                        sin_stock: "Sin stock"
-                    };
-                    
-                    return etiquetas[estado];
-                }
-            },
-            {
-                clave: "precioActual",
-                titulo: "Precio",
-                formato: valor => `$${Number(valor).toLocaleString("es-AR")}`
+    const tabla = this.shadowRoot.querySelector("tabla-generica");
+
+    const coloresEstado = {
+        disponible: "#254D7B",
+        stock_bajo: "#E28C15",
+        sin_stock: "#FF1500"
+    };
+
+    const coloresCategoria = {
+        "Químico": "#00690C",
+        "Repuesto": "#9F6C00",
+        "Accesorios de Instalación": "#A22EA0"
+    };
+
+    tabla.columnas = [
+        {
+            clave: "nombre",
+            titulo: "Producto",
+            formato: (valor, fila) =>
+                `${valor} - ${fila.contenido} ${fila.unidadMedida.abreviatura}`
+        },
+        {
+            clave: "categoriaProducto.nombre",
+            titulo: "Categoría",
+            formato: (valor) => {
+                const color = coloresCategoria[valor] || "#888888";
+                return `<span style="background:${color}22; color:${color}; padding:.25rem .7rem; border-radius:20px; font-size:.9rem; font-weight:600">${valor}</span>`;
             }
-        ];
-        tabla.datos = this.obtenerProductosFiltrados();
-    }
+        },
+        { clave: "marcaProducto.nombre", titulo: "Marca" },
+        {
+            clave: "stock",
+            titulo: "Stock",
+            formato: (valor, fila) => {
+                const estado = this.estadoStockDe(fila);
+                const color = coloresEstado[estado];
+
+                const referencia = fila.umbralStock > 0 ? fila.umbralStock * 4 : 50;
+                const porcentaje = Math.min(100, Math.round((valor / referencia) * 100));
+
+                return `
+                    <div style="display:flex; flex-direction:column; gap:.25rem; min-width:110px">
+                        <span style="color:${color}; font-weight:600">${valor} / min ${fila.umbralStock}</span>
+                        <div style="background:rgba(255,255,255,.15); border-radius:10px; height:6px; overflow:hidden">
+                            <div style="background:${color}; width:${porcentaje}%; height:100%"></div>
+                        </div>
+                    </div>
+                `;
+            }
+        },
+        {
+            clave: "stock",
+            titulo: "Estado stock",
+            formato: (valor, fila) => {
+                const estado = this.estadoStockDe(fila);
+                const color = coloresEstado[estado];
+                const etiquetas = {
+                    disponible: "Disponible",
+                    stock_bajo: "Stock bajo",
+                    sin_stock: "Sin stock"
+                };
+                return `<span style="color:${color} font-weight:bold;">${etiquetas[estado]}</span>`;
+            }
+        },
+        {
+            clave: "precioActual",
+            titulo: "Precio",
+            formato: valor => `$${Number(valor).toLocaleString("es-AR")}`
+        }
+    ];
+
+    tabla.datos = this.obtenerProductosFiltrados();
+}
 
     setupListeners() {
         this.shadowRoot.querySelector("tabla-generica").addEventListener("fila-clickeada", (evento) => {
