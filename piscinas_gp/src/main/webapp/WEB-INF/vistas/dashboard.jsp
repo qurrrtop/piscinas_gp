@@ -13,7 +13,7 @@
         <script src="${pageContext.request.contextPath}/assets/js/wc/productos/ListadoProductos.js" type="module" defer></script>
         <script src="${pageContext.request.contextPath}/assets/js/wc/TarjetasResumen.js" type="module" defer></script>
         <script src="${pageContext.request.contextPath}/assets/js/wc/NotificacionToast.js" type="module" defer></script>
-        <script src="${pageContext.request.contextPath}/assets/js/wc/DetalleProducto.js" type="module" defer></script>
+        <script src="${pageContext.request.contextPath}/assets/js/wc/productos/DetalleProducto.js" type="module" defer></script>
         
         <title>PiscinasGP</title>
     </head>

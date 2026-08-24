@@ -1,4 +1,4 @@
-class ListadoProductos extends HTMLElement {
+class ListadoClientes extends HTMLElement {
 
     constructor() {
         super();
@@ -26,13 +26,13 @@ class ListadoProductos extends HTMLElement {
         this.actualizarTabla();
         this.actualizarTarjetas();
         
-        document.addEventListener("producto-guardado", async () => {
+        document.addEventListener("cliente-guardado", async () => {
             await this.cargarDatos();
             this.actualizarTabla();
             this.actualizarTarjetas();
         });
         
-        document.addEventListener("producto-actualizado", async () => {
+        document.addEventListener("cliente-actualizado", async () => {
             await this.cargarDatos();
             this.actualizarTabla();
             this.actualizarTarjetas();
@@ -384,5 +384,5 @@ class ListadoProductos extends HTMLElement {
     }
 }
 
-customElements.define("listado-productos", ListadoProductos);
+customElements.define("listado-productos", ListadoClientes);
 

@@ -36,6 +36,10 @@ public class DashboardControlador extends HttpServlet {
         
         // si está logueado, manejamos la ruta.
         String action = request.getPathInfo();
+        
+        System.out.println("URI: " + request.getRequestURI());
+        System.out.println("PathInfo: " + request.getPathInfo());
+        
         if (action == null || action.equals("/")) {
             action = "/dashboard";
         }
@@ -45,6 +49,7 @@ public class DashboardControlador extends HttpServlet {
             case "/menu" -> handleMenu(request, response);
             case "/principal" -> request.getRequestDispatcher("/WEB-INF/vistas/dashboard/principal/principal.jsp").forward(request, response);
             case "/gestion/productos" -> request.getRequestDispatcher("/WEB-INF/vistas/dashboard/gestion/productos/productos.jsp").forward(request, response);
+            case "/gestion/clientes" -> request.getRequestDispatcher("/WEB-INF/vistas/dashboard/gestion/clientes/clientes.jsp").forward(request, response);
             case "/acerca" -> request.getRequestDispatcher("/WEB-INF/vistas/dashboard/acerca.jsp").forward(request, response);
             default -> response.sendError(HttpServletResponse.SC_NOT_FOUND);
         }

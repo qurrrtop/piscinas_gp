@@ -179,42 +179,48 @@ public abstract class GenericoDAO< T extends Identifiable> {
         }
     }
         
-    public T updateObject( String fieldName, T entity ) throws PersistenceException {
+    public T updateObject(String fieldName, T entity) throws PersistenceException {
         String[] columns = getColumnsForUpdate();
-        
+    
+        // 1. Construir el SQL
         String sql = "UPDATE " + getTableName() + 
-                     " SET " + String.join(", ", columns ) +
-                     " WHERE " + fieldName + " = ?";
+                    " SET " + String.join(", ", columns) +
+                    " WHERE " + fieldName + " = ?";
+    
+        // 2. Log para depuración
+        logger.debug("SQL UPDATE: {}", sql);
+        logger.debug("Entity ID a actualizar: {}", entity.getId());
+    
+        try (Connection conn = dbConn.getConnection();
+            PreparedStatement pstmt = conn.prepareStatement(sql)) {
         
-        try( Connection conn = dbConn.getConnection();
-                PreparedStatement pstmt = conn.prepareStatement( sql ) ) {
-            
+            // 3. Establecer los parámetros del SET (posiciones 1 a N)
             setUpdateParams(pstmt, entity);
-            
-            // Verificar que el último indice esperado este libre
-            ParameterMetaData meta = pstmt.getParameterMetaData();
-            int expectedParams = columns.length + 1;
-            if( meta.getParameterCount() != expectedParams ) {
-                throw new PersistenceException(
-                    "SetUpdateParams " + meta.getParameterCount() + 
-                    " params, se esperaban " + (expectedParams + 1)
-                );
-            }
-            pstmt.setLong( getColumnsForUpdate().length + 1, entity.getId() );
-            
-            int affectedRow = pstmt.executeUpdate();
-            
-            if( affectedRow > 0 ) {
-                logger.info("Se modifico correctamente el regitro en la tabla {}, y con el ID", getTableName(), entity.getId() );
+        
+            // 4. Establecer el ID en la última posición (N + 1)
+            int idIndex = columns.length + 1;
+            pstmt.setLong(idIndex, entity.getId());
+        
+            logger.debug("Parámetros: {} para SET, ID en posición {}", columns.length, idIndex);
+        
+            // 5. Ejecutar la actualización
+            int affectedRows = pstmt.executeUpdate();
+        
+            // 6. Verificar resultado
+            if (affectedRows > 0) {
+                logger.info("✅ Registro actualizado en tabla {}, ID: {}", getTableName(), entity.getId());
                 return entity;
             } else {
-                logger.warn("El registro de la tabla {}, no fue modificado", getTableName() );
+                logger.warn("⚠️ No se encontró registro para actualizar en tabla {}, ID: {}", getTableName(), entity.getId());
                 return null;
             }
-            
-        } catch( SQLException e ) {
-            logger.error("Error el registro de la tabla {}, con id {} no pudo ser modificado" + getTableName(), entity.getId(), e);
-            throw new PersistenceException("Error al intentar modificar el registro con ID [ " + entity.getId() + " ], en la tabla [ " + getTableName() + " ] ", e);
+        
+        } catch (SQLException e) {
+            logger.error("❌ Error al actualizar en tabla {}, ID: {}", getTableName(), entity.getId(), e);
+            throw new PersistenceException(
+                String.format("Error al actualizar registro ID %d en tabla %s: %s", 
+                    entity.getId(), getTableName(), e.getMessage()),e
+            );
         }
     }
     

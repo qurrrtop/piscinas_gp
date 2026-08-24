@@ -6,6 +6,64 @@ class FormularioProducto extends HTMLElement {
     constructor() {
         super();
         this.attachShadow({mode: "open"});
+        this._modo = 'crear'; // 'crear' o 'editar'
+        this._productoId = null;
+        this._productoData = null;
+    }
+
+    // Método para configurar el formulario en modo edición
+    setModoEdicion(producto) {
+        this._modo = 'editar';
+        this._productoId = producto.id;
+        this._productoData = producto;
+        
+        // Esperar a que el DOM esté listo para cargar los datos
+        if (this.shadowRoot.querySelector('form')) {
+            this.cargarDatosProducto();
+        }
+    }
+
+    // Método para cargar datos del producto en el formulario
+    cargarDatosProducto() {
+        if (!this._productoData) return;
+        
+        const p = this._productoData;
+        
+        // Cargar campos del formulario
+        const campos = {
+            '#nombreProducto': p.nombre,
+            '#stock': p.stock,
+            '#stockMin': p.umbralStock,
+            '#precio': p.precioActual,
+            '#contenido': p.contenido,
+            '#descripcion': p.descripcion || '',
+            '#categoria': p.categoriaProducto?.id,
+            '#marca': p.marcaProducto?.id,
+            '#uniMedida': p.unidadMedida?.id
+        };
+        
+        Object.entries(campos).forEach(([selector, valor]) => {
+            const input = this.shadowRoot.querySelector(selector);
+            if (input && valor !== undefined && valor !== null) {
+                input.value = valor;
+            }
+        });
+        
+        // Actualizar el título del formulario
+        const titulo = this.shadowRoot.querySelector('h3');
+        if (titulo) {
+            titulo.textContent = this._modo === 'editar' 
+                ? `EDITANDO: ${p.nombre}` 
+                : 'INFORMACIÓN DEL PRODUCTO';
+        }
+        
+        // Cambiar texto del botón
+        const btnSubmit = this.shadowRoot.querySelector('button[type="submit"]');
+        if (btnSubmit) {
+            btnSubmit.textContent = this._modo === 'editar' 
+                ? 'Actualizar producto' 
+                : 'Guardar producto';
+        }
     }
 
     async connectedCallback() {
@@ -14,6 +72,12 @@ class FormularioProducto extends HTMLElement {
         console.log("hola pasó render");
         await this.cargarSelects();
         console.log("hola ya cargó los select");
+        
+        // Si hay datos del producto, cargarlos después de que los selects estén listos
+        if (this._modo === 'editar' && this._productoData) {
+            this.cargarDatosProducto();
+        }
+        
         this.setupListeners();
         console.log("hola pasó setup");
     }
@@ -68,7 +132,13 @@ class FormularioProducto extends HTMLElement {
 
             const producto = this.obtenerDatosDelForm();
 
-            await this.registrarProducto(producto);
+            if (this._modo === 'editar') {
+                // Agregar ID para la actualización
+                producto.id = this._productoId;
+                await this.actualizarProducto(producto);
+            } else {
+                await this.registrarProducto(producto);
+            }
         });
         
         btnVolver.addEventListener("click", () => {
@@ -120,6 +190,46 @@ class FormularioProducto extends HTMLElement {
 
         } catch (error) {
             console.error("Error al cargar marcas/categorias/unidades:", error);
+        }
+    }
+    
+    // NUEVO MÉTODO PARA ACTUALIZAR
+    async actualizarProducto(producto) {
+        try {
+            const response = await fetch("productos", {
+                method: "PUT",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify(producto)
+            });
+        
+            const data = await response.json();
+        
+            if (!response.ok) {
+                throw new Error(data.error || "Error al actualizar el producto");
+            }
+        
+            document.dispatchEvent(new CustomEvent("mostrar-notificacion", {
+                detail: { mensaje: "Producto actualizado correctamente", tipo: "exito" }
+            }));
+
+            // Disparar evento de producto actualizado
+            this.dispatchEvent(new CustomEvent("producto-actualizado", {
+                detail: data,
+                bubbles: true,
+                composed: true
+            }));
+
+            this.dispatchEvent(new CustomEvent("cerrar-modal", {
+                bubbles: true,
+                composed: true
+            }));
+        
+        } catch (error) {
+            document.dispatchEvent(new CustomEvent("mostrar-notificacion", {
+                detail: { mensaje: error.message, tipo: "error" }
+            }));
         }
     }
     
@@ -220,14 +330,14 @@ class FormularioProducto extends HTMLElement {
     
     obtenerDatosDelForm() {
         const producto = {
-            stock: this.shadowRoot.querySelector("#stock").value,
-            stockMin: this.shadowRoot.querySelector("#stockMin").value,
-            precio: this.shadowRoot.querySelector("#precio").value,
+            stock: parseInt(this.shadowRoot.querySelector("#stock").value) || 0,
+            stockMin: parseInt(this.shadowRoot.querySelector("#stockMin").value) || 0,
+            precio: parseFloat(this.shadowRoot.querySelector("#precio").value) || 0,
             nombre: this.shadowRoot.querySelector("#nombreProducto").value,
-            categoriaId: this.shadowRoot.querySelector("#categoria").value,
-            marcaId: this.shadowRoot.querySelector("#marca").value,
-            uniMedidaId: this.shadowRoot.querySelector("#uniMedida").value,
-            contenido: this.shadowRoot.querySelector("#contenido").value,
+            categoriaId: parseInt(this.shadowRoot.querySelector("#categoria").value),
+            marcaId: parseInt(this.shadowRoot.querySelector("#marca").value),
+            uniMedidaId: parseInt(this.shadowRoot.querySelector("#uniMedida").value),
+            contenido: parseFloat(this.shadowRoot.querySelector("#contenido").value) || 0,
             descripcion: this.shadowRoot.querySelector("#descripcion").value
         };
         
@@ -351,29 +461,37 @@ class FormularioProducto extends HTMLElement {
                     color: white;
                 }
                 
-                .actions button:first-child{
-                    background:transparent;
-                    color:white;
-                    border:1px solid rgba(255,255,255,.25);
-                    padding:.6rem 1.6rem;
-                    border-radius:8px;
+                .actions button {
+                    color: white;
+                    border-radius: 8px;
                     cursor:pointer;
                     transition:.2s;
+                }
+                .actions button:first-child{
+                    background:transparent;
+                    border:1px solid rgba(255,255,255,.25);
+                    padding:.6rem 1.6rem;
                 }
         
                 .actions button:first-child:hover {
                     background:rgba(255,255,255,.08);
                 }
         
+                .actions button:first-child + button {
+                    background: rgba(31, 204, 10,.3);
+                    border:1px solid rgba(255,255,255,.25);
+                    padding:.6rem 1.6rem;
+                }
+        
+                .actions button:first-child + button:hover {
+                    background: rgba(31, 204, 10,.40);
+                }
+        
                 .actions button:last-child{
                     background:#37A4FF;
-                    color:white;
                     border:none;
                     padding:.6rem 1.8rem;
-                    border-radius:8px;
                     font-weight:600;
-                    cursor:pointer;
-                    transition:.2s;
                 }
         
                 .actions button:last-child:hover{
@@ -469,6 +587,7 @@ class FormularioProducto extends HTMLElement {
         
                 <div class="actions">
                     <button class="btn-volver" type="button">Volver</button>
+                    <button class="btn-importar" type="button">Importar</button>
                     <button type="submit">Guardar producto</button>
                 </div>
             </form>

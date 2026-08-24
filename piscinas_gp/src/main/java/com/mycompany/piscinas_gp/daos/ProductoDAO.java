@@ -222,8 +222,9 @@ public class ProductoDAO extends GenericoDAO<Producto> {
     }
 
     private void setProductoParams(PreparedStatement pstmt, Producto producto) throws PersistenceException {
-        validarRelaciones(producto);
-
+        // NO validar relaciones aquí, permitir nulos para UPDATE
+        // validarRelaciones(producto); // ← COMENTAR o ELIMINAR esta línea
+    
         try {
             pstmt.setString(1, producto.getNombre());
             pstmt.setString(2, producto.getDescripcion());
@@ -231,9 +232,26 @@ public class ProductoDAO extends GenericoDAO<Producto> {
             pstmt.setInt(4, producto.getUmbralStock());
             pstmt.setBigDecimal(5, producto.getPrecioActual());
             pstmt.setBigDecimal(6, producto.getContenido());
-            pstmt.setLong(7, producto.getUnidadMedida().getId());
-            pstmt.setLong(8, producto.getMarcaProducto().getId());
-            pstmt.setLong(9, producto.getCategoriaProducto().getId());
+        
+            // Manejar valores nulos para las relaciones
+            if (producto.getUnidadMedida() != null) {
+                pstmt.setLong(7, producto.getUnidadMedida().getId());
+            } else {
+                pstmt.setNull(7, java.sql.Types.BIGINT);
+            }
+        
+            if (producto.getMarcaProducto() != null) {
+                pstmt.setLong(8, producto.getMarcaProducto().getId());
+            } else {
+                pstmt.setNull(8, java.sql.Types.BIGINT);
+            }
+        
+            if (producto.getCategoriaProducto() != null) {
+                pstmt.setLong(9, producto.getCategoriaProducto().getId());
+            } else {
+                pstmt.setNull(9, java.sql.Types.BIGINT);
+            }
+        
         } catch (SQLException e) {
             throw new PersistenceException("Error al asignar los parametros del producto", e);
         }

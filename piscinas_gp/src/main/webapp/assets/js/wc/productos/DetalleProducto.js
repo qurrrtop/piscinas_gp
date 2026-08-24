@@ -8,8 +8,8 @@ class DetalleProducto extends HTMLElement {
 
     static COLORES_CATEGORIA = {
         "Químico": "#4ADE80",
-        "Repuesto": "#A855F7",
-        "Accesorios de Instalación": "#F97316"
+        "Repuesto": "#E39B00",
+        "Accesorios de Instalación": "#E83FE5"
     };
 
     set producto(valor) {
@@ -46,7 +46,7 @@ class DetalleProducto extends HTMLElement {
 
                 .badge-categoria {
                     align-self: flex-start;
-                    background: ${colorCategoria}22;
+                    background: ${colorCategoria}44;
                     color: ${colorCategoria};
                     padding: .3rem .9rem;
                     border-radius: 20px;

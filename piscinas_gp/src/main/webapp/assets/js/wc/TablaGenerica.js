@@ -114,7 +114,7 @@ class TablaGenerica extends HTMLElement {
                 .sin-datos {
                     text-align: center;
                     padding: 2rem;
-                    color: rgba(255, 255, 255, .6);
+                    color: black;
                     cursor: default;
                 }
         
