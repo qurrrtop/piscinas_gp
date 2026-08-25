@@ -11,6 +11,7 @@ import com.mycompany.piscinas_gp.modelos.Venta;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.sql.Connection;
 
 public class VentaDAO extends GenericoDAO<Venta> {
 
@@ -69,6 +70,27 @@ public class VentaDAO extends GenericoDAO<Venta> {
     public Venta buscarPorId(Long idVenta) throws PersistenceException {
         return findById(idVenta);
     }
+    
+    public int contarVentasPorCliente(Long clienteId) throws PersistenceException {
+        String sql = "SELECT COUNT(*) FROM ventas WHERE cliente_id = ?";
+
+        try (Connection conn = dbConn.getConnection();
+                PreparedStatement pstmt = conn.prepareStatement(sql)) {
+
+            pstmt.setLong(1, clienteId);
+
+            try (ResultSet rs = pstmt.executeQuery()) {
+                if (rs.next()) {
+                    return rs.getInt(1);
+                }
+            }
+
+        } catch (SQLException e) {
+            throw new PersistenceException("Error al contar las ventas del cliente " + clienteId, e);
+        }
+
+        return 0;
+    }
 
     public Venta crear(Venta venta) throws PersistenceException {
         return createObject(venta);
@@ -123,43 +145,43 @@ public class VentaDAO extends GenericoDAO<Venta> {
     }
     
   @Override
-protected Venta mapResultSet(ResultSet rs) throws PersistenceException {
-    try {
+    protected Venta mapResultSet(ResultSet rs) throws PersistenceException {
+        try {
 
-        ClienteDAO clienteDAO = new ClienteDAO(dbConn);
+            ClienteDAO clienteDAO = new ClienteDAO(dbConn);
 
-        Cliente cliente = clienteDAO.buscarPorId(rs.getLong("cliente_id"));
+            Cliente cliente = clienteDAO.buscarPorId(rs.getLong("cliente_id"));
 
-        EstadoVenta estadoVenta = new EstadoVenta(
-                rs.getLong("estado_venta_id"),
-                null
-        );
+            EstadoVenta estadoVenta = new EstadoVenta(
+                    rs.getLong("estado_venta_id"),
+                    null
+            );
 
-        MetodoPago metodoPago = new MetodoPago(
-                rs.getLong("metodo_pago_id"),
-                null,
-                null
-        );
+            MetodoPago metodoPago = new MetodoPago(
+                    rs.getLong("metodo_pago_id"),
+                    null,
+                    null
+            );
 
-        return new Venta(
-                rs.getLong("id"),
-                cliente,
-                estadoVenta,
-                rs.getDate("fecha").toLocalDate(),
-                metodoPago,
-                rs.getString("observacion"),
-                rs.getBigDecimal("total"),
-                rs.getDate("fecha_inicio").toLocalDate(),
-                rs.getDate("fecha_cierre") != null
-                        ? rs.getDate("fecha_cierre").toLocalDate()
-                        : null
-        );
+            return new Venta(
+                    rs.getLong("id"),
+                    cliente,
+                    estadoVenta,
+                    rs.getDate("fecha").toLocalDate(),
+                    metodoPago,
+                    rs.getString("observacion"),
+                    rs.getBigDecimal("total"),
+                    rs.getDate("fecha_inicio").toLocalDate(),
+                    rs.getDate("fecha_cierre") != null
+                            ? rs.getDate("fecha_cierre").toLocalDate()
+                            : null
+            );
 
-    } catch (SQLException e) {
-        throw new PersistenceException(
-                "Error al mapear la venta desde la base de datos", e);
+        } catch (SQLException e) {
+            throw new PersistenceException(
+                    "Error al mapear la venta desde la base de datos", e);
+        }
     }
-}
 
     private void setVentaParams(PreparedStatement pstmt, Venta venta) throws PersistenceException {
 

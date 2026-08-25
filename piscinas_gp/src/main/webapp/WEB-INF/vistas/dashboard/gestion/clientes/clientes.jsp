@@ -13,6 +13,7 @@
             botonTexto="+ Nuevo cliente"
         ></dashboard-header>
 
+            <listado-clientes></listado-clientes>
         <br><br><br><br><br><br>
     </div>
 </div>

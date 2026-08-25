@@ -3,21 +3,11 @@ class ListadoClientes extends HTMLElement {
     constructor() {
         super();
         this.attachShadow({ mode: "open" });
-        this._productos = [];
-        this._marcas = [];
-        this._categoriaSeleccionada = null;
-        this._marcaSeleccionada = "";
+        this._clientes = [];
         this._busqueda = "";
-        this._estadoStock = "";
-        this._orden = "nombre_asc";
+        this._tipoSeleccionado = "";
+        this._orden = "nombre_desc";
     }
-
-    // Etiqueta visible en la UI -> valor real guardado en la base
-    static CATEGORIAS_TABS = [
-        { etiqueta: "Químicos", valorReal: "Químico" },
-        { etiqueta: "Repuestos", valorReal: "Repuesto" },
-        { etiqueta: "Accesorios de instalación", valorReal: "Accesorios de Instalación" }
-    ];
 
     async connectedCallback() {
         this.renderShell();
@@ -31,182 +21,88 @@ class ListadoClientes extends HTMLElement {
             this.actualizarTabla();
             this.actualizarTarjetas();
         });
-        
-        document.addEventListener("cliente-actualizado", async () => {
-            await this.cargarDatos();
-            this.actualizarTabla();
-            this.actualizarTarjetas();
-        });
     }
-
+    
     async cargarDatos() {
         try {
-            const [productos, marcas] = await Promise.all([
-                fetch("productos").then(r => r.json()),
-                fetch("marcas").then(r => r.json())
-            ]);
-            this._productos = productos;
-            this._marcas = marcas;
-            this.poblarSelectMarcas();
+            this._clientes = await fetch("clientes").then(r => r.json());
         } catch (error) {
-            console.error("Error al cargar productos/marcas:", error);
+            console.error("Error al cargar clientes: ", error);
         }
+    }
+    
+    obtenerClientesFiltrados() {
+        const busqueda = this._busqueda.trim().toLowerCase();
+        
+        let resultado = this._clientes.filter(cliente => {
+           if (this._tipoSeleccionado && cliente.tipo !== this._tipoSeleccionado) {
+               return false;
+           }
+           
+           if (busqueda) {
+               const coincideNombre = cliente.nombreCompleto.toLowerCase().includes(busqueda);
+               const coincideCuitCuil = cliente.cuitCuil.toLowerCase().includes(busqueda);
+               const coincideEmail = (cliente.email || "").toLowerCase().includes(busqueda);
+               if (!coincideNombre && !coincideCuitCuil && !coincideEmail) return false;
+
+           }
+           return true;
+        });
+        
+         if (this._orden === "nombre_desc") {
+            resultado = resultado.sort((a, b) => b.nombreCompleto.localeCompare(a.nombreCompleto));
+        }
+
+        return resultado;
     }
     
     actualizarTarjetas() {
         const tarjetas = this.shadowRoot.querySelector("tarjetas-resumen");
 
-        const total = this._productos.length;
-        const quimicos = this._productos.filter(p => p.categoriaProducto.nombre === "Químico").length;
-        const repuestos = this._productos.filter(p => p.categoriaProducto.nombre === "Repuesto").length;
-        const accesorios = this._productos.filter(p => p.categoriaProducto.nombre === "Accesorios de Instalación").length;
-        const sinStock = this._productos.filter(p => this.estadoStockDe(p) === "sin_stock").length;
-        const stockBajo = this._productos.filter(p => this.estadoStockDe(p) === "stock_bajo").length;
+        const total = this._clientes.length;
+        const particulares = this._clientes.filter(c => c.tipo === "Particular").length;
+        const empresas = this._clientes.filter(c => c.tipo === "Empresa").length;
 
         tarjetas.tarjetas = [
-            { titulo: "Total productos", valor: total },
-            { titulo: "Químicos", valor: quimicos },
-            { titulo: "Repuestos", valor: repuestos },
-            { titulo: "Accesorios", valor: accesorios },
-            { titulo: "Sin stock", valor: sinStock },
-            { titulo: "Stock bajo", valor: stockBajo }
+            { titulo: "Total", valor: total },
+            { titulo: "Particulares", valor: particulares, subTitulo: "PERSONAS FÍSICAS" },
+            { titulo: "Empresas", valor: empresas, subTitulo: "PERSONAS JURÍDICAS" }
         ];
-    }
-
-    poblarSelectMarcas() {
-        const select = this.shadowRoot.querySelector("#filtroMarca");
-        this._marcas.forEach(marca => {
-            const option = document.createElement("option");
-            option.value = marca.nombre;
-            option.textContent = marca.nombre;
-            select.appendChild(option);
-        });
-    }
-
-    estadoStockDe(producto) {
-        if (producto.stock === 0) return "sin_stock";
-        if (producto.stock <= producto.umbralStock) return "stock_bajo";
-        return "disponible";
-    }
-
-    obtenerProductosFiltrados() {
-        const busqueda = this._busqueda.trim().toLowerCase();
-
-        let resultado = this._productos.filter(producto => {
-            if (this._categoriaSeleccionada && producto.categoriaProducto.nombre !== this._categoriaSeleccionada) {
-                return false;
-            }
-            if (this._marcaSeleccionada && producto.marcaProducto.nombre !== this._marcaSeleccionada) {
-                return false;
-            }
-            if (this._estadoStock && this.estadoStockDe(producto) !== this._estadoStock) {
-                return false;
-            }
-            if (busqueda) {
-                const coincideNombre = producto.nombre.toLowerCase().includes(busqueda);
-                const coincideMarca = producto.marcaProducto.nombre.toLowerCase().includes(busqueda);
-                if (!coincideNombre && !coincideMarca) return false;
-            }
-            return true;
-        });
-
-        if (this._orden === "nombre_asc") {
-            resultado = resultado.sort((a, b) => a.nombre.localeCompare(b.nombre));
-        }
-
-        return resultado;
     }
 
     actualizarTabla() {
         const tabla = this.shadowRoot.querySelector("tabla-generica");
 
-        const coloresEstado = {
-            disponible: "#254D7B",
-            stock_bajo: "#E28C15",
-            sin_stock: "#FF1500"
-        };
-
-        const coloresCategoria = {
-            "Químico": "#00690C",
-            "Repuesto": "#9F6C00",
-            "Accesorios de Instalación": "#A22EA0"
+        const coloresTipo = {
+            "Particular" : "#013168",
+            "Empresa" : "#DA4EC0"
         };
 
         tabla.columnas = [
+            { clave: "nombreCompleto", titulo: "Cliente" },
             {
-                clave: "nombre",
-                titulo: "Producto",
-                formato: (valor, fila) =>
-                    `${valor} - ${fila.contenido} ${fila.unidadMedida.abreviatura}`
-            },
-            {
-                clave: "categoriaProducto.nombre",
-                titulo: "Categoría",
+                clave: "tipo",
+                titulo: "Tipo",
                 formato: (valor) => {
-                    const color = coloresCategoria[valor] || "#888888";
+                    const color = coloresTipo[valor] || "#888888";
                     return `<span style="background:${color}22; color:${color}; padding:.25rem .7rem; border-radius:20px; font-size:.9rem; font-weight:600">${valor}</span>`;
                 }
             },
-            { clave: "marcaProducto.nombre", titulo: "Marca" },
+            { clave: "cuitCuil", titulo: "Cuit / Cuil" },
             {
-                clave: "stock",
-                titulo: "Stock",
-                formato: (valor, fila) => {
-                    const estado = this.estadoStockDe(fila);
-                    const color = coloresEstado[estado];
-
-                    const referencia = fila.umbralStock > 0 ? fila.umbralStock * 4 : 50;
-                    const porcentaje = Math.min(100, Math.round((valor / referencia) * 100));
-
-                    return `
-                        <div style="display:flex; flex-direction:column; gap:.25rem; min-width:110px">
-                            <span style="color:${color}; font-weight:600">${valor} / min ${fila.umbralStock}</span>
-                            <div style="background:rgba(255,255,255,.15); border-radius:10px; height:6px; overflow:hidden">
-                                <div style="background:${color}; width:${porcentaje}%; height:100%"></div>
-                            </div>
-                        </div>
-                    `;
-                }
+                clave: "telefono",
+                titulo: "Teléfono",
+                formato: (valor) =>  valor || "No registrado." 
             },
-            {
-                clave: "stock",
-                titulo: "Estado stock",
-                formato: (valor, fila) => {
-                    const estado = this.estadoStockDe(fila);
-                    const color = coloresEstado[estado];
-                    const etiquetas = {
-                        disponible: "Disponible",
-                        stock_bajo: "Stock bajo",
-                        sin_stock: "Sin stock"
-                    };
-                    return `<span style="color:${color} font-weight:bold;">${etiquetas[estado]}</span>`;
-                }
-            },
-            {
-                clave: "precioActual",
-                titulo: "Precio",
-                formato: valor => `$${Number(valor).toLocaleString("es-AR")}`
-            }
+            { clave: "cantidadVentas", titulo: "Ventas" }
         ];
 
-    tabla.datos = this.obtenerProductosFiltrados();
-}
+        tabla.datos = this.obtenerClientesFiltrados();
+    }
 
     setupListeners() {
         this.shadowRoot.querySelector("tabla-generica").addEventListener("fila-clickeada", (evento) => {
-            this.abrirDetalleProducto(evento.detail);
-        });
-        
-        this.shadowRoot.querySelectorAll(".tab-categoria").forEach(tab => {
-            tab.addEventListener("click", () => {
-                const valor = tab.dataset.valorReal;
-                this._categoriaSeleccionada = this._categoriaSeleccionada === valor ? null : valor;
-
-                this.shadowRoot.querySelectorAll(".tab-categoria").forEach(t => t.classList.remove("activo"));
-                if (this._categoriaSeleccionada) tab.classList.add("activo");
-
-                this.actualizarTabla();
-            });
+            this.abrirDetalleCliente(evento.detail);
         });
 
         this.shadowRoot.querySelector("#filtroBusqueda").addEventListener("input", (e) => {
@@ -214,15 +110,11 @@ class ListadoClientes extends HTMLElement {
             this.actualizarTabla();
         });
 
-        this.shadowRoot.querySelector("#filtroMarca").addEventListener("change", (e) => {
-            this._marcaSeleccionada = e.target.value;
+        this.shadowRoot.querySelector("#filtroTipo").addEventListener("change", (e) => {
+            this._tipoSeleccionado = e.target.value;
             this.actualizarTabla();
         });
 
-        this.shadowRoot.querySelector("#filtroStock").addEventListener("change", (e) => {
-            this._estadoStock = e.target.value;
-            this.actualizarTabla();
-        });
 
         this.shadowRoot.querySelector("#filtroOrden").addEventListener("change", (e) => {
             this._orden = e.target.value;
@@ -257,21 +149,20 @@ class ListadoClientes extends HTMLElement {
         document.body.appendChild(modal);
     }
 
-    // Modificar el método abrirDetalleProducto para que use la edición
-    abrirDetalleProducto(producto) {
+    abrirDetalleCliente(cliente) {
         const modal = document.createElement("modal-component");
-        modal.setAttribute("titulo", producto.nombre);
-        modal.setAttribute("subTitulo", "PRODUCTO");
+        modal.setAttribute("titulo", cliente.nombreCompleto);
+        modal.setAttribute("subTitulo", "CLIENTE");
     
-        const detalle = document.createElement("detalle-producto");
-        detalle.producto = producto;
+        const detalle = document.createElement("detalle-cliente");
+        detalle.cliente = cliente;
     
         // Escuchar evento de edición desde el detalle
-        detalle.addEventListener("editar-producto", (event) => {
+        detalle.addEventListener("editar-cliente", (event) => {
             // Cerrar modal actual
             modal.remove();
             // Abrir formulario de edición
-            this.abrirEdicionProducto(event.detail);
+            this.abrirEdicionCliente(event.detail);
         });
     
         modal.appendChild(detalle);
@@ -285,7 +176,7 @@ class ListadoClientes extends HTMLElement {
                     display: block;
                     margin-top: 30px;
                 }
-            
+
                 .contenedor {
                     display: flex;
                     flex-direction: column;
@@ -294,34 +185,9 @@ class ListadoClientes extends HTMLElement {
                     color: white;
                 }
 
-                .tabs-categorias {
-                    display: flex;
-                    gap: .75rem;
-                }
-
-                .tab-categoria {
-                    padding: .6rem 1.4rem;
-                    border: 1px solid rgba(255,255,255,.4);
-                    background: rgba(1, 49, 104, 1);
-                    color: white;
-                    cursor: pointer;
-                    font-size: .9rem;
-                    transition: .2s;
-                    border-radius: 30px;
-                }
-
-                .tab-categoria:hover {
-                    background: rgba(1, 49, 104, 0.5);
-                }
-
-                .tab-categoria.activo {
-                    background: rgba(9, 77, 154, 1);
-                    font-weight: 600;
-                }
-
                 .card-filtros {
                     display: grid;
-                    grid-template-columns: 2fr 1fr 1fr 1fr;
+                    grid-template-columns: 2fr 1fr 1fr;
                     gap: 1rem;
                     padding: 1rem 1.25rem;
                     border-radius: 10px;
@@ -352,29 +218,18 @@ class ListadoClientes extends HTMLElement {
 
             <div class="contenedor">
                 <tarjetas-resumen></tarjetas-resumen>
-            
-                <div class="tabs-categorias">
-                    ${ListadoProductos.CATEGORIAS_TABS.map(cat => `
-                        <button class="tab-categoria" data-valor-real="${cat.valorReal}">${cat.etiqueta}</button>
-                    `).join("")}
-                </div>
 
                 <div class="card-filtros">
-                    <input type="text" id="filtroBusqueda" placeholder="Buscar por nombre o marca...">
+                    <input type="text" id="filtroBusqueda" placeholder="Buscar por nombre, cuit/cuil o email...">
 
-                    <select id="filtroMarca">
-                        <option value="">Todas las marcas</option>
-                    </select>
-
-                    <select id="filtroStock">
-                        <option value="">Todos los estados</option>
-                        <option value="disponible">Disponible</option>
-                        <option value="stock_bajo">Stock bajo</option>
-                        <option value="sin_stock">Sin stock</option>
+                    <select id="filtroTipo">
+                        <option value="">Todos los tipos</option>
+                        <option value="Particular">Particular</option>
+                        <option value="Empresa">Empresa</option>
                     </select>
 
                     <select id="filtroOrden">
-                        <option value="nombre_asc">Nombre: A-Z</option>
+                        <option value="nombre_desc">Nombre: Z-A</option>
                     </select>
                 </div>
 
@@ -384,5 +239,5 @@ class ListadoClientes extends HTMLElement {
     }
 }
 
-customElements.define("listado-productos", ListadoClientes);
+customElements.define("listado-clientes", ListadoClientes);
 
