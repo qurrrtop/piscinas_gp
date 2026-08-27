@@ -79,12 +79,16 @@ public abstract class Cliente implements Identifiable{
     }
 
     public void setCiudad(String ciudad) {
-        SetValidator.validar(ciudad, StringFieldType.CIUDAD);
+        if(ciudad == null) {
+            throw new IllegalArgumentException("La marca del producto no puede estar vacio");
+        }
         this.ciudad = ciudad;
     }
 
     public void setProvincia(String provincia) {
-        SetValidator.validar(provincia, StringFieldType.PROVINCIA);
+        if(provincia == null) {
+            throw new IllegalArgumentException("La marca del producto no puede estar vacio");
+        }
         this.provincia = provincia;
     }
 

@@ -24,8 +24,14 @@ export default class SetValidator {
         }
     }
     
+    
+    
     static validateString( value, rule ) {
         if( value == null || value.trim() === "" ) {
+            
+            if (rule.required === false) {
+                return null;
+            }
             return "Campo vacio";
         }
         
@@ -57,6 +63,76 @@ export default class SetValidator {
             return "Formato invalido";
         }
         
+         // Validaciones específicas de cuil o cuit       
+        if (rule.validation === "cuil" || rule.validation === "cuit") {
+            return this.validateCuilCuit(trimmed, rule.validation);
+        }
+        
+        // Validaciones específicas de telefono       
+        if (rule.validation === "telefono") {
+            return this.validateTelefono(trimmed);
+        }
+        
+        return null;
+    }
+    
+    static validateCuilCuit(value, validation) {
+        const prefijo = value.substring(0, 2);
+
+        if (validation === "cuil") {
+            const prefijosValidos = ["20", "23", "24", "27"];
+
+            if (!prefijosValidos.includes(prefijo)) {
+                return "El CUIL no tiene un prefijo válido";
+            }
+        }
+
+        if (validation === "cuit") {
+            const prefijosValidos = ["20", "23", "24", "27", "30", "33", "34"];
+
+            if (!prefijosValidos.includes(prefijo)) {
+                return "El CUIT no tiene un prefijo válido";
+            }
+        }
+
+        const multiplicadores = [5, 4, 3, 2, 7, 6, 5, 4, 3, 2];
+
+        let suma = 0;
+
+        for (let i = 0; i < 10; i++) {
+            suma += Number(value[i]) * multiplicadores[i];
+        }
+
+        const resto = suma % 11;
+
+        let digitoVerificador;
+
+        if (resto === 0) {
+            digitoVerificador = 0;
+        } else if (resto === 1) {
+            digitoVerificador = 9;
+        } else {
+            digitoVerificador = 11 - resto;
+        }
+
+        if (Number(value[10]) !== digitoVerificador) {
+            return "El CUIL/CUIT no es válido";
+        }
+
+        return null;
+    }
+    
+    static validateTelefono(value) {
+        const soloNumeros = value.replace(/\D/g, "");
+
+        if (soloNumeros.length < 8) {
+            return "El teléfono debe tener al menos 8 dígitos";
+        }
+
+        if (soloNumeros.length > 15) {
+            return "El teléfono no puede tener más de 15 dígitos";
+        }
+
         return null;
     }
     

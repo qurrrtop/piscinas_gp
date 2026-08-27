@@ -1,17 +1,31 @@
 export default class Rules {
         
     static provisions = {
-        NAME: {
+        NOMBRE: {
             type: "string",
             min: 3,
             max: 80,
             regex: /^[A-Za-zÁÉÍÓÚáéíóúÑñ\s'-]+$/
         },
-        LAST_NAME: {
+        APELLIDO: {
             type: "string",
             min: 3,
             max: 50,
             regex: /^[A-Za-zÁÉÍÓÚáéíóúÑñ\s'-]+$/
+        },
+        CUIL: {
+            validation: "cuil",
+            type: "string",
+            min: 11,
+            max: 11,
+            regex: /^[0-9]{11}$/
+        },
+        CUIT: {
+            validation: "cuit",
+            type: "string",
+            min: 11,
+            max: 11,
+            regex: /^[0-9]{11}$/
         },
         DNI: {
             type: "string",
@@ -21,9 +35,42 @@ export default class Rules {
         },
         EMAIL: {
             type: "string",
-            min: 10,
-            max: 30,
-            regex: /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/
+            min: 3,
+            max: 80,
+            regex: /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/,
+            required: false
+        },
+        TELEFONO: {
+            validation: "telefono",
+            type: "string",
+            min: 8,
+            max: 15,
+            regex: /^[0-9+\-\s()]+$/,
+            required: false
+        },
+        CALLE_Y_NUMERO: {
+            validation: "calleYNumero",
+            type: "string",
+            min: 3,
+            max: 60,
+            required: false
+        },
+        CIUDAD: {
+            validation: "ciudad",
+            type: "list",
+            required: false
+        },
+        PROVINCIA: {
+            validation: "provincia",
+            type: "list",
+            required: false
+        },
+        OBSERVACIONES: {
+            validation: "observaciones",
+            type: "string",
+            min: 0,
+            max: 500,
+            required: false
         },
         BIRTHDAY: {
             type: "date",

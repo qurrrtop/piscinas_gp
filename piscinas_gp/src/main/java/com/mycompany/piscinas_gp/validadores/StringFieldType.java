@@ -9,9 +9,12 @@ public enum StringFieldType implements FieldType< String > {
     EMAIL("email", 3, 80, "^[_a-z0-9-]+(\\\\.[_a-z0-9-]+)*@[a-z0-9-]+(\\\\.[a-z0-9-]+)*(\\\\.[a-z]{2,4})$"),
     TELEFONO("telefono", 8, 15, "^[0-9+]+$"),
     CALLE_Y_NUMERO("calle y numero", 3, 60, "^[A-Za-zÁÉÍÓÚáéíóúÑñ\\s'.-]+$"),
-    CIUDAD("ciudad", 3, 60, "^[A-Za-zÁÉÍÓÚáéíóúÑñ\\s'.-]+$"),
-    PROVINCIA("provincia", 3, 60, "^[A-Za-zÁÉÍÓÚáéíóúÑñ\\s'.-]+$"),
     OBSERVACIONES("observaciones", 0, 250, "^[a-zA-ZÀ-ÿ0-9\\s:º°',.-]*$"),
+    
+    // estos serán select's
+    
+    //CIUDAD("ciudad", 3, 60, "^[A-Za-zÁÉÍÓÚáéíóúÑñ\\s'.-]+$"),
+    //PROVINCIA("provincia", 3, 60, "^[A-Za-zÁÉÍÓÚáéíóúÑñ\\s'.-]+$"),
     
     //clienteParticular
     NOMBRE("nombre", 3, 80, "^[A-Za-zÁÉÍÓÚáéíóúÑñ\\s'-]+$"),
