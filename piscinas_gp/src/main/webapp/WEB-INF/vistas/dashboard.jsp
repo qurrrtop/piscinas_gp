@@ -15,6 +15,7 @@
         <script src="${pageContext.request.contextPath}/assets/js/wc/NotificacionToast.js" type="module" defer></script>
         <script src="${pageContext.request.contextPath}/assets/js/wc/productos/DetalleProducto.js" type="module" defer></script>
         <script src="${pageContext.request.contextPath}/assets/js/wc/clientes/ListadoClientes.js" type="module" defer></script>
+        <script src="${pageContext.request.contextPath}/assets/js/wc/clientes/DetalleCliente.js" type="module" defer></script>
         
         <title>PiscinasGP</title>
     </head>

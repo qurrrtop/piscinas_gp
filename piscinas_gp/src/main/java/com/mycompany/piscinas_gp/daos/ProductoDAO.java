@@ -7,6 +7,7 @@ import com.mycompany.piscinas_gp.modelos.CategoriaProducto;
 import com.mycompany.piscinas_gp.modelos.MarcaProducto;
 import com.mycompany.piscinas_gp.modelos.Producto;
 import com.mycompany.piscinas_gp.modelos.UnidadMedida;
+import java.math.BigDecimal;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -146,6 +147,36 @@ public class ProductoDAO extends GenericoDAO<Producto> {
         }
     }
 
+    // metodo que verifica si no existe otro producto igual (nombre + marca + unidadMedida + contenido)
+    
+    public boolean existeProductoDuplicado(String nombre, Long marcaId, BigDecimal contenido, Long unidadMedidaId, Long idExcluir) throws PersistenceException {
+        String sql = "SELECT COUNT(*) FROM productos WHERE nombre = ? AND marca_producto_id = ? AND contenido = ? AND unidad_medida_id = ?"
+                + (idExcluir != null ? " AND id != ?" : "");
+
+        try (Connection conn = dbConn.getConnection();
+                PreparedStatement pstmt = conn.prepareStatement(sql)) {
+
+            pstmt.setString(1, nombre);
+            pstmt.setLong(2, marcaId);
+            pstmt.setBigDecimal(3, contenido);
+            pstmt.setLong(4, unidadMedidaId);
+            if (idExcluir != null) {
+                pstmt.setLong(5, idExcluir);
+            }
+
+            try (ResultSet rs = pstmt.executeQuery()) {
+                if (rs.next()) {
+                    return rs.getInt(1) > 0;
+                }
+            }
+
+        } catch (SQLException e) {
+            throw new PersistenceException("Error al verificar si el producto ya existe", e);
+        }
+
+        return false;
+    }
+    
     @Override
     protected String getTableName() {
         return TABLE_NAME;
@@ -222,8 +253,7 @@ public class ProductoDAO extends GenericoDAO<Producto> {
     }
 
     private void setProductoParams(PreparedStatement pstmt, Producto producto) throws PersistenceException {
-        // NO validar relaciones aquí, permitir nulos para UPDATE
-        // validarRelaciones(producto); // ← COMENTAR o ELIMINAR esta línea
+        validarRelaciones(producto); // ← COMENTAR o ELIMINAR esta línea
     
         try {
             pstmt.setString(1, producto.getNombre());

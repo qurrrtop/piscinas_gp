@@ -64,7 +64,7 @@ class ListadoClientes extends HTMLElement {
         const empresas = this._clientes.filter(c => c.tipo === "Empresa").length;
 
         tarjetas.tarjetas = [
-            { titulo: "Total", valor: total },
+            { titulo: "Total clientes registrados", valor: total },
             { titulo: "Particulares", valor: particulares, subTitulo: "PERSONAS FÍSICAS" },
             { titulo: "Empresas", valor: empresas, subTitulo: "PERSONAS JURÍDICAS" }
         ];
@@ -149,24 +149,21 @@ class ListadoClientes extends HTMLElement {
         document.body.appendChild(modal);
     }
 
-    abrirDetalleCliente(cliente) {
+    async abrirDetalleCliente(clienteResumen) {
         const modal = document.createElement("modal-component");
-        modal.setAttribute("titulo", cliente.nombreCompleto);
+        modal.setAttribute("titulo", clienteResumen.nombreCompleto);
         modal.setAttribute("subTitulo", "CLIENTE");
-    
+
         const detalle = document.createElement("detalle-cliente");
-        detalle.cliente = cliente;
-    
-        // Escuchar evento de edición desde el detalle
-        detalle.addEventListener("editar-cliente", (event) => {
-            // Cerrar modal actual
-            modal.remove();
-            // Abrir formulario de edición
-            this.abrirEdicionCliente(event.detail);
-        });
-    
         modal.appendChild(detalle);
         document.body.appendChild(modal);
+
+        try {
+            const clienteCompleto = await fetch(`clientes/${clienteResumen.id}`).then(r => r.json());
+            detalle.cliente = clienteCompleto;
+        } catch (error) {
+            console.error("Error al cargar el detalle del cliente:", error);
+        }
     }
 
     renderShell() {

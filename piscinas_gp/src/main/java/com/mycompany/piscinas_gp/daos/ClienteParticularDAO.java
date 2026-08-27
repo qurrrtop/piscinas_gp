@@ -28,6 +28,62 @@ public class ClienteParticularDAO extends GenericoDAO<ClienteParticular> {
     public ClienteParticularDAO(DbConnection dbConn) {
         super(dbConn);
     }
+    
+    // MÉTODO CREAR. PARA INSERTAR EN LA TABLA  "clientes" y "clientes_particulares"
+    // asegurando que las dos inserciones se realicen juntas o ninguna.
+    
+    public ClienteParticular crear(ClienteParticular cliente) throws PersistenceException {
+        String sqlCliente = "INSERT INTO clientes (email, telefono, calle_numero, ciudad, provincia, codigo_postal, observaciones) "
+                + "VALUES (?, ?, ?, ?, ?, ?, ?)";
+        String sqlParticular = "INSERT INTO clientes_particulares (cliente_id, nombre, apellido, cuil) VALUES (?, ?, ?, ?)";
+
+        try (Connection conn = dbConn.getConnection()) {
+            conn.setAutoCommit(false);
+
+            try {
+                Long idGenerado;
+
+                try (PreparedStatement pstmtCliente = conn.prepareStatement(sqlCliente, java.sql.Statement.RETURN_GENERATED_KEYS)) {
+                    pstmtCliente.setString(1, cliente.getEmail());
+                    pstmtCliente.setString(2, cliente.getTelefono());
+                    pstmtCliente.setString(3, cliente.getCalleYnumero());
+                    pstmtCliente.setString(4, cliente.getCiudad());
+                    pstmtCliente.setString(5, cliente.getProvincia());
+                    pstmtCliente.setString(6, cliente.getCodigoPostal());
+                    pstmtCliente.setString(7, cliente.getObservaciones());
+                    pstmtCliente.executeUpdate();
+
+                    try (ResultSet generatedKey = pstmtCliente.getGeneratedKeys()) {
+                        if (!generatedKey.next()) {
+                            throw new PersistenceException("No se pudo generar el ID del cliente");
+                        }
+                        idGenerado = generatedKey.getLong(1);
+                    }
+                }
+
+                try (PreparedStatement pstmtParticular = conn.prepareStatement(sqlParticular)) {
+                    pstmtParticular.setLong(1, idGenerado);
+                    pstmtParticular.setString(2, cliente.getNombre());
+                    pstmtParticular.setString(3, cliente.getApellido());
+                    pstmtParticular.setString(4, cliente.getCuil());
+                    pstmtParticular.executeUpdate();
+                }
+
+                conn.commit();
+                cliente.setId(idGenerado);
+                return cliente;
+
+            } catch (SQLException e) {
+                conn.rollback();
+                throw new PersistenceException("Error al crear el cliente particular, se revirtieron los cambios", e);
+            } finally {
+                conn.setAutoCommit(true);
+            }
+
+        } catch (SQLException e) {
+            throw new PersistenceException("Error al conectar para crear el cliente particular", e);
+        }
+    }
 
     public List<ClienteParticular> buscarTodos() throws PersistenceException {
         List<ClienteParticular> resultado = new ArrayList<>();
