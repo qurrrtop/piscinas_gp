@@ -12,7 +12,7 @@ class DashboardHeader extends HTMLElement {
         this.descripcion = this.getAttribute("descripcion") || "";
         this.icono = this.getAttribute("icono") || "";
         this.botonTexto = this.getAttribute("botonTexto") || "";
-        
+        this.action = this.getAttribute("action") || "";
         this.basePath = this.getAttribute("base-path") || "";
         this.render();
     }
@@ -27,7 +27,7 @@ class DashboardHeader extends HTMLElement {
                 bubbles: true,
                 composed: true,
                 detail: {
-                    action: "nuevo-producto"
+                    action: this.action
                 }
             }));
         });

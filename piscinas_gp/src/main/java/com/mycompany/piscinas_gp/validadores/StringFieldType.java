@@ -13,7 +13,7 @@ public enum StringFieldType implements FieldType< String > {
     
     // estos serán select's
     
-    //CIUDAD("ciudad", 3, 60, "^[A-Za-zÁÉÍÓÚáéíóúÑñ\\s'.-]+$"),
+    CIUDAD("ciudad", 3, 60, "^[A-Za-zÁÉÍÓÚáéíóúÑñ\\s'.-]+$"),
     //PROVINCIA("provincia", 3, 60, "^[A-Za-zÁÉÍÓÚáéíóúÑñ\\s'.-]+$"),
     
     //clienteParticular
@@ -22,9 +22,9 @@ public enum StringFieldType implements FieldType< String > {
     CUIL("cuil", 11, 11, "^[0-9]+$"),
     
     //clienteEmpresa
-    RAZON_SOCIAL("razon social", 3, 100, "^[a-zA-ZÀ-ÿ0-9\\s:º°'.-]+$"),
+    RAZON_SOCIAL("razon social", 3, 150, "^[a-zA-ZÀ-ÿ0-9\\s:º°'.-]+$"),
     NOMBRE_FANTASIA("nombre de fantasia", 3, 100, "^[a-zA-ZÀ-ÿ0-9\\s:º°'.-]+$"),
-    RUBRO("rubro", 3, 80, "^[a-zA-ZÀ-ÿ0-9\\s:º°'.-]+$"),
+    RUBRO("rubro", 3, 100, "^[a-zA-ZÀ-ÿ0-9\\s:º°'.-]+$"),
     CUIT("cuit", 11, 11, "^[0-9]+$"),
 
     //venta

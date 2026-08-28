@@ -77,7 +77,18 @@ export default class SetValidator {
     }
     
     static validateCuilCuit(value, validation) {
-        const prefijo = value.substring(0, 2);
+        
+        if (value == null || value.trim() === "") {
+            return "Campo vacío";
+        }
+
+        const limpio = value.replace(/\D/g, "");
+
+        if (limpio.length !== 11) {
+            return "debe contener 11 dígitos";
+        }
+        
+        const prefijo = limpio.substring(0, 2);
 
         if (validation === "cuil") {
             const prefijosValidos = ["20", "23", "24", "27"];
@@ -100,7 +111,7 @@ export default class SetValidator {
         let suma = 0;
 
         for (let i = 0; i < 10; i++) {
-            suma += Number(value[i]) * multiplicadores[i];
+            suma += Number(limpio[i]) * multiplicadores[i];
         }
 
         const resto = suma % 11;
@@ -115,7 +126,7 @@ export default class SetValidator {
             digitoVerificador = 11 - resto;
         }
 
-        if (Number(value[10]) !== digitoVerificador) {
+        if (Number(limpio[10]) !== digitoVerificador) {
             return "El CUIL/CUIT no es válido";
         }
 

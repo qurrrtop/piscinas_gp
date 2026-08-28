@@ -9,6 +9,7 @@ com\mycompany\piscinas_gp\config\DbConnection.class
 com\mycompany\piscinas_gp\controladores\UnidadMedidaControlador.class
 com\mycompany\piscinas_gp\exceptions\AppException.class
 com\mycompany\piscinas_gp\servicios\ProductoServicio.class
+com\mycompany\piscinas_gp\dtos\ClienteDTO.class
 com\mycompany\piscinas_gp\modelos\ClienteParticular.class
 com\mycompany\piscinas_gp\resources\JakartaEE8Resource.class
 com\mycompany\piscinas_gp\modelos\Producto.class
@@ -32,7 +33,6 @@ com\mycompany\piscinas_gp\daos\UnidadMedidaDAO.class
 com\mycompany\piscinas_gp\modelos\MarcaProducto.class
 com\mycompany\piscinas_gp\validadores\LocalDateFieldType$4.class
 com\mycompany\piscinas_gp\validadores\LocalDateFieldType.class
-com\mycompany\piscinas_gp\daos\ClienteDAO.class
 com\mycompany\piscinas_gp\servicios\ClienteServicio.class
 com\mycompany\piscinas_gp\dtos\MenuItem.class
 com\mycompany\piscinas_gp\daos\MarcaProductoDAO.class

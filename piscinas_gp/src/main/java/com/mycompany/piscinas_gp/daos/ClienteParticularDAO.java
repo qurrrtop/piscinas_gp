@@ -21,7 +21,7 @@ public class ClienteParticularDAO extends GenericoDAO<ClienteParticular> {
     private static final String[] COLUMNS_FOR_UPDATE = { "nombre = ?", "apellido = ?", "cuil = ?" };
 
     private static final String SQL_JOIN =
-            "SELECT c.id, c.email, c.telefono, c.calle_numero, c.ciudad, c.provincia, c.codigo_postal, c.observaciones, "
+            "SELECT c.id, c.email, c.telefono, c.calle_numero, c.ciudad, c.observaciones, "
             + "cp.nombre, cp.apellido, cp.cuil "
             + "FROM clientes c JOIN clientes_particulares cp ON c.id = cp.cliente_id ";
 
@@ -33,8 +33,8 @@ public class ClienteParticularDAO extends GenericoDAO<ClienteParticular> {
     // asegurando que las dos inserciones se realicen juntas o ninguna.
     
     public ClienteParticular crear(ClienteParticular cliente) throws PersistenceException {
-        String sqlCliente = "INSERT INTO clientes (email, telefono, calle_numero, ciudad, provincia, codigo_postal, observaciones) "
-                + "VALUES (?, ?, ?, ?, ?, ?, ?)";
+        String sqlCliente = "INSERT INTO clientes (email, telefono, calle_numero, ciudad, observaciones) "
+                + "VALUES (?, ?, ?, ?, ?)";
         String sqlParticular = "INSERT INTO clientes_particulares (cliente_id, nombre, apellido, cuil) VALUES (?, ?, ?, ?)";
 
         try (Connection conn = dbConn.getConnection()) {
@@ -48,9 +48,7 @@ public class ClienteParticularDAO extends GenericoDAO<ClienteParticular> {
                     pstmtCliente.setString(2, cliente.getTelefono());
                     pstmtCliente.setString(3, cliente.getCalleYnumero());
                     pstmtCliente.setString(4, cliente.getCiudad());
-                    pstmtCliente.setString(5, cliente.getProvincia());
-                    pstmtCliente.setString(6, cliente.getCodigoPostal());
-                    pstmtCliente.setString(7, cliente.getObservaciones());
+                    pstmtCliente.setString(5, cliente.getObservaciones());
                     pstmtCliente.executeUpdate();
 
                     try (ResultSet generatedKey = pstmtCliente.getGeneratedKeys()) {
@@ -122,6 +120,47 @@ public class ClienteParticularDAO extends GenericoDAO<ClienteParticular> {
         return null;
     }
 
+    public ClienteParticular actualizar(ClienteParticular cliente) throws PersistenceException {
+    String sqlCliente = "UPDATE clientes SET email = ?, telefono = ?, calle_numero = ?, ciudad = ?, observaciones = ? WHERE id = ?";
+    String sqlParticular = "UPDATE clientes_particulares SET nombre = ?, apellido = ?, cuil = ? WHERE cliente_id = ?";
+
+    try (Connection conn = dbConn.getConnection()) {
+        conn.setAutoCommit(false);
+
+        try {
+            try (PreparedStatement pstmtCliente = conn.prepareStatement(sqlCliente)) {
+                pstmtCliente.setString(1, cliente.getEmail());
+                pstmtCliente.setString(2, cliente.getTelefono());
+                pstmtCliente.setString(3, cliente.getCalleYnumero());
+                pstmtCliente.setString(4, cliente.getCiudad());
+                pstmtCliente.setString(5, cliente.getObservaciones());
+                pstmtCliente.setLong(6, cliente.getId());
+                pstmtCliente.executeUpdate();
+            }
+
+            try (PreparedStatement pstmtParticular = conn.prepareStatement(sqlParticular)) {
+                pstmtParticular.setString(1, cliente.getNombre());
+                pstmtParticular.setString(2, cliente.getApellido());
+                pstmtParticular.setString(3, cliente.getCuil());
+                pstmtParticular.setLong(4, cliente.getId());
+                pstmtParticular.executeUpdate();
+            }
+
+            conn.commit();
+            return cliente;
+
+        } catch (SQLException e) {
+            conn.rollback();
+            throw new PersistenceException("Error al actualizar el cliente particular, se revirtieron los cambios", e);
+        } finally {
+            conn.setAutoCommit(true);
+        }
+
+    } catch (SQLException e) {
+        throw new PersistenceException("Error al conectar para actualizar el cliente particular", e);
+    }
+}
+    
     @Override
     protected String getTableName() {
         return TABLE_NAME;
@@ -174,8 +213,6 @@ public class ClienteParticularDAO extends GenericoDAO<ClienteParticular> {
                     rs.getString("telefono"),
                     rs.getString("calle_numero"),
                     rs.getString("ciudad"),
-                    rs.getString("provincia"),
-                    rs.getString("codigo_postal"),
                     rs.getString("observaciones")
             );
         } catch (SQLException e) {

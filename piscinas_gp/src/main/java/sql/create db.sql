@@ -136,3 +136,48 @@ INSERT INTO unidades_medida (nombre, abreviatura) VALUES
 ('Partes por millón', 'ppm'),
 ('Metros cúbicos por hora', 'm³/h'),
 ('Pulgadas', '"');
+
+-- 28/08
+
+-- ------ SI YA CREARON LA BASE DE DATOS EJECUTEN ESTAS SENTENCIAS -----
+-- ------ PARA ELIMINAR LAS COLUMNAS PROVINCIA Y CODPOSTAL -----
+-- ------ (NO SE USARÁN, POR ESO) ---------
+
+-- 1) eliminamos las columnas que no se usará
+
+ALTER TABLE clientes
+DROP COLUMN provincia,
+DROP COLUMN codigo_postal;
+
+-- 2) eliminamos el campo ciudad, para crear "localidad_id" en su lugar
+
+-- 2.1)
+
+ALTER TABLE clientes
+DROP COLUMN ciudad;
+
+-- 2.2)
+
+ALTER TABLE clientes
+ADD COLUMN localidad_id INT UNSIGNED NULL AFTER calle_numero;
+
+-- 2.3
+
+-- ----- NUEVA TABLA DE LOCALIDADES DE CORRIENTES -----
+CREATE TABLE localidades (
+    id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    nombre varchar(60) NOT NULL UNIQUE
+);
+
+-- 2.4
+
+ALTER TABLE clientes
+ADD CONSTRAINT fk_clientes_localidad FOREIGN KEY (localidad_id) REFERENCES localidades(id)
+ON UPDATE CASCADE ON DELETE SET NULL;
+
+-- 2.5 insertamos las localidades (ESTAS SON ALGUNAS NOMAS)
+
+INSERT INTO localidades (nombre) VALUES
+('Mercedes'), ('Felipe Yofre'), ('Mariano I. Loza'), ('Curuzú Cuatiá'), ('Perugorría'), 
+('Chavarría'), ('Paso de los Libres'), ('Bonpland'), ('Parada Pucheta'), ('Tapebicuá'), 
+('Monte Caseros'), ('Juan Pujol'), ('Colonia Libertad'), ('Sauce'), ('Mocoretá');

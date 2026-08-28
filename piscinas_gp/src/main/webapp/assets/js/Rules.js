@@ -1,38 +1,7 @@
 export default class Rules {
         
     static provisions = {
-        NOMBRE: {
-            type: "string",
-            min: 3,
-            max: 80,
-            regex: /^[A-Za-zÁÉÍÓÚáéíóúÑñ\s'-]+$/
-        },
-        APELLIDO: {
-            type: "string",
-            min: 3,
-            max: 50,
-            regex: /^[A-Za-zÁÉÍÓÚáéíóúÑñ\s'-]+$/
-        },
-        CUIL: {
-            validation: "cuil",
-            type: "string",
-            min: 11,
-            max: 11,
-            regex: /^[0-9]{11}$/
-        },
-        CUIT: {
-            validation: "cuit",
-            type: "string",
-            min: 11,
-            max: 11,
-            regex: /^[0-9]{11}$/
-        },
-        DNI: {
-            type: "string",
-            min: 7,
-            max: 8,
-            regex: /^[0-9]+$/
-        },
+        // ----- CLIENTE BASE -----
         EMAIL: {
             type: "string",
             min: 3,
@@ -69,8 +38,56 @@ export default class Rules {
             validation: "observaciones",
             type: "string",
             min: 0,
-            max: 500,
+            max: 250,
             required: false
+        },
+        // CLIENTE PARTICULAR
+        NOMBRE: {
+            type: "string",
+            min: 3,
+            max: 80,
+            regex: /^[A-Za-zÁÉÍÓÚáéíóúÑñ\s'-]+$/
+        },
+        APELLIDO: {
+            type: "string",
+            min: 3,
+            max: 80,
+            regex: /^[A-Za-zÁÉÍÓÚáéíóúÑñ\s'-]+$/
+        },
+        CUIL: {
+            validation: "cuil",
+            type: "string",
+        },
+        // ----- CLIENTE EMPRESA -----
+        RAZON_SOCIAL: {
+            type: "string",
+            min: 3,
+            max: 150,
+            regex: /^[A-Za-zÁÉÍÓÚáéíóúÑñ0-9\s.'&,()-]+$/,
+        },
+        NOMBRE_FANTASIA: {
+            type: "string",
+            min: 3,
+            max: 100,
+            regex: /^[A-Za-zÁÉÍÓÚáéíóúÑñ0-9\s.'&,()-]+$/,
+            required: false
+        },
+        RUBRO: {
+            type: "string",
+            min: 3,
+            max: 100,
+            regex: /^[A-Za-zÁÉÍÓÚáéíóúÑñ\s&'-]+$/,
+        },
+        CUIT: {
+            validation: "cuit",
+            type: "string",
+        },
+        // ----- OTROS DATOS -----
+        DNI: {
+            type: "string",
+            min: 7,
+            max: 8,
+            regex: /^[0-9]+$/
         },
         BIRTHDAY: {
             type: "date",

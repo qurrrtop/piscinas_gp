@@ -1,6 +1,5 @@
 package com.mycompany.piscinas_gp.modelos;
 import com.mycompany.piscinas_gp.utils.Identifiable;
-import com.mycompany.piscinas_gp.validadores.NumericFieldType;
 import com.mycompany.piscinas_gp.validadores.SetValidator;
 import com.mycompany.piscinas_gp.validadores.StringFieldType;
 
@@ -10,31 +9,25 @@ public abstract class Cliente implements Identifiable{
     private String telefono;
     private String calleYnumero;
     private String ciudad;
-    private String provincia;
-    private String codigoPostal;
     private String observaciones;
 
     public Cliente() {       
     }
 
-    public Cliente(String email, String telefono, String calleYnumero, String ciudad, String provincia, String codigoPostal, String observaciones) {
+    public Cliente(String email, String telefono, String calleYnumero, String ciudad, String observaciones) {
         setEmail(email);
         setTelefono (telefono);
         setCalleYnumero(calleYnumero);
         setCiudad(ciudad);
-        setProvincia(provincia);
-        setCodigoPostal(codigoPostal);
         setObservaciones(observaciones);
     }
 
-    public Cliente(Long idCliente, String email, String telefono, String calleYnumero, String ciudad, String provincia, String codigoPostal, String observaciones) {
+    public Cliente(Long idCliente, String email, String telefono, String calleYnumero, String ciudad, String observaciones) {
         this.idCliente = idCliente;
         this.email = email;
         this.telefono = telefono;
         this.calleYnumero = calleYnumero;
         this.ciudad = ciudad;
-        this.provincia = provincia;
-        this.codigoPostal = codigoPostal;
         this.observaciones = observaciones;
     }
 
@@ -45,8 +38,6 @@ public abstract class Cliente implements Identifiable{
     public String getTelefono() { return telefono; }
     public String getCalleYnumero() { return calleYnumero; }
     public String getCiudad() { return ciudad; }
-    public String getProvincia() { return provincia; }
-    public String getCodigoPostal() { return codigoPostal; }
     public String getObservaciones() { return observaciones; }
 
     
@@ -83,19 +74,6 @@ public abstract class Cliente implements Identifiable{
             throw new IllegalArgumentException("La marca del producto no puede estar vacio");
         }
         this.ciudad = ciudad;
-    }
-
-    public void setProvincia(String provincia) {
-        if(provincia == null) {
-            throw new IllegalArgumentException("La marca del producto no puede estar vacio");
-        }
-        this.provincia = provincia;
-    }
-
-    public void setCodigoPostal(String codigoPostal) {
-        SetValidator.validar(codigoPostal, NumericFieldType.CODIGO_POSTAL);
-        
-        this.codigoPostal = codigoPostal;
     }
 
     public void setObservaciones(String observaciones) {

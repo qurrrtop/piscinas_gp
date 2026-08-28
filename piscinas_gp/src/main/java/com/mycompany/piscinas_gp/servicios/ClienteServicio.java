@@ -3,8 +3,9 @@ package com.mycompany.piscinas_gp.servicios;
 import com.mycompany.piscinas_gp.daos.ClienteEmpresaDAO;
 import com.mycompany.piscinas_gp.daos.ClienteParticularDAO;
 import com.mycompany.piscinas_gp.daos.VentaDAO;
-import com.mycompany.piscinas_gp.dtos.ClienteListadoDTO;
+import com.mycompany.piscinas_gp.dtos.ClienteDTO;
 import com.mycompany.piscinas_gp.dtos.ClienteDetalleDTO;
+import com.mycompany.piscinas_gp.dtos.ClienteListadoDTO;
 import com.mycompany.piscinas_gp.exceptions.BusinessException;
 import com.mycompany.piscinas_gp.exceptions.PersistenceException;
 import com.mycompany.piscinas_gp.exceptions.ServiceException;
@@ -26,57 +27,6 @@ public class ClienteServicio {
         this.clienteParticularDAO = clienteParticularDAO;
         this.clienteEmpresaDAO = clienteEmpresaDAO;
         this.ventaDAO = ventaDAO;
-    }
-    
-    public ClienteDetalleDTO buscarClientePorId(Long id) throws ServiceException {
-        logger.debug("Buscando cliente con ID: {}", id);
-        try {
-            ClienteParticular particular = clienteParticularDAO.buscarPorId(id);
-            
-            if (particular != null) {
-                ClienteDetalleDTO dto = new ClienteDetalleDTO();
-                dto.setId(particular.getId());
-                dto.setTipo("Particular");
-                dto.setEmail(particular.getEmail());
-                dto.setTelefono(particular.getTelefono());
-                dto.setCalleYnumero(particular.getCalleYnumero());
-                dto.setCiudad(particular.getCiudad());
-                dto.setProvincia(particular.getProvincia());
-                dto.setCodigoPostal(particular.getCodigoPostal());
-                dto.setObservaciones(particular.getObservaciones());
-                dto.setNombre(particular.getNombre());
-                dto.setApellido(particular.getApellido());
-                dto.setCuil(particular.getCuil());
-                dto.setCantidadVentas(ventaDAO.contarVentasPorCliente(particular.getId()));
-                return dto;
-            }
-
-            ClienteEmpresa empresa = clienteEmpresaDAO.buscarPorId(id);
-            if (empresa != null) {
-                ClienteDetalleDTO dto = new ClienteDetalleDTO();
-                dto.setId(empresa.getId());
-                dto.setTipo("Empresa");
-                dto.setEmail(empresa.getEmail());
-                dto.setTelefono(empresa.getTelefono());
-                dto.setCalleYnumero(empresa.getCalleYnumero());
-                dto.setCiudad(empresa.getCiudad());
-                dto.setProvincia(empresa.getProvincia());
-                dto.setCodigoPostal(empresa.getCodigoPostal());
-                dto.setObservaciones(empresa.getObservaciones());
-                dto.setRazonSocial(empresa.getRazonSocial());
-                dto.setNombreFantasia(empresa.getNombreFantasia());
-                dto.setRubro(empresa.getRubro());
-                dto.setCuit(empresa.getCuit());
-                dto.setCantidadVentas(ventaDAO.contarVentasPorCliente(empresa.getId()));
-                return dto;
-            }
-
-            throw new BusinessException("No existe un cliente con ID " + id);
-
-        } catch (PersistenceException e) {
-            logger.error("Error al buscar el cliente con ID {}", id, e);
-            throw new ServiceException("Error al buscar el cliente", e);
-        }
     }
 
     public List<ClienteListadoDTO> listarClientes() throws ServiceException {
@@ -117,5 +67,155 @@ public class ClienteServicio {
             logger.error("Error al listar los clientes", e);
             throw new ServiceException("Error al listar los clientes", e);
         }
+    }
+
+    public ClienteDetalleDTO buscarClientePorId(Long id) throws ServiceException, BusinessException {
+        logger.debug("Buscando cliente con ID: {}", id);
+        try {
+            ClienteParticular particular = clienteParticularDAO.buscarPorId(id);
+            if (particular != null) {
+                return mapearADetalle(particular);
+            }
+
+            ClienteEmpresa empresa = clienteEmpresaDAO.buscarPorId(id);
+            if (empresa != null) {
+                return mapearADetalle(empresa);
+            }
+
+            throw new BusinessException("No existe un cliente con ID " + id);
+
+        } catch (PersistenceException e) {
+            logger.error("Error al buscar el cliente con ID {}", id, e);
+            throw new ServiceException("Error al buscar el cliente", e);
+        }
+    }
+
+    public ClienteDetalleDTO crearCliente(ClienteDTO dto) throws ServiceException, BusinessException {
+        logger.debug("Creando cliente de tipo {}", dto.getTipo());
+        try {
+            if ("Particular".equalsIgnoreCase(dto.getTipo())) {
+                ClienteParticular nuevo = new ClienteParticular(
+                        dto.getNombre(),
+                        dto.getApellido(),
+                        dto.getCuil(),
+                        dto.getEmail(),
+                        dto.getTelefono(),
+                        dto.getCalleYnumero(),
+                        dto.getCiudad(),
+                        dto.getObservaciones()
+                );
+                ClienteParticular creado = clienteParticularDAO.crear(nuevo);
+                logger.info("Cliente particular creado correctamente");
+                return mapearADetalle(creado);
+
+            } else if ("Empresa".equalsIgnoreCase(dto.getTipo())) {
+                ClienteEmpresa nuevo = new ClienteEmpresa(
+                        dto.getRazonSocial(),
+                        dto.getNombreFantasia(),
+                        dto.getRubro(),
+                        dto.getCuit(),
+                        dto.getEmail(),
+                        dto.getTelefono(),
+                        dto.getCalleYnumero(),
+                        dto.getCiudad(),
+                        dto.getObservaciones()
+                );
+                ClienteEmpresa creado = clienteEmpresaDAO.crear(nuevo);
+                logger.info("Cliente empresa creado correctamente");
+                return mapearADetalle(creado);
+
+            } else {
+                throw new BusinessException("El tipo de cliente debe ser 'Particular' o 'Empresa'");
+            }
+
+        } catch (PersistenceException e) {
+            logger.error("Error al crear el cliente", e);
+            throw new ServiceException("Error al crear el cliente", e);
+        }
+    }
+    
+    public ClienteDetalleDTO actualizarCliente(ClienteDTO dto) throws ServiceException, BusinessException {
+        logger.debug("Actualizando cliente con ID {}", dto.getId());
+
+        if (dto.getId() == null) {
+            throw new BusinessException("El ID del cliente es requerido para actualizar");
+        }
+
+        try {
+            if ("Particular".equalsIgnoreCase(dto.getTipo())) {
+                ClienteParticular actualizado = new ClienteParticular(
+                        dto.getId(),
+                        dto.getNombre(),
+                        dto.getApellido(),
+                        dto.getCuil(),
+                        dto.getEmail(),
+                        dto.getTelefono(),
+                        dto.getCalleYnumero(),
+                        dto.getCiudad(),
+                        dto.getObservaciones()
+                );
+                ClienteParticular guardado = clienteParticularDAO.actualizar(actualizado);
+                logger.info("Cliente particular actualizado correctamente");
+                return mapearADetalle(guardado);
+
+            } else if ("Empresa".equalsIgnoreCase(dto.getTipo())) {
+                ClienteEmpresa actualizado = new ClienteEmpresa(
+                        dto.getId(),
+                        dto.getRazonSocial(),
+                        dto.getNombreFantasia(),
+                        dto.getRubro(),
+                        dto.getCuit(),
+                        dto.getEmail(),
+                        dto.getTelefono(),
+                        dto.getCalleYnumero(),
+                        dto.getCiudad(),
+                        dto.getObservaciones()
+                );
+                ClienteEmpresa guardado = clienteEmpresaDAO.actualizar(actualizado);
+                logger.info("Cliente empresa actualizado correctamente");
+                return mapearADetalle(guardado);
+
+            } else {
+                throw new BusinessException("El tipo de cliente debe ser 'Particular' o 'Empresa'");    
+            }
+
+        } catch (PersistenceException e) {
+            logger.error("Error al actualizar el cliente con ID {}", dto.getId(), e);
+            throw new ServiceException("Error al actualizar el cliente", e);
+        }
+    }
+
+    // Métodos privados de mapeo a DTO de detalle, reusados por buscarClientePorId y crearCliente
+    private ClienteDetalleDTO mapearADetalle(ClienteParticular c) throws PersistenceException {
+        ClienteDetalleDTO dto = new ClienteDetalleDTO();
+        dto.setId(c.getId());
+        dto.setTipo("Particular");
+        dto.setEmail(c.getEmail());
+        dto.setTelefono(c.getTelefono());
+        dto.setCalleYnumero(c.getCalleYnumero());
+        dto.setCiudad(c.getCiudad());
+        dto.setObservaciones(c.getObservaciones());
+        dto.setNombre(c.getNombre());
+        dto.setApellido(c.getApellido());
+        dto.setCuil(c.getCuil());
+        dto.setCantidadVentas(ventaDAO.contarVentasPorCliente(c.getId()));
+        return dto;
+    }
+
+    private ClienteDetalleDTO mapearADetalle(ClienteEmpresa c) throws PersistenceException {
+        ClienteDetalleDTO dto = new ClienteDetalleDTO();
+        dto.setId(c.getId());
+        dto.setTipo("Empresa");
+        dto.setEmail(c.getEmail());
+        dto.setTelefono(c.getTelefono());
+        dto.setCalleYnumero(c.getCalleYnumero());
+        dto.setCiudad(c.getCiudad());
+        dto.setObservaciones(c.getObservaciones());
+        dto.setRazonSocial(c.getRazonSocial());
+        dto.setNombreFantasia(c.getNombreFantasia());
+        dto.setRubro(c.getRubro());
+        dto.setCuit(c.getCuit());
+        dto.setCantidadVentas(ventaDAO.contarVentasPorCliente(c.getId()));
+        return dto;
     }
 }

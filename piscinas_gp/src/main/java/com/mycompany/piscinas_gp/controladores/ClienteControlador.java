@@ -7,6 +7,7 @@ import com.mycompany.piscinas_gp.daos.ClienteParticularDAO;
 import com.mycompany.piscinas_gp.daos.VentaDAO;
 import com.mycompany.piscinas_gp.dtos.ClienteListadoDTO;
 import com.mycompany.piscinas_gp.dtos.ClienteDetalleDTO;
+import com.mycompany.piscinas_gp.dtos.ClienteDTO;
 import com.mycompany.piscinas_gp.exceptions.BusinessException;
 import com.mycompany.piscinas_gp.exceptions.ServiceException;
 import com.mycompany.piscinas_gp.servicios.ClienteServicio;
@@ -68,6 +69,48 @@ public class ClienteControlador extends HttpServlet {
                     response,
                     HttpServletResponse.SC_INTERNAL_SERVER_ERROR
             );
+        }
+    }
+    
+    @Override
+    protected void doPost(HttpServletRequest request, HttpServletResponse response)
+            throws ServletException, IOException {
+
+        request.setCharacterEncoding("UTF-8");
+        ObjectMapper mapper = new ObjectMapper();
+
+        try {
+            ClienteDTO dto = mapper.readValue(request.getReader(), ClienteDTO.class);
+
+            ClienteDetalleDTO clienteCreado = clienteServicio.crearCliente(dto);
+
+            sendJsonResponse(clienteCreado, response, HttpServletResponse.SC_CREATED);
+
+        } catch (IllegalArgumentException | BusinessException e) {
+            sendJsonResponse(java.util.Map.of("error", e.getMessage()), response, HttpServletResponse.SC_BAD_REQUEST);
+        } catch (ServiceException e) {
+            sendJsonResponse(java.util.Map.of("error", "Error interno al procesar la solicitud"), response, HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
+        }
+    }
+    
+    @Override
+    protected void doPut(HttpServletRequest request, HttpServletResponse response)
+            throws ServletException, IOException {
+
+        request.setCharacterEncoding("UTF-8");
+        ObjectMapper mapper = new ObjectMapper();
+
+        try {
+            ClienteDTO dto = mapper.readValue(request.getReader(), ClienteDTO.class);
+
+            ClienteDetalleDTO clienteActualizado = clienteServicio.actualizarCliente(dto);
+
+            sendJsonResponse(clienteActualizado, response, HttpServletResponse.SC_OK);
+
+        } catch (IllegalArgumentException | BusinessException e) {
+            sendJsonResponse(java.util.Map.of("error", e.getMessage()), response, HttpServletResponse.SC_BAD_REQUEST);
+        } catch (ServiceException e) {
+            sendJsonResponse(java.util.Map.of("error", "Error interno al procesar la solicitud"), response, HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
         }
     }
     

@@ -11,6 +11,7 @@
             icono="users.svg"
             descripcion="Clientes registrados en el sistema"
             botonTexto="+ Nuevo cliente"
+            action="nuevo-cliente"
         ></dashboard-header>
 
             <listado-clientes></listado-clientes>

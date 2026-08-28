@@ -34,6 +34,21 @@ class DashboardSection extends HTMLElement {
                 modal.appendChild(productForm);
                 document.body.appendChild(modal);
             }
+            
+            if (event.detail.action === "nuevo-cliente") {
+                
+                const modal = document.createElement("modal-component");
+            
+                modal.setAttribute("subTitulo", "NUEVO CLIENTE");
+                modal.setAttribute("titulo", "COMPLETE LOS DATOS");
+            
+                const clienteForm = document.createElement("formulario-cliente");
+
+                clienteForm.setAttribute("base-path", this.basePath);
+
+                modal.appendChild(clienteForm);
+                document.body.appendChild(modal);
+            }
 
         });
         

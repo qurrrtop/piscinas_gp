@@ -8,7 +8,6 @@ C:\Users\Estudiante\OneDrive\Documentos\piscinas_gp\piscinas_gp\src\main\java\co
 C:\Users\Estudiante\OneDrive\Documentos\piscinas_gp\piscinas_gp\src\main\java\com\mycompany\piscinas_gp\controladores\ProductoControlador.java
 C:\Users\Estudiante\OneDrive\Documentos\piscinas_gp\piscinas_gp\src\main\java\com\mycompany\piscinas_gp\controladores\UnidadMedidaControlador.java
 C:\Users\Estudiante\OneDrive\Documentos\piscinas_gp\piscinas_gp\src\main\java\com\mycompany\piscinas_gp\daos\CategoriaProductoDAO.java
-C:\Users\Estudiante\OneDrive\Documentos\piscinas_gp\piscinas_gp\src\main\java\com\mycompany\piscinas_gp\daos\ClienteDAO.java
 C:\Users\Estudiante\OneDrive\Documentos\piscinas_gp\piscinas_gp\src\main\java\com\mycompany\piscinas_gp\daos\ClienteEmpresaDAO.java
 C:\Users\Estudiante\OneDrive\Documentos\piscinas_gp\piscinas_gp\src\main\java\com\mycompany\piscinas_gp\daos\ClienteParticularDAO.java
 C:\Users\Estudiante\OneDrive\Documentos\piscinas_gp\piscinas_gp\src\main\java\com\mycompany\piscinas_gp\daos\MarcaProductoDAO.java
@@ -16,6 +15,7 @@ C:\Users\Estudiante\OneDrive\Documentos\piscinas_gp\piscinas_gp\src\main\java\co
 C:\Users\Estudiante\OneDrive\Documentos\piscinas_gp\piscinas_gp\src\main\java\com\mycompany\piscinas_gp\daos\UnidadMedidaDAO.java
 C:\Users\Estudiante\OneDrive\Documentos\piscinas_gp\piscinas_gp\src\main\java\com\mycompany\piscinas_gp\daos\VentaDAO.java
 C:\Users\Estudiante\OneDrive\Documentos\piscinas_gp\piscinas_gp\src\main\java\com\mycompany\piscinas_gp\dtos\ClienteDetalleDTO.java
+C:\Users\Estudiante\OneDrive\Documentos\piscinas_gp\piscinas_gp\src\main\java\com\mycompany\piscinas_gp\dtos\ClienteDTO.java
 C:\Users\Estudiante\OneDrive\Documentos\piscinas_gp\piscinas_gp\src\main\java\com\mycompany\piscinas_gp\dtos\ClienteListadoDTO.java
 C:\Users\Estudiante\OneDrive\Documentos\piscinas_gp\piscinas_gp\src\main\java\com\mycompany\piscinas_gp\dtos\MenuItem.java
 C:\Users\Estudiante\OneDrive\Documentos\piscinas_gp\piscinas_gp\src\main\java\com\mycompany\piscinas_gp\dtos\ProductoDTO.java
