@@ -180,4 +180,5 @@ ON UPDATE CASCADE ON DELETE SET NULL;
 INSERT INTO localidades (nombre) VALUES
 ('Mercedes'), ('Felipe Yofre'), ('Mariano I. Loza'), ('Curuzú Cuatiá'), ('Perugorría'), 
 ('Chavarría'), ('Paso de los Libres'), ('Bonpland'), ('Parada Pucheta'), ('Tapebicuá'), 
-('Monte Caseros'), ('Juan Pujol'), ('Colonia Libertad'), ('Sauce'), ('Mocoretá');
+('Monte Caseros'), ('Juan Pujol'), ('Colonia Libertad'), ('Sauce'), ('Mocoretá'),
+('Goya'), ('Corrientes Capital');

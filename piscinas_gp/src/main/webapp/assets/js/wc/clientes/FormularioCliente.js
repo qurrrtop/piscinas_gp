@@ -1,9 +1,6 @@
 import Rules from '../../Rules.js';
 import SetValidator from '../../SetValidator.js';
 
-// En FormularioCliente, después de importar Rules
-console.log("Rules.EMAIL:", Rules.provisions.EMAIL);
-console.log("Rules.EMAIL.regex:", Rules.provisions.EMAIL.regex);
 
 class FormularioCliente extends HTMLElement {
 

@@ -11,10 +11,10 @@
             icono="users.svg"
             descripcion="Clientes registrados en el sistema"
             botonTexto="+ Nuevo cliente"
-            action="nuevo-cliente"
+            accion="nuevo-cliente"
         ></dashboard-header>
 
-            <listado-clientes></listado-clientes>
+            <listado-clientes base-path="${pageContext.request.contextPath}"></listado-clientes>
         <br><br><br><br><br><br>
     </div>
 </div>

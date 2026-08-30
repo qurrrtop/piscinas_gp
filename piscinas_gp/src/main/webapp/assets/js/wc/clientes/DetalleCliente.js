@@ -27,7 +27,7 @@ class DetalleCliente extends HTMLElement {
 
         const c = this._cliente;
         const esParticular = c.tipo === "Particular";
-        const colorTipo = esParticular ? "#3B82F6" : "#F97316";
+        const colorTipo = esParticular ? "#2387FA" : "#FE1BD4";
 
         this.shadowRoot.innerHTML = `
             <style>
@@ -41,11 +41,11 @@ class DetalleCliente extends HTMLElement {
 
                 .badge-tipo {
                     align-self: flex-start;
-                    background: ${colorTipo}22;
+                    background: ${colorTipo}44;
                     color: ${colorTipo};
                     padding: .3rem .9rem;
                     border-radius: 20px;
-                    font-size: .8rem;
+                    font-size: 1rem;
                     font-weight: 700;
                 }
 
@@ -153,11 +153,11 @@ class DetalleCliente extends HTMLElement {
                         </div>
                         <div class="campo">
                             <label>Nombre de fantasía</label>
-                            <div class="valor-box">${c.nombreFantasia}</div>
+                            <div class="valor-box">${c.nombreFantasia || "No registrado."}</div>
                         </div>
                         <div class="campo full-width">
                             <label>Rubro</label>
-                            <div class="valor-box">${c.rubro}</div>
+                            <div class="valor-box">${c.rubro || "No registrado."}</div>
                         </div>
                     `}
                 </div>
@@ -173,16 +173,18 @@ class DetalleCliente extends HTMLElement {
                         <label>Teléfono</label>
                         <div class="valor-box">${c.telefono || "No registrado."}</div>
                     </div>
-                    <div class="campo full-width">
-                        <label>Dirección</label>
-                        <div class="valor-box">${c.calleYnumero}, ${c.ciudad}${c.provincia ? ", " + c.provincia : ""}</div>
+                    <div class="campo">
+                        <label>Localidad</label>
+                        <div class="valor-box">${c.localidadNombre}</div>
                     </div>
-                    ${c.observaciones ? `
-                        <div class="campo full-width">
-                            <label>Observaciones</label>
-                            <div class="valor-box" style="font-weight:400">${c.observaciones}</div>
-                        </div>
-                    ` : ""}
+                    <div class="campo">
+                        <label>Calle y número</label>
+                        <div class="valor-box">${c.calleYnumero}</div>
+                    </div>
+                    <div class="campo full-width">
+                        <label>Observaciones</label>
+                        <div class="valor-box" style="font-weight:400">${c.observaciones || "No registrado."}</div>
+                    </div>
                 </div>
 
                 <div class="acciones">

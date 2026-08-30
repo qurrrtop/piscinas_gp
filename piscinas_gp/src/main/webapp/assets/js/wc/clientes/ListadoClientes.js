@@ -75,7 +75,7 @@ class ListadoClientes extends HTMLElement {
 
         const coloresTipo = {
             "Particular" : "#013168",
-            "Empresa" : "#DA4EC0"
+            "Empresa" : "#FE1BD4"
         };
 
         tabla.columnas = [
@@ -122,31 +122,18 @@ class ListadoClientes extends HTMLElement {
         });
     }
     
-    // En ListadoProductos, agregar método para abrir edición
-    abrirEdicionProducto(producto) {
+    abrirEdicionCliente(cliente) {
         const modal = document.createElement("modal-component");
-        modal.setAttribute("titulo", `Editando: ${producto.nombre}`);
-        modal.setAttribute("subTitulo", "EDITAR PRODUCTO");
-    
-        const formulario = document.createElement("formulario-producto");
-    
-        // Configurar en modo edición
-        formulario.setModoEdicion(producto);
-    
-        // Escuchar cuando se actualice el producto
-        formulario.addEventListener("producto-actualizado", () => {
-            // Recargar datos
-            this.cargarDatos();
-            this.actualizarTabla();
-            this.actualizarTarjetas();
-        });
-    
-        formulario.addEventListener("cerrar-modal", () => {
-            modal.remove();
-        });
-    
+        modal.setAttribute("titulo", `Editando: ${cliente.nombre ? cliente.nombre + ' ' + cliente.apellido : cliente.razonSocial}`);
+        modal.setAttribute("subTitulo", "EDITAR CLIENTE");
+
+        const formulario = document.createElement("formulario-cliente");
+        formulario.setAttribute("base-path", this.getAttribute("base-path") || "");
+
         modal.appendChild(formulario);
         document.body.appendChild(modal);
+
+        formulario.setModoEdicion(cliente);
     }
 
     async abrirDetalleCliente(clienteResumen) {
@@ -155,6 +142,12 @@ class ListadoClientes extends HTMLElement {
         modal.setAttribute("subTitulo", "CLIENTE");
 
         const detalle = document.createElement("detalle-cliente");
+        
+        detalle.addEventListener("editar-cliente", (evento) => {
+            modal.remove();
+            this.abrirEdicionCliente(evento.detail);
+        });
+        
         modal.appendChild(detalle);
         document.body.appendChild(modal);
 

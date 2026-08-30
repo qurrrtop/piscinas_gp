@@ -48,9 +48,14 @@ public class DashboardControlador extends HttpServlet {
             case "/dashboard" -> request.getRequestDispatcher("/WEB-INF/vistas/dashboard.jsp").forward(request, response);
             case "/menu" -> handleMenu(request, response);
             case "/principal" -> request.getRequestDispatcher("/WEB-INF/vistas/dashboard/principal/principal.jsp").forward(request, response);
+            case "/ventas/historial" -> request.getRequestDispatcher("/WEB-INF/vistas/dashboard/ventas/historial-ventas.jsp").forward(request, response);
+            case "/ventas/nueva" -> request.getRequestDispatcher("/WEB-INF/vistas/dashboard/ventas/nueva-venta.jsp").forward(request, response);
+            case "/servicios/historial" -> request.getRequestDispatcher("/WEB-INF/vistas/dashboard/servicios/historial-servicios.jsp").forward(request, response);
+            case "/servicios/nuevo" -> request.getRequestDispatcher("/WEB-INF/vistas/dashboard/servicios/nuevo-servicio.jsp").forward(request, response);
+            case "/pendientes/historial" -> request.getRequestDispatcher("/WEB-INF/vistas/dashboard/pendientes/historial-pendientes.jsp").forward(request, response);
             case "/gestion/productos" -> request.getRequestDispatcher("/WEB-INF/vistas/dashboard/gestion/productos/productos.jsp").forward(request, response);
             case "/gestion/clientes" -> request.getRequestDispatcher("/WEB-INF/vistas/dashboard/gestion/clientes/clientes.jsp").forward(request, response);
-            case "/acerca" -> request.getRequestDispatcher("/WEB-INF/vistas/dashboard/acerca.jsp").forward(request, response);
+            case "/acercade" -> request.getRequestDispatcher("/WEB-INF/vistas/dashboard/acercade/acercade.jsp").forward(request, response);
             default -> response.sendError(HttpServletResponse.SC_NOT_FOUND);
         }
         
@@ -82,9 +87,9 @@ public class DashboardControlador extends HttpServlet {
         items.add(new MenuItem("Principal", "menu", "house.svg", "icono menu princial", path + "/dashboard/principal", List.of()));
         items.add(new MenuItem("Ventas", "menu", "shopping-cart.svg", "icono ventas", null, hijosVenta));
         items.add(new MenuItem("Servicios", "menu", "hammer.svg", "icono servicios", null, hijosServicio));
-        items.add(new MenuItem("Pendientes", "menu", "clipboard-list.svg", "icono pendientes", path + "/dashboard/pendientes", List.of()));
+        items.add(new MenuItem("Pendientes", "menu", "clipboard-list.svg", "icono pendientes", path + "/dashboard/pendientes/historial", List.of()));
         items.add(new MenuItem("Gestión", "menu", "settings.svg", "icono gestión", null, hijosGestion));
-        items.add(new MenuItem("Acerca de", "footer", "info.svg", "icono sugerencia", path + "/dashboard/acerca", List.of()));
+        items.add(new MenuItem("Acerca de", "footer", "info.svg", "icono sugerencia", path + "/dashboard/acercade", List.of()));
         items.add(new MenuItem("Cerrar Sesión", "footer", "log-out.svg", "icono cerrar sesión", path + "/auth/logout", List.of()));
         
         Gson gson = new Gson();

@@ -167,7 +167,7 @@ class SidebarMenu extends HTMLElement {
                     
                     .menu-link.active,
                     .menu-button.active {
-                        background: rgba(0, 122, 156, 1);
+                        border-right: 3px solid #0CE0F5;
                     }
         
                     .menu-left, .submenu-left {

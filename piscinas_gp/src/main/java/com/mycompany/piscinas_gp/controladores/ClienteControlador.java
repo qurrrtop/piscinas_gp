@@ -20,7 +20,7 @@ import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.util.List;
 
-@WebServlet(name = "ClienteControlador", urlPatterns = {"/clientes"})
+@WebServlet(name = "ClienteControlador", urlPatterns = {"/clientes", "/clientes/*"})
 public class ClienteControlador extends HttpServlet {
 
     private ClienteServicio clienteServicio;

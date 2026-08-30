@@ -11,7 +11,7 @@
             icono="package.svg"
             descripcion="Catálogo completo de productos del negocio"
             botonTexto="+ Nuevo producto"
-            action="nuevo-producto"
+            accion="nuevo-producto"
             ></dashboard-header>
 
         <listado-productos></listado-productos>

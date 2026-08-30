@@ -5,32 +5,37 @@ class DashboardHeader extends HTMLElement {
         this.basePath = "";
     }
     
-    connectedCallback() {
-        this.basePath = this.getAttribute("base-path") || "";
-
-        this.titulo = this.getAttribute("titulo") || "";
-        this.descripcion = this.getAttribute("descripcion") || "";
-        this.icono = this.getAttribute("icono") || "";
-        this.botonTexto = this.getAttribute("botonTexto") || "";
-        this.action = this.getAttribute("action") || "";
-        this.basePath = this.getAttribute("base-path") || "";
-        this.render();
-    }
+connectedCallback() {
+    this.basePath = this.getAttribute("base-path") || "";
+    this.titulo = this.getAttribute("titulo") || "";
+    this.descripcion = this.getAttribute("descripcion") || "";
+    this.icono = this.getAttribute("icono") || "";
+    this.botonTexto = this.getAttribute("botonTexto") || "";
+    this.accion = this.getAttribute("accion") || "";
+    this.render();
+}
     
     setupListeners() {
         const button = this.shadowRoot.querySelector("button");
-
+        
         if (!button) return;
-
-        button.addEventListener("click", () => {
-            this.dispatchEvent(new CustomEvent("header-action", {
-                bubbles: true,
-                composed: true,
-                detail: {
-                    action: this.action
+            button.addEventListener("click", () => {
+            
+                if (this.accion && this.accion.startsWith("nav:")) {
+                    const path = this.accion.replace("nav:", "");
+                    this.dispatchEvent(new CustomEvent("navigateTo", {
+                        bubbles: true,
+                        composed: true,
+                        detail: { path: `${this.basePath}${path}` }
+                    }));
+                } else {
+                    this.dispatchEvent(new CustomEvent("header-action", {
+                        bubbles: true,
+                        composed: true,
+                        detail: { action: this.accion }
+                    }));
                 }
-            }));
-        });
+            });
     }
 
     render() {
