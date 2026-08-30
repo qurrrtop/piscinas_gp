@@ -4,12 +4,14 @@ C:\Users\Estudiante\OneDrive\Documentos\piscinas_gp\piscinas_gp\src\main\java\co
 C:\Users\Estudiante\OneDrive\Documentos\piscinas_gp\piscinas_gp\src\main\java\com\mycompany\piscinas_gp\controladores\ClienteControlador.java
 C:\Users\Estudiante\OneDrive\Documentos\piscinas_gp\piscinas_gp\src\main\java\com\mycompany\piscinas_gp\controladores\ControladorFrontal.java
 C:\Users\Estudiante\OneDrive\Documentos\piscinas_gp\piscinas_gp\src\main\java\com\mycompany\piscinas_gp\controladores\DashboardControlador.java
+C:\Users\Estudiante\OneDrive\Documentos\piscinas_gp\piscinas_gp\src\main\java\com\mycompany\piscinas_gp\controladores\LocalidadControlador.java
 C:\Users\Estudiante\OneDrive\Documentos\piscinas_gp\piscinas_gp\src\main\java\com\mycompany\piscinas_gp\controladores\MarcaProductoControlador.java
 C:\Users\Estudiante\OneDrive\Documentos\piscinas_gp\piscinas_gp\src\main\java\com\mycompany\piscinas_gp\controladores\ProductoControlador.java
 C:\Users\Estudiante\OneDrive\Documentos\piscinas_gp\piscinas_gp\src\main\java\com\mycompany\piscinas_gp\controladores\UnidadMedidaControlador.java
 C:\Users\Estudiante\OneDrive\Documentos\piscinas_gp\piscinas_gp\src\main\java\com\mycompany\piscinas_gp\daos\CategoriaProductoDAO.java
 C:\Users\Estudiante\OneDrive\Documentos\piscinas_gp\piscinas_gp\src\main\java\com\mycompany\piscinas_gp\daos\ClienteEmpresaDAO.java
 C:\Users\Estudiante\OneDrive\Documentos\piscinas_gp\piscinas_gp\src\main\java\com\mycompany\piscinas_gp\daos\ClienteParticularDAO.java
+C:\Users\Estudiante\OneDrive\Documentos\piscinas_gp\piscinas_gp\src\main\java\com\mycompany\piscinas_gp\daos\LocalidadDAO.java
 C:\Users\Estudiante\OneDrive\Documentos\piscinas_gp\piscinas_gp\src\main\java\com\mycompany\piscinas_gp\daos\MarcaProductoDAO.java
 C:\Users\Estudiante\OneDrive\Documentos\piscinas_gp\piscinas_gp\src\main\java\com\mycompany\piscinas_gp\daos\ProductoDAO.java
 C:\Users\Estudiante\OneDrive\Documentos\piscinas_gp\piscinas_gp\src\main\java\com\mycompany\piscinas_gp\daos\UnidadMedidaDAO.java
@@ -31,6 +33,7 @@ C:\Users\Estudiante\OneDrive\Documentos\piscinas_gp\piscinas_gp\src\main\java\co
 C:\Users\Estudiante\OneDrive\Documentos\piscinas_gp\piscinas_gp\src\main\java\com\mycompany\piscinas_gp\modelos\ClienteParticular.java
 C:\Users\Estudiante\OneDrive\Documentos\piscinas_gp\piscinas_gp\src\main\java\com\mycompany\piscinas_gp\modelos\DetalleVenta.java
 C:\Users\Estudiante\OneDrive\Documentos\piscinas_gp\piscinas_gp\src\main\java\com\mycompany\piscinas_gp\modelos\EstadoVenta.java
+C:\Users\Estudiante\OneDrive\Documentos\piscinas_gp\piscinas_gp\src\main\java\com\mycompany\piscinas_gp\modelos\Localidad.java
 C:\Users\Estudiante\OneDrive\Documentos\piscinas_gp\piscinas_gp\src\main\java\com\mycompany\piscinas_gp\modelos\MarcaProducto.java
 C:\Users\Estudiante\OneDrive\Documentos\piscinas_gp\piscinas_gp\src\main\java\com\mycompany\piscinas_gp\modelos\MetodoPago.java
 C:\Users\Estudiante\OneDrive\Documentos\piscinas_gp\piscinas_gp\src\main\java\com\mycompany\piscinas_gp\modelos\Producto.java

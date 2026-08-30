@@ -7,9 +7,8 @@ public class ClienteDetalleDTO {
     private String email;
     private String telefono;
     private String calleYnumero;
-    private String ciudad;
-    private String provincia;
-    private String codigoPostal;
+    private Long localidadId;
+    private String localidadNombre;
     private String observaciones;
     private int cantidadVentas;
 
@@ -38,12 +37,10 @@ public class ClienteDetalleDTO {
     public void setTelefono(String telefono) { this.telefono = telefono; }
     public String getCalleYnumero() { return calleYnumero; }
     public void setCalleYnumero(String calleYnumero) { this.calleYnumero = calleYnumero; }
-    public String getCiudad() { return ciudad; }
-    public void setCiudad(String ciudad) { this.ciudad = ciudad; }
-    public String getProvincia() { return provincia; }
-    public void setProvincia(String provincia) { this.provincia = provincia; }
-    public String getCodigoPostal() { return codigoPostal; }
-    public void setCodigoPostal(String codigoPostal) { this.codigoPostal = codigoPostal; }
+    public Long getLocalidadId() { return localidadId; }
+    public void setLocalidadId(Long localidadId) { this.localidadId = localidadId; }
+    public String getLocalidadNombre() { return localidadNombre; }
+    public void setLocalidadNombre(String localidadNombre) { this.localidadNombre = localidadNombre; }
     public String getObservaciones() { return observaciones; }
     public void setObservaciones(String observaciones) { this.observaciones = observaciones; }
     public int getCantidadVentas() { return cantidadVentas; }

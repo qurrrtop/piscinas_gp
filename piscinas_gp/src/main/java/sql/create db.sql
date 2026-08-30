@@ -169,7 +169,7 @@ CREATE TABLE localidades (
     nombre varchar(60) NOT NULL UNIQUE
 );
 
--- 2.4
+-- 2.4 ahora si se agrega la relación de ambas tablas
 
 ALTER TABLE clientes
 ADD CONSTRAINT fk_clientes_localidad FOREIGN KEY (localidad_id) REFERENCES localidades(id)

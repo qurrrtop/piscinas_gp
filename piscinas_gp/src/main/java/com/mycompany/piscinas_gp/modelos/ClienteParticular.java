@@ -15,9 +15,9 @@ public class ClienteParticular extends Cliente {
 
     public ClienteParticular(String nombre, String apellido, String cuil,
                              String email, String telefono, String calleYnumero,
-                             String ciudad, String observaciones) {
+                             Localidad localidad, String observaciones) {
 
-        super(email, telefono, calleYnumero, ciudad, observaciones);
+        super(email, telefono, calleYnumero, localidad, observaciones);
 
         setNombre(nombre);
         setApellido(apellido);
@@ -26,9 +26,9 @@ public class ClienteParticular extends Cliente {
 
     public ClienteParticular(Long idCliente, String nombre, String apellido, String cuil,
                              String email, String telefono, String calleYnumero,
-                             String ciudad, String observaciones) {
+                             Localidad localidad, String observaciones) {
 
-        super(idCliente, email, telefono, calleYnumero, ciudad, observaciones);
+        super(idCliente, email, telefono, calleYnumero, localidad, observaciones);
 
         this.nombre = nombre;
         this.apellido = apellido;
@@ -51,6 +51,6 @@ public class ClienteParticular extends Cliente {
 
     public void setCuil(String cuil) {
         SetValidator.validar(cuil, StringFieldType.CUIL);
-        this.cuil = cuil;
+        this.cuil = cuil.replaceAll("[^0-9]", "");
     }
 }

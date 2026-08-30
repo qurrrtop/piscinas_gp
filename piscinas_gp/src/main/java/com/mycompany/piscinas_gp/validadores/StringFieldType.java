@@ -6,14 +6,12 @@ import java.util.regex.Pattern;
 public enum StringFieldType implements FieldType< String > { 
     
     //cliente
-    EMAIL("email", 3, 80, "^[_a-z0-9-]+(\\\\.[_a-z0-9-]+)*@[a-z0-9-]+(\\\\.[a-z0-9-]+)*(\\\\.[a-z]{2,4})$"),
+    EMAIL("email", 3, 80, "^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$"),
     TELEFONO("telefono", 8, 15, "^[0-9+]+$"),
-    CALLE_Y_NUMERO("calle y numero", 3, 60, "^[A-Za-zÁÉÍÓÚáéíóúÑñ\\s'.-]+$"),
+    CALLE_Y_NUMERO("calle y numero", 3, 60, "^[A-Za-zÁÉÍÓÚáéíóúÑñ0-9\\s'.-]+$"),
     OBSERVACIONES("observaciones", 0, 250, "^[a-zA-ZÀ-ÿ0-9\\s:º°',.-]*$"),
     
-    // estos serán select's
-    
-    CIUDAD("ciudad", 3, 60, "^[A-Za-zÁÉÍÓÚáéíóúÑñ\\s'.-]+$"),
+    NOMBRE_LOCALIDAD("localidad", 3, 60, "^[A-Za-zÁÉÍÓÚáéíóúÑñ\\s'.-]+$"),
     //PROVINCIA("provincia", 3, 60, "^[A-Za-zÁÉÍÓÚáéíóúÑñ\\s'.-]+$"),
     
     //clienteParticular

@@ -1,6 +1,10 @@
 import Rules from '../../Rules.js';
 import SetValidator from '../../SetValidator.js';
 
+// En FormularioCliente, después de importar Rules
+console.log("Rules.EMAIL:", Rules.provisions.EMAIL);
+console.log("Rules.EMAIL.regex:", Rules.provisions.EMAIL.regex);
+
 class FormularioCliente extends HTMLElement {
 
     constructor() {
@@ -26,10 +30,23 @@ class FormularioCliente extends HTMLElement {
     async connectedCallback() {
         this.basePath = this.getAttribute('base-path') || "";
         this.render();
+        await this.cargarLocalidades();
         this.setupListeners();
 
         if (this._modo === 'editar' && this._clienteData) {
             this.cargarDatosCliente();
+        }
+    }
+    
+    async cargarLocalidades() {
+        try {
+            this._localidades = await fetch("localidades").then(r => r.json());
+            const datalist = this.shadowRoot.querySelector("#listaLocalidades");
+            datalist.innerHTML = this._localidades
+                .map(loc => `<option value="${loc.nombre}"></option>`)
+                .join("");
+        } catch (error) {
+            console.error("Error al cargar localidades:", error);
         }
     }
 
@@ -47,7 +64,7 @@ class FormularioCliente extends HTMLElement {
             '#email': c.email,
             '#telefono': c.telefono,
             '#calleYNumero': c.calleYnumero,
-            '#ciudad': c.ciudad,
+            '#localidad': c.localidadNombre,
             '#observaciones': c.observaciones || '',
             '#nombre': c.nombre,
             '#apellido': c.apellido,
@@ -103,7 +120,6 @@ class FormularioCliente extends HTMLElement {
             { input: "#email", rule: Rules.provisions.EMAIL },
             { input: "#telefono", rule: Rules.provisions.TELEFONO },
             { input: "#calleYNumero", rule: Rules.provisions.CALLE_Y_NUMERO },
-            { input: "#ciudad", rule: Rules.provisions.CIUDAD },
             { input: "#observaciones", rule: Rules.provisions.OBSERVACIONES, optional: true },
             { input: "#nombre", rule: Rules.provisions.NOMBRE },
             { input: "#apellido", rule: Rules.provisions.APELLIDO },
@@ -175,7 +191,6 @@ class FormularioCliente extends HTMLElement {
             { input: "#email", rule: Rules.provisions.EMAIL },
             { input: "#telefono", rule: Rules.provisions.TELEFONO },
             { input: "#calleYNumero", rule: Rules.provisions.CALLE_Y_NUMERO },
-            { input: "#ciudad", rule: Rules.provisions.CIUDAD },
             { input: "#observaciones", rule: Rules.provisions.OBSERVACIONES, optional: true }
         ];
 
@@ -211,6 +226,14 @@ class FormularioCliente extends HTMLElement {
                 formularioValido = false;
             }
         });
+        
+        const inputLocalidad = this.shadowRoot.querySelector("#localidad");
+        const localidadValida = this._localidades.some(loc => loc.nombre === inputLocalidad.value);
+
+        if (!localidadValida) {
+            this.checkResult(inputLocalidad, "Debe seleccionar una localidad de la lista");
+            formularioValido = false;
+        }
 
         return formularioValido;
     }
@@ -223,12 +246,15 @@ class FormularioCliente extends HTMLElement {
     }
 
     obtenerDatosDelForm() {
+        const nombreLocalidad = this.shadowRoot.querySelector("#localidad").value;
+        const localidadEncontrada = this._localidades.find(loc => loc.nombre === nombreLocalidad);
+
         const base = {
             tipo: this._tipo === 'particular' ? 'Particular' : 'Empresa',
             email: this.shadowRoot.querySelector("#email").value,
             telefono: this.shadowRoot.querySelector("#telefono").value,
             calleYnumero: this.shadowRoot.querySelector("#calleYNumero").value,
-            ciudad: this.shadowRoot.querySelector("#ciudad").value,
+            localidadId: localidadEncontrada ? localidadEncontrada.id : null,
             observaciones: this.shadowRoot.querySelector("#observaciones").value
         };
 
@@ -492,17 +518,17 @@ class FormularioCliente extends HTMLElement {
                     
                     <div class="form-group">
                         <label>NOMBRE <span class="required">*</span></label>
-                        <input type="text" name="nombre" id="nombre" required placeholder="Ej: Juan">
+                        <input type="text" name="nombre" id="nombre" placeholder="Ej: Juan">
                         <small class="error-message"></small>
                     </div>
                     <div class="form-group">
                         <label>APELLIDO <span class="required">*</span></label>
-                        <input type="text" name="apellido" id="apellido" required placeholder="Ej: Díaz">
+                        <input type="text" name="apellido" id="apellido" placeholder="Ej: Díaz">
                         <small class="error-message"></small>
                     </div>
                     <div class="form-group full-width">
                         <label>CUIL <span class="required">*</span></label>
-                        <input type="text" name="cuil" id="cuil" required placeholder="27-12345678-9">
+                        <input type="text" name="cuil" id="cuil" placeholder="27-12345678-9">
                         <small class="error-message"></small>
                     </div>
                 </div>
@@ -513,7 +539,7 @@ class FormularioCliente extends HTMLElement {
                     <div class="form-group">
                         <label>RAZÓN SOCIAL <span class="required">*</span></label>
                         <input type="text" name="razonSocial" id="razonSocial" 
-                                placeholder="Ej: Piscinas del Norte S.R.L." required>
+                                placeholder="Ej: Piscinas del Norte S.R.L.">
                         <small class="error-message"></small>
                     </div>
                     <div class="form-group">
@@ -524,13 +550,13 @@ class FormularioCliente extends HTMLElement {
                     </div>
                     <div class="form-group">
                         <label>RUBRO <span class="required">*</span></label>
-                        <input type="text" name="rubro" id="rubro required" 
+                        <input type="text" name="rubro" id="rubro"
                                 placeholder="Ej: Construcción de piscinas">
                         <small class="error-message"></small>
                     </div>
                     <div class="form-group">
                         <label>CUIT <span class="required">*</span></label>
-                        <input type="text" name="cuit" id="cuit" required placeholder="30-12345678-9">
+                        <input type="text" name="cuit" id="cuit" placeholder="30-12345678-9">
                         <small class="error-message"></small>
                     </div>
                 </div>
@@ -557,8 +583,9 @@ class FormularioCliente extends HTMLElement {
                     </div>
 
                     <div class="form-group">
-                        <label>CIUDAD</label>
-                        <input type="text" name="ciudad" id="ciudad" placeholder="Ej: Mercedes">
+                        <label>LOCALIDAD</label>
+                        <input type="text" name="localidad" id="localidad" list="listaLocalidades" placeholder="Escribí para buscar...">
+                        <datalist id="listaLocalidades"></datalist>
                         <small class="error-message"></small>
                     </div>
 

@@ -77,56 +77,51 @@ export default class SetValidator {
     }
     
     static validateCuilCuit(value, validation) {
-        
         if (value == null || value.trim() === "") {
             return "Campo vacío";
         }
 
         const limpio = value.replace(/\D/g, "");
-
         if (limpio.length !== 11) {
             return "debe contener 11 dígitos";
         }
-        
+    
+        const prefijosValidosCuil = ["20", "23", "24", "27"];
+        const prefijosValidosCuit = ["20", "23", "24", "27", "30", "33", "34"];
+        const prefijosValidos = validation === "cuil" ? prefijosValidosCuil : prefijosValidosCuit;
+    
         const prefijo = limpio.substring(0, 2);
+        if (!prefijosValidos.includes(prefijo)) {
+            return validation === "cuil" ? "El CUIL no tiene un prefijo válido" : "El CUIT no tiene un prefijo válido";
+        }
 
-        if (validation === "cuil") {
-            const prefijosValidos = ["20", "23", "24", "27"];
+        // Función para calcular dígito verificador
+        const calcDigito = (num) => {
+            const mult = [5, 4, 3, 2, 7, 6, 5, 4, 3, 2];
+            let s = 0;
+            for (let i = 0; i < 10; i++) s += Number(num[i]) * mult[i];
+            const r = s % 11;
+            if (r === 0) return 0;
+            if (r === 1) return 9;
+            return 11 - r;
+        };
 
-            if (!prefijosValidos.includes(prefijo)) {
-                return "El CUIL no tiene un prefijo válido";
+        const digitoCalculado = calcDigito(limpio);
+        const digitoIngresado = Number(limpio[10]);
+
+        // Si el dígito calculado es 9 (caso especial), probar con prefijo alternativo
+        if (digitoCalculado === 9) {
+            const prefijosAlt = {"20":"23","23":"20","24":"27","27":"24","30":"33","33":"30","34":"33"};
+            const prefijoAlt = prefijosAlt[prefijo];
+            if (prefijoAlt && prefijosValidos.includes(prefijoAlt)) {
+                const numAlt = prefijoAlt + limpio.substring(2);
+                if (calcDigito(numAlt) === digitoIngresado) {
+                    return null;
+                }
             }
         }
 
-        if (validation === "cuit") {
-            const prefijosValidos = ["20", "23", "24", "27", "30", "33", "34"];
-
-            if (!prefijosValidos.includes(prefijo)) {
-                return "El CUIT no tiene un prefijo válido";
-            }
-        }
-
-        const multiplicadores = [5, 4, 3, 2, 7, 6, 5, 4, 3, 2];
-
-        let suma = 0;
-
-        for (let i = 0; i < 10; i++) {
-            suma += Number(limpio[i]) * multiplicadores[i];
-        }
-
-        const resto = suma % 11;
-
-        let digitoVerificador;
-
-        if (resto === 0) {
-            digitoVerificador = 0;
-        } else if (resto === 1) {
-            digitoVerificador = 9;
-        } else {
-            digitoVerificador = 11 - resto;
-        }
-
-        if (Number(limpio[10]) !== digitoVerificador) {
+        if (digitoCalculado !== digitoIngresado) {
             return "El CUIL/CUIT no es válido";
         }
 

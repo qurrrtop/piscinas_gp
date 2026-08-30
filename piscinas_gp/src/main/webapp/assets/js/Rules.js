@@ -24,13 +24,8 @@ export default class Rules {
             max: 60,
             required: false
         },
-        CIUDAD: {
-            validation: "ciudad",
-            type: "list",
-            required: false
-        },
-        PROVINCIA: {
-            validation: "provincia",
+        LOCALIDAD: {
+            validation: "localidad",
             type: "list",
             required: false
         },

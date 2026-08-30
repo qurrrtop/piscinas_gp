@@ -15,10 +15,10 @@ public class ClienteEmpresa extends Cliente {
     }
 
     public ClienteEmpresa(String razonSocial, String nombreFantasia, String rubro, String cuit,
-                          String email, String telefono, String calleYnumero, String ciudad,
+                          String email, String telefono, String calleYnumero, Localidad localidad,
                           String observaciones) {
 
-        super(email, telefono, calleYnumero, ciudad, observaciones);
+        super(email, telefono, calleYnumero, localidad, observaciones);
 
         setRazonSocial(razonSocial);
         setNombreFantasia(nombreFantasia);
@@ -28,9 +28,9 @@ public class ClienteEmpresa extends Cliente {
 
     public ClienteEmpresa(Long idCliente, String razonSocial, String nombreFantasia, String rubro,
                              String cuit, String email, String telefono, String calleYnumero,
-                             String ciudad, String observaciones) {
+                             Localidad localidad, String observaciones) {
 
-        super(idCliente, email, telefono, calleYnumero, ciudad, observaciones);
+        super(idCliente, email, telefono, calleYnumero, localidad, observaciones);
 
         this.razonSocial = razonSocial;
         this.nombreFantasia = nombreFantasia;
@@ -60,6 +60,6 @@ public class ClienteEmpresa extends Cliente {
 
     public void setCuit(String cuit) {
         SetValidator.validar(cuit, StringFieldType.CUIT);
-        this.cuit = cuit;
+        this.cuit = cuit.replaceAll("[^0-9]", "");
     }
 }

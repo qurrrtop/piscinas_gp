@@ -8,26 +8,26 @@ public abstract class Cliente implements Identifiable{
     private String email;
     private String telefono;
     private String calleYnumero;
-    private String ciudad;
+    private Localidad localidad;
     private String observaciones;
 
     public Cliente() {       
     }
 
-    public Cliente(String email, String telefono, String calleYnumero, String ciudad, String observaciones) {
+    public Cliente(String email, String telefono, String calleYnumero, Localidad localidad, String observaciones) {
         setEmail(email);
         setTelefono (telefono);
         setCalleYnumero(calleYnumero);
-        setCiudad(ciudad);
+        setLocalidad(localidad);
         setObservaciones(observaciones);
     }
 
-    public Cliente(Long idCliente, String email, String telefono, String calleYnumero, String ciudad, String observaciones) {
+    public Cliente(Long idCliente, String email, String telefono, String calleYnumero, Localidad localidad, String observaciones) {
         this.idCliente = idCliente;
         this.email = email;
         this.telefono = telefono;
         this.calleYnumero = calleYnumero;
-        this.ciudad = ciudad;
+        this.localidad = localidad;
         this.observaciones = observaciones;
     }
 
@@ -37,7 +37,7 @@ public abstract class Cliente implements Identifiable{
     public String getEmail() { return email; }
     public String getTelefono() { return telefono; }
     public String getCalleYnumero() { return calleYnumero; }
-    public String getCiudad() { return ciudad; }
+    public Localidad getLocalidad() { return localidad; }
     public String getObservaciones() { return observaciones; }
 
     
@@ -69,16 +69,20 @@ public abstract class Cliente implements Identifiable{
         this.calleYnumero = calleYnumero;
     }
 
-    public void setCiudad(String ciudad) {
-        if(ciudad == null) {
-            throw new IllegalArgumentException("La marca del producto no puede estar vacio");
+    public void setLocalidad(Localidad localidad) {
+        if(localidad == null) {
+            throw new IllegalArgumentException("La localidad no puede estar nulo");
         }
-        this.ciudad = ciudad;
+        this.localidad = localidad;
     }
 
     public void setObservaciones(String observaciones) {
-        SetValidator.validar(observaciones, StringFieldType.OBSERVACIONES); //de observar amigo, pensala// 
-        this.observaciones = observaciones;                                        //asi se observa chicos
+        if (observaciones == null || observaciones.isBlank()) {
+            this.observaciones = null;
+            return;
+        }
+        SetValidator.validar(observaciones, StringFieldType.OBSERVACIONES);
+        this.observaciones = observaciones;
     }
     
 }

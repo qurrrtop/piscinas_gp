@@ -2,6 +2,7 @@ package com.mycompany.piscinas_gp.servicios;
 
 import com.mycompany.piscinas_gp.daos.ClienteEmpresaDAO;
 import com.mycompany.piscinas_gp.daos.ClienteParticularDAO;
+import com.mycompany.piscinas_gp.daos.LocalidadDAO;
 import com.mycompany.piscinas_gp.daos.VentaDAO;
 import com.mycompany.piscinas_gp.dtos.ClienteDTO;
 import com.mycompany.piscinas_gp.dtos.ClienteDetalleDTO;
@@ -11,6 +12,7 @@ import com.mycompany.piscinas_gp.exceptions.PersistenceException;
 import com.mycompany.piscinas_gp.exceptions.ServiceException;
 import com.mycompany.piscinas_gp.modelos.ClienteEmpresa;
 import com.mycompany.piscinas_gp.modelos.ClienteParticular;
+import com.mycompany.piscinas_gp.modelos.Localidad;
 import java.util.ArrayList;
 import java.util.List;
 import org.slf4j.Logger;
@@ -22,11 +24,14 @@ public class ClienteServicio {
     private final ClienteParticularDAO clienteParticularDAO;
     private final ClienteEmpresaDAO clienteEmpresaDAO;
     private final VentaDAO ventaDAO;
+    private final LocalidadDAO localidadDAO;
 
-    public ClienteServicio(ClienteParticularDAO clienteParticularDAO, ClienteEmpresaDAO clienteEmpresaDAO, VentaDAO ventaDAO) {
+    public ClienteServicio(ClienteParticularDAO clienteParticularDAO, ClienteEmpresaDAO clienteEmpresaDAO,
+            VentaDAO ventaDAO, LocalidadDAO localidadDAO) {
         this.clienteParticularDAO = clienteParticularDAO;
         this.clienteEmpresaDAO = clienteEmpresaDAO;
         this.ventaDAO = ventaDAO;
+        this.localidadDAO = localidadDAO;
     }
 
     public List<ClienteListadoDTO> listarClientes() throws ServiceException {
@@ -93,6 +98,8 @@ public class ClienteServicio {
     public ClienteDetalleDTO crearCliente(ClienteDTO dto) throws ServiceException, BusinessException {
         logger.debug("Creando cliente de tipo {}", dto.getTipo());
         try {
+            Localidad localidad = resolverLocalidad(dto.getLocalidadId());
+
             if ("Particular".equalsIgnoreCase(dto.getTipo())) {
                 ClienteParticular nuevo = new ClienteParticular(
                         dto.getNombre(),
@@ -101,7 +108,7 @@ public class ClienteServicio {
                         dto.getEmail(),
                         dto.getTelefono(),
                         dto.getCalleYnumero(),
-                        dto.getCiudad(),
+                        localidad,
                         dto.getObservaciones()
                 );
                 ClienteParticular creado = clienteParticularDAO.crear(nuevo);
@@ -117,7 +124,7 @@ public class ClienteServicio {
                         dto.getEmail(),
                         dto.getTelefono(),
                         dto.getCalleYnumero(),
-                        dto.getCiudad(),
+                        localidad,
                         dto.getObservaciones()
                 );
                 ClienteEmpresa creado = clienteEmpresaDAO.crear(nuevo);
@@ -133,7 +140,7 @@ public class ClienteServicio {
             throw new ServiceException("Error al crear el cliente", e);
         }
     }
-    
+
     public ClienteDetalleDTO actualizarCliente(ClienteDTO dto) throws ServiceException, BusinessException {
         logger.debug("Actualizando cliente con ID {}", dto.getId());
 
@@ -142,6 +149,8 @@ public class ClienteServicio {
         }
 
         try {
+            Localidad localidad = resolverLocalidad(dto.getLocalidadId());
+
             if ("Particular".equalsIgnoreCase(dto.getTipo())) {
                 ClienteParticular actualizado = new ClienteParticular(
                         dto.getId(),
@@ -151,7 +160,7 @@ public class ClienteServicio {
                         dto.getEmail(),
                         dto.getTelefono(),
                         dto.getCalleYnumero(),
-                        dto.getCiudad(),
+                        localidad,
                         dto.getObservaciones()
                 );
                 ClienteParticular guardado = clienteParticularDAO.actualizar(actualizado);
@@ -168,7 +177,7 @@ public class ClienteServicio {
                         dto.getEmail(),
                         dto.getTelefono(),
                         dto.getCalleYnumero(),
-                        dto.getCiudad(),
+                        localidad,
                         dto.getObservaciones()
                 );
                 ClienteEmpresa guardado = clienteEmpresaDAO.actualizar(actualizado);
@@ -176,7 +185,7 @@ public class ClienteServicio {
                 return mapearADetalle(guardado);
 
             } else {
-                throw new BusinessException("El tipo de cliente debe ser 'Particular' o 'Empresa'");    
+                throw new BusinessException("El tipo de cliente debe ser 'Particular' o 'Empresa'");
             }
 
         } catch (PersistenceException e) {
@@ -185,7 +194,19 @@ public class ClienteServicio {
         }
     }
 
-    // Métodos privados de mapeo a DTO de detalle, reusados por buscarClientePorId y crearCliente
+    // Busca la Localidad real a partir del ID que manda el DTO, validando que exista
+    private Localidad resolverLocalidad(Long localidadId) throws PersistenceException, BusinessException {
+        if (localidadId == null) {
+            throw new BusinessException("La localidad es requerida");
+        }
+        Localidad localidad = localidadDAO.buscarPorId(localidadId);
+        
+        if (localidad == null) {
+            throw new BusinessException("La localidad indicada no existe");
+        }
+        return localidad;
+    }
+
     private ClienteDetalleDTO mapearADetalle(ClienteParticular c) throws PersistenceException {
         ClienteDetalleDTO dto = new ClienteDetalleDTO();
         dto.setId(c.getId());
@@ -193,7 +214,8 @@ public class ClienteServicio {
         dto.setEmail(c.getEmail());
         dto.setTelefono(c.getTelefono());
         dto.setCalleYnumero(c.getCalleYnumero());
-        dto.setCiudad(c.getCiudad());
+        dto.setLocalidadId(c.getLocalidad().getId());
+        dto.setLocalidadNombre(c.getLocalidad().getNombre());
         dto.setObservaciones(c.getObservaciones());
         dto.setNombre(c.getNombre());
         dto.setApellido(c.getApellido());
@@ -209,7 +231,8 @@ public class ClienteServicio {
         dto.setEmail(c.getEmail());
         dto.setTelefono(c.getTelefono());
         dto.setCalleYnumero(c.getCalleYnumero());
-        dto.setCiudad(c.getCiudad());
+        dto.setLocalidadId(c.getLocalidad().getId());
+        dto.setLocalidadNombre(c.getLocalidad().getNombre());
         dto.setObservaciones(c.getObservaciones());
         dto.setRazonSocial(c.getRazonSocial());
         dto.setNombreFantasia(c.getNombreFantasia());

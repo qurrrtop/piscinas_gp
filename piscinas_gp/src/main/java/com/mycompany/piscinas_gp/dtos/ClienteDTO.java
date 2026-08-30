@@ -8,7 +8,7 @@ public class ClienteDTO {
     private String email;
     private String telefono;
     private String calleYnumero;
-    private String ciudad;
+    private Long localidadId;
     private String observaciones;
 
     private String nombre;
@@ -33,8 +33,8 @@ public class ClienteDTO {
     public void setTelefono(String telefono) { this.telefono = telefono; }
     public String getCalleYnumero() { return calleYnumero; }
     public void setCalleYnumero(String calleYnumero) { this.calleYnumero = calleYnumero; }
-    public String getCiudad() { return ciudad; }
-    public void setCiudad(String ciudad) { this.ciudad = ciudad; }
+    public Long getLocalidadId() { return localidadId; }
+    public void setLocalidadId(Long localidadId) { this.localidadId = localidadId; }
     public String getObservaciones() { return observaciones; }
     public void setObservaciones(String observaciones) { this.observaciones = observaciones; }
     public String getNombre() { return nombre; }

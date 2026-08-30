@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.mycompany.piscinas_gp.config.DbConnection;
 import com.mycompany.piscinas_gp.daos.ClienteEmpresaDAO;
 import com.mycompany.piscinas_gp.daos.ClienteParticularDAO;
+import com.mycompany.piscinas_gp.daos.LocalidadDAO;
 import com.mycompany.piscinas_gp.daos.VentaDAO;
 import com.mycompany.piscinas_gp.dtos.ClienteListadoDTO;
 import com.mycompany.piscinas_gp.dtos.ClienteDetalleDTO;
@@ -29,7 +30,8 @@ public class ClienteControlador extends HttpServlet {
         clienteServicio = new ClienteServicio(
                 new ClienteParticularDAO(DbConnection.getInstance()),
                 new ClienteEmpresaDAO(DbConnection.getInstance()),
-                new VentaDAO(DbConnection.getInstance())
+                new VentaDAO(DbConnection.getInstance()),
+                new LocalidadDAO(DbConnection.getInstance())
         );
     }
     
@@ -89,6 +91,8 @@ public class ClienteControlador extends HttpServlet {
         } catch (IllegalArgumentException | BusinessException e) {
             sendJsonResponse(java.util.Map.of("error", e.getMessage()), response, HttpServletResponse.SC_BAD_REQUEST);
         } catch (ServiceException e) {
+            // 👇 SOLO ESTO: imprime el error real en la consola
+            e.printStackTrace();
             sendJsonResponse(java.util.Map.of("error", "Error interno al procesar la solicitud"), response, HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
         }
     }
