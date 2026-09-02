@@ -6,27 +6,28 @@ package com.mycompany.piscinas_gp.controladores;
 
 //conexion base dato
 
-import com.mycompany.piscinas_gp.config.DbConnection;
+//import com.mycompany.piscinas_gp.config.DbConnection;
 
 
 
 //clienteDAOS en su variantes de empresa y particulas 
-import com.mycompany.piscinas_gp.daos.ClienteEmpresaDAO;
-import com.mycompany.piscinas_gp.daos.ClienteParticularDAO;
+//import com.mycompany.piscinas_gp.daos.ClienteEmpresaDAO;
+//import com.mycompany.piscinas_gp.daos.ClienteParticularDAO;
 
 //ventadao
-import com.mycompany.piscinas_gp.daos.VentaDAO;
+//import com.mycompany.piscinas_gp.daos.VentaDAO;
 //dto de ventas 
-import com.mycompany.piscinas_gp.dtos.VentaDTO;
+//import com.mycompany.piscinas_gp.dtos.VentaDTO;
 //service de ventas
 
 //modelos
-import com.mycompany.piscinas_gp.modelos.Venta;
-import com.mycompany.piscinas_gp.modelos.VentaAsesoramiento;
-import com.mycompany.piscinas_gp.modelos.VentaProducto;
-import com.mycompany.piscinas_gp.modelos.VentaServTecnico;
+//import com.mycompany.piscinas_gp.modelos.Venta;
+//import com.mycompany.piscinas_gp.modelos.VentaAsesoramiento;
+//import com.mycompany.piscinas_gp.modelos.VentaProducto;
+//import com.mycompany.piscinas_gp.modelos.VentaServTecnico;
 
 //servicio venta
+//import com.mycompany.piscinas_gp.servicios.VentaServicio;
 
 
 
@@ -40,7 +41,7 @@ import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
-import java.util.List;
+//import java.util.List;
 import java.io.IOException;
 //excepciones
 import com.mycompany.piscinas_gp.exceptions.BusinessException;
@@ -48,18 +49,16 @@ import com.mycompany.piscinas_gp.exceptions.ServiceException;
 //mapeador
 import com.fasterxml.jackson.databind.ObjectMapper;
 
-/**
- *
- * @author Mapatipi
- */
+
 
 //define ruta el webServlet. para usar get/post/put
-
+/*
 @WebServlet(name = "VentaControlador", urlPatterns = {"/ventas", "/ventas/*"})
 public class VentaControlador extends HttpServlet {
 
     //guarda servicio como atributo servlet
     //para usar en todos los metodos
+    
     private VentaServicio ventaServicio;
     
     //init() ejecuta una sola vez al arrancar servlet. crea ventaServicio
@@ -133,7 +132,7 @@ public class VentaControlador extends HttpServlet {
             
             VentaDTO dto = mapper.readValue(request.getReader(), VentaDTO.class);
             
-            Venta venta = CrearVentaDesdeDTO(dto);
+            Venta venta = crearVentaDesdeDTO(dto);
             
             Venta ventaCreada = ventaServicio.crearVenta(venta, dto.getClienteId());
         
@@ -165,8 +164,8 @@ public class VentaControlador extends HttpServlet {
         try {
             VentaDTO dto= mapper.readValue(request.getReader(), VentaDTO.class);
             
-            if (dto.getId == null){
-                sendJsonResponse(java.util.map.of("error", "el id de la venta es requerido"),
+            if (dto.getId() == null){
+                sendJsonResponse(java.util.Map.of("error", "el id de la venta es requerido"),
                         response,
                         HttpServletResponse.SC_BAD_REQUEST);
                 
@@ -191,6 +190,7 @@ public class VentaControlador extends HttpServlet {
                     response,
                     HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
         }
+    }
         
         //funcion clave. decide q objeto crear segun su tipo de venta
         // si viene producto crea objeto de "VentaProducto".
@@ -219,7 +219,7 @@ public class VentaControlador extends HttpServlet {
                 
                 venta = ventaAsesoramiento;
                 
-            } else if ("ServicioTecnico".equalsIgnoreCase(dto.getTipoVenta())); {
+            } else if ("ServicioTecnico".equalsIgnoreCase(dto.getTipoVenta())) {
                   VentaServTecnico ventaServTecnico = new VentaServTecnico();
 
                 
@@ -273,4 +273,71 @@ public class VentaControlador extends HttpServlet {
         return "Short description";
     }// </editor-fold>
 
+*/
+
+//borrar cuando ya esta dto y service
+@WebServlet(name = "VentaControlador", urlPatterns = {"/ventas", "/ventas/*"})
+public class VentaControlador extends HttpServlet {
+
+    @Override
+    public void init() throws ServletException {
+        // Por ahora vacio hasta crear VentaServicio
+    }
+
+    @Override
+    protected void doGet(HttpServletRequest request, HttpServletResponse response)
+            throws ServletException, IOException {
+
+        String pathInfo = request.getPathInfo();
+
+        if (pathInfo == null || pathInfo.equals("/")) {
+            sendJsonResponse(
+                    java.util.Map.of("mensaje", "Listado de ventas"),
+                    response,
+                    HttpServletResponse.SC_OK
+            );
+            return;
+        }
+
+        try {
+            Long id = Long.parseLong(pathInfo.substring(1));
+
+            sendJsonResponse(
+                    java.util.Map.of("mensaje", "Detalle de venta", "id", id),
+                    response,
+                    HttpServletResponse.SC_OK
+            );
+
+        } catch (NumberFormatException e) {
+            sendJsonResponse(
+                    java.util.Map.of("error", "El ID debe ser un numero"),
+                    response,
+                    HttpServletResponse.SC_BAD_REQUEST
+            );
+        }
+    }
+
+    private void sendJsonResponse(Object value, HttpServletResponse response, int statusCode)
+            throws IOException {
+
+        ObjectMapper mapper = new ObjectMapper();
+
+        String json = mapper.writeValueAsString(value);
+
+        response.setStatus(statusCode);
+        response.setContentType("application/json");
+        response.setCharacterEncoding("UTF-8");
+
+        response.getWriter().write(json);
+    }
+
+    @Override
+    public String getServletInfo() {
+        return "VentaControlador";
+    }
+
 }
+
+
+
+
