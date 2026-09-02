@@ -4,6 +4,7 @@ class DetalleProducto extends HTMLElement {
         super();
         this.attachShadow({ mode: "open" });
         this._producto = null;
+        this.basePath = "";
     }
 
     static COLORES_CATEGORIA = {
@@ -22,6 +23,7 @@ class DetalleProducto extends HTMLElement {
     }
 
     connectedCallback() {
+        this.basePath = this.getAttribute("base-path") || "";
         this.render();
     }
 
@@ -177,6 +179,9 @@ class DetalleProducto extends HTMLElement {
                 </div>
 
                 <div class="acciones">
+                    <button class="btn-estado" style="background:${p.activo ? '#F87171' : '#4ADE80'}; color:white; border:none; padding:.65rem 1.6rem; border-radius:8px; font-weight:700; cursor:pointer;">
+                        ${p.activo ? "Dar de baja" : "Reactivar"}
+                    </button>
                     <button class="btn-editar">✎ Editar</button>
                 </div>
             </div>
@@ -188,6 +193,38 @@ class DetalleProducto extends HTMLElement {
                 bubbles: true,
                 composed: true
             }));
+        });
+        
+        this.shadowRoot.querySelector(".btn-estado").addEventListener("click", async () => {
+            try {
+                const contextPath = window.location.pathname.split('/')[1];
+                const url = p.activo
+                    ? `/${contextPath}/productos/${p.id}`
+                    : `/${contextPath}/productos/${p.id}/reactivar`;
+                    
+                const method = p.activo ? "DELETE" : "POST";
+
+                const response = await fetch(url, { method });
+                const data = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(data.error || "Error al cambiar el estado del producto");
+                }
+
+                document.dispatchEvent(new CustomEvent("mostrar-notificacion", {
+                    detail: { mensaje: data.mensaje || "Operación exitosa", tipo: "exito" }
+                }));
+
+                this.dispatchEvent(new CustomEvent("producto-guardado", { bubbles: true, composed: true }));
+
+                const modal = this.closest("modal-component") || document.querySelector("modal-component");
+                if (modal) modal.remove();
+
+            } catch (error) {
+                document.dispatchEvent(new CustomEvent("mostrar-notificacion", {
+                    detail: { mensaje: error.message, tipo: "error" }
+                }));
+            }
         });
     }
 }

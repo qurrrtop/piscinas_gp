@@ -188,6 +188,9 @@ class DetalleCliente extends HTMLElement {
                 </div>
 
                 <div class="acciones">
+                    <button class="btn-estado" style="background:${c.activo ? '#F87171' : '#4ADE80'}; color:white; border:none; padding:.65rem 1.6rem; border-radius:8px; font-weight:700; cursor:pointer; margin-right:auto;">
+                        ${c.activo ? "Dar de baja" : "Reactivar"}
+                    </button>
                     <button class="btn-editar">✎ Editar</button>
                 </div>
             </div>
@@ -199,6 +202,38 @@ class DetalleCliente extends HTMLElement {
                 bubbles: true,
                 composed: true
             }));
+        });
+        
+        this.shadowRoot.querySelector(".btn-estado").addEventListener("click", async () => {
+            const accionTexto = c.activo ? "dar de baja" : "reactivar";
+            const confirmado = confirm(`¿Seguro que querés ${accionTexto} a este cliente?`);
+            if (!confirmado) return;
+
+            try {
+                const url = c.activo ? `clientes/${c.id}` : `clientes/${c.id}/reactivar`;
+                const method = c.activo ? "DELETE" : "POST";
+
+                const response = await fetch(url, { method });
+                const data = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(data.error || `Error al ${accionTexto} el cliente`);
+                }
+
+                document.dispatchEvent(new CustomEvent("mostrar-notificacion", {
+                    detail: { mensaje: data.mensaje || "Operación exitosa", tipo: "exito" }
+                }));
+
+                this.dispatchEvent(new CustomEvent("cliente-guardado", { bubbles: true, composed: true }));
+
+                const modal = this.closest("modal-component") || document.querySelector("modal-component");
+                if (modal) modal.remove();
+
+            } catch (error) {
+                document.dispatchEvent(new CustomEvent("mostrar-notificacion", {
+                    detail: { mensaje: error.message, tipo: "error" }
+                }));
+            }
         });
     }
 }

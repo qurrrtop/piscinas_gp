@@ -24,7 +24,7 @@ import com.mycompany.piscinas_gp.servicios.ProductoServicio;
 
 import java.util.List;
 
-@WebServlet(name = "ProductoControlador", urlPatterns = {"/productos"})
+@WebServlet(name = "ProductoControlador", urlPatterns = {"/productos", "/productos/*"})
 public class ProductoControlador extends HttpServlet {
 
     private ProductoServicio productoServicio;

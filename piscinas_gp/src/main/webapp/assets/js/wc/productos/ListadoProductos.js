@@ -237,6 +237,11 @@ class ListadoProductos extends HTMLElement {
             this._estadoStock = e.target.value;
             this.actualizarTabla();
         });
+        
+        this.shadowRoot.querySelector("#filtroEstado").addEventListener("input", (e) => {
+            this._filtroEstado = e.target.value;
+            this.actualizarTabla();
+        });
 
         this.shadowRoot.querySelector("#filtroOrden").addEventListener("change", (e) => {
             this._orden = e.target.value;
@@ -278,6 +283,7 @@ class ListadoProductos extends HTMLElement {
         modal.setAttribute("subTitulo", "PRODUCTO");
     
         const detalle = document.createElement("detalle-producto");
+        detalle.setAttribute("base-path", this.getAttribute("base-path") || "");
         detalle.producto = producto;
     
         // Escuchar evento de edición desde el detalle

@@ -166,7 +166,6 @@ public class ClienteControlador extends HttpServlet {
         }
     }
     
-<<<<<<< HEAD
     @Override
     protected void doDelete(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
@@ -192,9 +191,7 @@ public class ClienteControlador extends HttpServlet {
     }
     
     
-=======
     //para no repetir tanto codigo, se arma metodo aparte. todo el codigo de aca se agregaba al try y catch de arriba
->>>>>>> a1baf9c76e66b589d1e433c7f9bdc9b20834f15c
     private void sendJsonResponse(Object value, HttpServletResponse response, int statusCode)
                  throws IOException {
 
