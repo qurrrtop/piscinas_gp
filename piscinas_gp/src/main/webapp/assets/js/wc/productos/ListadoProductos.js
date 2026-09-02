@@ -341,7 +341,7 @@ class ListadoProductos extends HTMLElement {
 
                 .card-filtros {
                     display: grid;
-                    grid-template-columns: 2fr 1fr 1fr 1fr;
+                    grid-template-columns: 2fr repeat(4, 1fr);
                     gap: 1rem;
                     padding: 1rem 1.25rem;
                     border-radius: 10px;
@@ -387,16 +387,16 @@ class ListadoProductos extends HTMLElement {
                     </select>
 
                     <select id="filtroStock">
-                        <option value="">Todos los estados</option>
+                        <option value="">Todos los Stock</option>
                         <option value="disponible">Disponible</option>
                         <option value="stock_bajo">Stock bajo</option>
                         <option value="sin_stock">Sin stock</option>
                     </select>
         
                     <select id="filtroEstado">
+                        <option value="todos">Todos los estados</option>
                         <option value="activos">Activos</option>
                         <option value="inactivos">Inactivos</option>
-                        <option value="todos">Todos</option>
                     </select>
 
                     <select id="filtroOrden">

@@ -205,10 +205,6 @@ class DetalleCliente extends HTMLElement {
         });
         
         this.shadowRoot.querySelector(".btn-estado").addEventListener("click", async () => {
-            const accionTexto = c.activo ? "dar de baja" : "reactivar";
-            const confirmado = confirm(`¿Seguro que querés ${accionTexto} a este cliente?`);
-            if (!confirmado) return;
-
             try {
                 const url = c.activo ? `clientes/${c.id}` : `clientes/${c.id}/reactivar`;
                 const method = c.activo ? "DELETE" : "POST";
@@ -217,7 +213,7 @@ class DetalleCliente extends HTMLElement {
                 const data = await response.json();
 
                 if (!response.ok) {
-                    throw new Error(data.error || `Error al ${accionTexto} el cliente`);
+                    throw new Error(data.error || `Error al cambiar el estado del cliente`);
                 }
 
                 document.dispatchEvent(new CustomEvent("mostrar-notificacion", {

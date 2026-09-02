@@ -129,6 +129,11 @@ class ListadoClientes extends HTMLElement {
             this._tipoSeleccionado = e.target.value;
             this.actualizarTabla();
         });
+        
+        this.shadowRoot.querySelector("#filtroEstado").addEventListener("change", (e) => {
+            this._filtroEstado = e.target.value;
+            this.actualizarTabla();
+        });
 
 
         this.shadowRoot.querySelector("#filtroOrden").addEventListener("change", (e) => {
@@ -192,7 +197,7 @@ class ListadoClientes extends HTMLElement {
 
                 .card-filtros {
                     display: grid;
-                    grid-template-columns: 2fr 1fr 1fr;
+                    grid-template-columns: 2fr 1fr 1fr 1fr;
                     gap: 1rem;
                     padding: 1rem 1.25rem;
                     border-radius: 10px;
@@ -231,6 +236,12 @@ class ListadoClientes extends HTMLElement {
                         <option value="">Todos los tipos</option>
                         <option value="Particular">Particular</option>
                         <option value="Empresa">Empresa</option>
+                    </select>
+        
+                    <select id="filtroEstado">
+                        <option value="todos">Todos los estados</option>
+                        <option value="activos">Activos</option>
+                        <option value="inactivos">Inactivos</option>
                     </select>
 
                     <select id="filtroOrden">

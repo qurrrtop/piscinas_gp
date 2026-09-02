@@ -51,6 +51,7 @@ public class ClienteServicio {
                         cp.getCuil(),
                         cp.getTelefono(),
                         cp.getEmail(),
+                        cp.isActivo(),
                         ventas
                 ));
             }
@@ -64,6 +65,7 @@ public class ClienteServicio {
                         ce.getCuit(),
                         ce.getTelefono(),
                         ce.getEmail(),
+                        ce.isActivo(),
                         ventas
                 ));
             }

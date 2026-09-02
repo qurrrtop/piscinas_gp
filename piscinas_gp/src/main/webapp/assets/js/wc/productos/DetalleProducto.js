@@ -4,7 +4,6 @@ class DetalleProducto extends HTMLElement {
         super();
         this.attachShadow({ mode: "open" });
         this._producto = null;
-        this.basePath = "";
     }
 
     static COLORES_CATEGORIA = {
@@ -23,7 +22,6 @@ class DetalleProducto extends HTMLElement {
     }
 
     connectedCallback() {
-        this.basePath = this.getAttribute("base-path") || "";
         this.render();
     }
 
@@ -197,11 +195,7 @@ class DetalleProducto extends HTMLElement {
         
         this.shadowRoot.querySelector(".btn-estado").addEventListener("click", async () => {
             try {
-                const contextPath = window.location.pathname.split('/')[1];
-                const url = p.activo
-                    ? `/${contextPath}/productos/${p.id}`
-                    : `/${contextPath}/productos/${p.id}/reactivar`;
-                    
+                const url = p.activo ? `productos/${p.id}` : `productos/${p.id}/reactivar`;
                 const method = p.activo ? "DELETE" : "POST";
 
                 const response = await fetch(url, { method });
