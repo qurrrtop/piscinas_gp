@@ -179,7 +179,7 @@ public class ClienteControlador extends HttpServlet {
             }
             Long id = Long.parseLong(pathInfo.substring(1));
             clienteServicio.darDeBajaCliente(id);
-            sendJsonResponse(java.util.Map.of("mensaje", "Pliente dado de baja correctamente"), response, HttpServletResponse.SC_OK);
+            sendJsonResponse(java.util.Map.of("mensaje", "Cliente dado de baja correctamente"), response, HttpServletResponse.SC_OK);
 
         } catch (NumberFormatException e) {
             sendJsonResponse(java.util.Map.of("error", "El ID debe ser un numero"), response, HttpServletResponse.SC_BAD_REQUEST);

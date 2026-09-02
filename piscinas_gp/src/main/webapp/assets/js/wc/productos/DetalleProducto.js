@@ -33,6 +33,8 @@ class DetalleProducto extends HTMLElement {
 
         const p = this._producto;
         const colorCategoria = DetalleProducto.COLORES_CATEGORIA[p.categoriaProducto.nombre] || "#888888";
+        const esActivo = p.activo === true;
+        const colorEstado = esActivo ? "rgba(35,143,16,.6)" : "rgba(194,50,50,.6)";
 
         this.shadowRoot.innerHTML = `
             <style>
@@ -42,6 +44,13 @@ class DetalleProducto extends HTMLElement {
                     gap: 1.4rem;
                     color: white;
                     font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+                }
+        
+                .info-producto {
+                    display: flex;
+                    align-items: center;
+                    flex-direction: row;
+                    gap: .5rem;
                 }
 
                 .badge-categoria {
@@ -54,6 +63,14 @@ class DetalleProducto extends HTMLElement {
                     font-weight: 700;
                 }
 
+                .badge-estado {
+                    display:inline-block;
+                    width: 22px;
+                    height: 22px;
+                    border-radius:50%;
+                    background: ${colorEstado};
+                }
+                
                 .fila-stats {
                     display: grid;
                     grid-template-columns: repeat(3, 1fr);
@@ -113,29 +130,47 @@ class DetalleProducto extends HTMLElement {
                 .acciones {
                     display: flex;
                     justify-content: flex-end;
+                    gap: .5rem;
                 }
-
-                .btn-editar {
+        
+                .btn {
                     display: flex;
                     align-items: center;
                     gap: .4rem;
-                    background: #37E0E0;
-                    color: #05448D;
                     border: none;
-                    padding: .65rem 1.6rem;
                     border-radius: 8px;
-                    font-weight: 700;
                     cursor: pointer;
                     transition: .2s;
+                }
+
+                .btn-editar {
+                    background: #37E0E0;
+                    color: #05448D;
+                    padding: .65rem 1.6rem;
+                    font-weight: 700;
+                }
+        
+                .btn-estado {
+                    background:${p.activo ? 'rgba(222, 31, 31,.7)' : 'rgba(45, 166, 36,.7)'};
+                    color:white;
+                    padding:.65rem 1.6rem;
+                    font-weight:700;
                 }
 
                 .btn-editar:hover {
                     background: #29C9C9;
                 }
+        
+                .btn-estado:hover {
+                    background:${p.activo ? 'rgba(222, 31, 31,.6)' : 'rgba(45, 166, 36,.6)'};
+                }
             </style>
 
             <div class="detalle">
-                <span class="badge-categoria">${p.categoriaProducto.nombre}</span>
+                <div class="info-producto">
+                    <span class="badge-categoria">${p.categoriaProducto.nombre}</span>
+                    <span class="badge-estado"></span>
+                </div>
 
                 <div class="fila-stats">
                     <div class="stat">
@@ -177,10 +212,10 @@ class DetalleProducto extends HTMLElement {
                 </div>
 
                 <div class="acciones">
-                    <button class="btn-estado" style="background:${p.activo ? '#F87171' : '#4ADE80'}; color:white; border:none; padding:.65rem 1.6rem; border-radius:8px; font-weight:700; cursor:pointer;">
+                    <button class="btn btn-estado">
                         ${p.activo ? "Dar de baja" : "Reactivar"}
                     </button>
-                    <button class="btn-editar">✎ Editar</button>
+                    <button class="btn btn-editar">✎ Editar</button>
                 </div>
             </div>
         `;

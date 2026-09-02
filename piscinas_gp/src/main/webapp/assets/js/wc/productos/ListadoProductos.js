@@ -9,7 +9,7 @@ class ListadoProductos extends HTMLElement {
         this._marcaSeleccionada = "";
         this._busqueda = "";
         this._estadoStock = "";
-        this._filtroEstado = "activos";
+        this._filtroEstado = "todos";
         this._orden = "nombre_asc";
     }
 

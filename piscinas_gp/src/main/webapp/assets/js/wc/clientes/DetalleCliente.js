@@ -118,22 +118,42 @@ class DetalleCliente extends HTMLElement {
                     justify-content: flex-end;
                 }
 
-                .btn-editar {
+                .acciones {
+                    display: flex;
+                    justify-content: flex-end;
+                    gap: .5rem;
+                }
+        
+                .btn {
                     display: flex;
                     align-items: center;
                     gap: .4rem;
-                    background: #37E0E0;
-                    color: #05448D;
                     border: none;
-                    padding: .65rem 1.6rem;
                     border-radius: 8px;
-                    font-weight: 700;
                     cursor: pointer;
                     transition: .2s;
                 }
 
+                .btn-editar {
+                    background: #37E0E0;
+                    color: #05448D;
+                    padding: .65rem 1.6rem;
+                    font-weight: 700;
+                }
+        
+                .btn-estado {
+                    background:${c.activo ? 'rgba(222, 31, 31,.7)' : 'rgba(45, 166, 36,.7)'};
+                    color:white;
+                    padding:.65rem 1.6rem;
+                    font-weight:700;
+                }
+
                 .btn-editar:hover {
                     background: #29C9C9;
+                }
+        
+                .btn-estado:hover {
+                    background:${c.activo ? 'rgba(222, 31, 31,.6)' : 'rgba(45, 166, 36,.6)'};
                 }
             </style>
 
@@ -208,10 +228,10 @@ class DetalleCliente extends HTMLElement {
                 </div>
 
                 <div class="acciones">
-                    <button class="btn-estado" style="background:${c.activo ? '#F87171' : '#4ADE80'}; color:white; border:none; padding:.65rem 1.6rem; border-radius:8px; font-weight:700; cursor:pointer; margin-right:auto;">
+                    <button class="btn btn-estado">
                         ${c.activo ? "Dar de baja" : "Reactivar"}
                     </button>
-                    <button class="btn-editar">✎ Editar</button>
+                    <button class="btn btn-editar">✎ Editar</button>
                 </div>
             </div>
         `;
