@@ -166,6 +166,7 @@ public class ClienteControlador extends HttpServlet {
         }
     }
     
+<<<<<<< HEAD
     @Override
     protected void doDelete(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
@@ -174,12 +175,12 @@ public class ClienteControlador extends HttpServlet {
 
         try {
             if (pathInfo == null || pathInfo.equals("/")) {
-                sendJsonResponse(java.util.Map.of("error", "El ID del producto es requerido"), response, HttpServletResponse.SC_BAD_REQUEST);
+                sendJsonResponse(java.util.Map.of("error", "El ID del cliente es requerido"), response, HttpServletResponse.SC_BAD_REQUEST);
                 return;
             }
             Long id = Long.parseLong(pathInfo.substring(1));
             clienteServicio.darDeBajaCliente(id);
-            sendJsonResponse(java.util.Map.of("mensaje", "Producto dado de baja correctamente"), response, HttpServletResponse.SC_OK);
+            sendJsonResponse(java.util.Map.of("mensaje", "Pliente dado de baja correctamente"), response, HttpServletResponse.SC_OK);
 
         } catch (NumberFormatException e) {
             sendJsonResponse(java.util.Map.of("error", "El ID debe ser un numero"), response, HttpServletResponse.SC_BAD_REQUEST);
@@ -191,6 +192,9 @@ public class ClienteControlador extends HttpServlet {
     }
     
     
+=======
+    //para no repetir tanto codigo, se arma metodo aparte. todo el codigo de aca se agregaba al try y catch de arriba
+>>>>>>> a1baf9c76e66b589d1e433c7f9bdc9b20834f15c
     private void sendJsonResponse(Object value, HttpServletResponse response, int statusCode)
                  throws IOException {
 
