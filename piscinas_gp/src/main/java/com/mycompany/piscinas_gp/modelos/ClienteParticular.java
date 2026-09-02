@@ -15,9 +15,9 @@ public class ClienteParticular extends Cliente {
 
     public ClienteParticular(String nombre, String apellido, String cuil,
                              String email, String telefono, String calleYnumero,
-                             Localidad localidad, String observaciones) {
+                             Localidad localidad, String observaciones, boolean activo) {
 
-        super(email, telefono, calleYnumero, localidad, observaciones);
+        super(email, telefono, calleYnumero, localidad, observaciones, activo);
 
         setNombre(nombre);
         setApellido(apellido);
@@ -26,9 +26,9 @@ public class ClienteParticular extends Cliente {
 
     public ClienteParticular(Long idCliente, String nombre, String apellido, String cuil,
                              String email, String telefono, String calleYnumero,
-                             Localidad localidad, String observaciones) {
+                             Localidad localidad, String observaciones, boolean activo) {
 
-        super(idCliente, email, telefono, calleYnumero, localidad, observaciones);
+        super(idCliente, email, telefono, calleYnumero, localidad, observaciones, activo);
 
         this.nombre = nombre;
         this.apellido = apellido;

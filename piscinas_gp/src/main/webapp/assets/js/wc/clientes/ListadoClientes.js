@@ -6,7 +6,9 @@ class ListadoClientes extends HTMLElement {
         this._clientes = [];
         this._busqueda = "";
         this._tipoSeleccionado = "";
+        this._filtroEstado = "activos";
         this._orden = "nombre_desc";
+        
     }
 
     async connectedCallback() {
@@ -35,6 +37,10 @@ class ListadoClientes extends HTMLElement {
         const busqueda = this._busqueda.trim().toLowerCase();
         
         let resultado = this._clientes.filter(cliente => {
+            if (this._filtroEstado === "activos" && !cliente.activo) return false;
+            
+            if (this._filtroEstado === "inactivos" && cliente.activo) return false;
+            
            if (this._tipoSeleccionado && cliente.tipo !== this._tipoSeleccionado) {
                return false;
            }
@@ -93,6 +99,15 @@ class ListadoClientes extends HTMLElement {
                 clave: "telefono",
                 titulo: "Teléfono",
                 formato: (valor) =>  valor || "No registrado." 
+            },
+            {
+                clave: "activo",
+                titulo: "Estado",
+                formato: (valor) => {
+                    const color = valor ? "#4ADE80" : "#F87171";
+                    const etiqueta = valor ? "Activo" : "Inactivo";
+                    return `<span title="${etiqueta}" style="display:inline-block; width:15px; height:15px; border-radius:50%; background:${color}"></span>`;
+                }
             },
             { clave: "cantidadVentas", titulo: "Ventas" }
         ];

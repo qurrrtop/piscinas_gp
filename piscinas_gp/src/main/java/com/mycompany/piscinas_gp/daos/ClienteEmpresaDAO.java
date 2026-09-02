@@ -22,7 +22,7 @@ public class ClienteEmpresaDAO extends GenericoDAO<ClienteEmpresa> {
     private static final String[] COLUMNS_FOR_UPDATE = { "razon_social = ?", "nombre_fantasia = ?", "rubro = ?", "cuit = ?" };
 
     private static final String SQL_JOIN =
-            "SELECT c.id, c.email, c.telefono, c.calle_numero, c.observaciones, "
+            "SELECT c.id, c.email, c.telefono, c.calle_numero, c.observaciones, c.activo, "
             + "l.id AS localidad_id, l.nombre AS localidad_nombre, "
             + "ce.razon_social, ce.nombre_fantasia, ce.rubro, ce.cuit "
             + "FROM clientes c "
@@ -34,7 +34,7 @@ public class ClienteEmpresaDAO extends GenericoDAO<ClienteEmpresa> {
     }
 
     public ClienteEmpresa crear(ClienteEmpresa cliente) throws PersistenceException {
-        String sqlCliente = "INSERT INTO clientes (email, telefono, calle_numero, localidad_id, observaciones) VALUES (?, ?, ?, ?, ?)";
+        String sqlCliente = "INSERT INTO clientes (email, telefono, calle_numero, localidad_id, observaciones, activo) VALUES (?, ?, ?, ?, ?, ?)";
         String sqlEmpresa = "INSERT INTO clientes_empresas (cliente_id, razon_social, nombre_fantasia, rubro, cuit) VALUES (?, ?, ?, ?, ?)";
 
         try (Connection conn = dbConn.getConnection()) {
@@ -49,6 +49,8 @@ public class ClienteEmpresaDAO extends GenericoDAO<ClienteEmpresa> {
                     pstmtCliente.setString(3, cliente.getCalleYnumero());
                     pstmtCliente.setLong(4, cliente.getLocalidad().getId());
                     pstmtCliente.setString(5, cliente.getObservaciones());
+                    pstmtCliente.setBoolean(6, cliente.isActivo());
+
                     pstmtCliente.executeUpdate();
 
                     try (ResultSet generatedKey = pstmtCliente.getGeneratedKeys()) {
@@ -122,7 +124,7 @@ public class ClienteEmpresaDAO extends GenericoDAO<ClienteEmpresa> {
     }
 
     public ClienteEmpresa actualizar(ClienteEmpresa cliente) throws PersistenceException {
-        String sqlCliente = "UPDATE clientes SET email = ?, telefono = ?, calle_numero = ?, localidad_id = ?, observaciones = ? WHERE id = ?";
+        String sqlCliente = "UPDATE clientes SET email = ?, telefono = ?, calle_numero = ?, localidad_id = ?, observaciones = ?, activo = ? WHERE id = ?";
         String sqlEmpresa = "UPDATE clientes_empresas SET razon_social = ?, nombre_fantasia = ?, rubro = ?, cuit = ? WHERE cliente_id = ?";
 
         try (Connection conn = dbConn.getConnection()) {
@@ -135,7 +137,8 @@ public class ClienteEmpresaDAO extends GenericoDAO<ClienteEmpresa> {
                     pstmtCliente.setString(3, cliente.getCalleYnumero());
                     pstmtCliente.setLong(4, cliente.getLocalidad().getId());
                     pstmtCliente.setString(5, cliente.getObservaciones());
-                    pstmtCliente.setLong(6, cliente.getId());
+                    pstmtCliente.setBoolean(6, cliente.isActivo());
+                    pstmtCliente.setLong(7, cliente.getId());
                     pstmtCliente.executeUpdate();
                 }
 
@@ -160,6 +163,30 @@ public class ClienteEmpresaDAO extends GenericoDAO<ClienteEmpresa> {
 
         } catch (SQLException e) {
             throw new PersistenceException("Error al conectar para actualizar el cliente empresa", e);
+        }
+    }
+    
+    public boolean darDeBaja(Long id) throws PersistenceException {
+        String sql = "UPDATE clientes SET activo = FALSE WHERE id = ?";
+        
+        try (Connection conn = dbConn.getConnection();
+                PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            pstmt.setLong(1, id);
+            return pstmt.executeUpdate() > 0;
+        } catch (SQLException e) {
+            throw new PersistenceException("Error al dar de baja el cliente con ID " + id, e);
+        }
+    }
+
+    public boolean reactivar(Long id) throws PersistenceException {
+        String sql = "UPDATE clientes SET activo = TRUE WHERE id = ?";
+        
+        try (Connection conn = dbConn.getConnection();
+                PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            pstmt.setLong(1, id);
+            return pstmt.executeUpdate() > 0;
+        } catch (SQLException e) {
+            throw new PersistenceException("Error al reactivar el cliente con ID " + id, e);
         }
     }
 
@@ -204,7 +231,8 @@ public class ClienteEmpresaDAO extends GenericoDAO<ClienteEmpresa> {
                     rs.getString("telefono"),
                     rs.getString("calle_numero"),
                     localidad,
-                    rs.getString("observaciones")
+                    rs.getString("observaciones"),
+                    rs.getBoolean("activo")
             );
         } catch (SQLException e) {
             throw new PersistenceException("Error al mapear el cliente empresa", e);

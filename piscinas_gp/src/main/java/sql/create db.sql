@@ -182,3 +182,11 @@ INSERT INTO localidades (nombre) VALUES
 ('Chavarría'), ('Paso de los Libres'), ('Bonpland'), ('Parada Pucheta'), ('Tapebicuá'), 
 ('Monte Caseros'), ('Juan Pujol'), ('Colonia Libertad'), ('Sauce'), ('Mocoretá'),
 ('Goya'), ('Corrientes Capital');
+
+-- AGREGAR CAMPO 'activo' EN PRODUCTO Y CLIENTE (DAR DE BAJA LÓGICAMENTE) 
+
+ALTER TABLE productos
+ADD COLUMN activo BOOLEAN NOT NULL DEFAULT TRUE;
+
+ALTER TABLE clientes
+ADD COLUMN activo BOOLEAN NOT NULL DEFAULT TRUE;

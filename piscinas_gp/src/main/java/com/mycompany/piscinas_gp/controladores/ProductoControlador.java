@@ -57,28 +57,40 @@ public class ProductoControlador extends HttpServlet {
         }
     }
 
-    @Override
+  @Override
     protected void doPost(HttpServletRequest request, HttpServletResponse response)
-                        throws ServletException, IOException {
+            throws ServletException, IOException {
+
+        String pathInfo = request.getPathInfo();
+
+        if (pathInfo != null && pathInfo.endsWith("/reactivar")) {
+            try {
+                Long id = Long.parseLong(pathInfo.replace("/reactivar", "").substring(1));
+                productoServicio.reactivarProducto(id);
+                sendJsonResponse(java.util.Map.of("mensaje", "Producto reactivado correctamente"), response, HttpServletResponse.SC_OK);
+            } catch (NumberFormatException e) {
+                sendJsonResponse(java.util.Map.of("error", "El ID debe ser un numero"), response, HttpServletResponse.SC_BAD_REQUEST);
+            } catch (BusinessException e) {
+                sendJsonResponse(java.util.Map.of("error", e.getMessage()), response, HttpServletResponse.SC_NOT_FOUND);
+            } catch (ServiceException e) {
+                sendJsonResponse(java.util.Map.of("error", "Error interno al procesar la solicitud"), response, HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
+            }
+            return;
+        }
 
         request.setCharacterEncoding("UTF-8");
         ObjectMapper mapper = new ObjectMapper();
-
         try {
             ProductoDTO dto = mapper.readValue(request.getReader(), ProductoDTO.class);
-
             Producto producto = new Producto();
             producto.setNombre(dto.getNombre());
-
             if (dto.getDescripcion() != null && !dto.getDescripcion().isBlank()) {
                 producto.setDescripcion(dto.getDescripcion());
             }
-
             producto.setStock(dto.getStock());
             producto.setUmbralStock(dto.getStockMin());
             producto.setPrecioActual(dto.getPrecio());
             producto.setContenido(dto.getContenido());
-
             producto.setUnidadMedida(
                     new UnidadMedida(
                             dto.getUniMedidaId(),
@@ -86,14 +98,12 @@ public class ProductoControlador extends HttpServlet {
                             null
                     )
             );
-
             producto.setMarcaProducto(
                     new MarcaProducto(
                             dto.getMarcaId(),
                             null
                     )
             );
-
             producto.setCategoriaProducto(
                     new CategoriaProducto(
                             dto.getCategoriaId(),
@@ -101,18 +111,14 @@ public class ProductoControlador extends HttpServlet {
                             null
                     )
             );
-
             Producto creado = productoServicio.crearProducto(producto);
             sendJsonResponse(creado, response, HttpServletResponse.SC_CREATED);
         } catch (IllegalArgumentException | BusinessException e) {
-            
             sendJsonResponse(java.util.Map.of("error", e.getMessage()),
                     response,
                     HttpServletResponse.SC_BAD_REQUEST
             );
-
         } catch (ServiceException e) {
-
             sendJsonResponse(java.util.Map.of("error", "Error interno al crear el producto"),
                     response,
                     HttpServletResponse.SC_INTERNAL_SERVER_ERROR
@@ -198,6 +204,31 @@ public class ProductoControlador extends HttpServlet {
         }
     }
 
+    
+    @Override
+    protected void doDelete(HttpServletRequest request, HttpServletResponse response)
+            throws ServletException, IOException {
+
+        String pathInfo = request.getPathInfo();
+
+        try {
+            if (pathInfo == null || pathInfo.equals("/")) {
+                sendJsonResponse(java.util.Map.of("error", "El ID del producto es requerido"), response, HttpServletResponse.SC_BAD_REQUEST);
+                return;
+            }
+            Long id = Long.parseLong(pathInfo.substring(1));
+            productoServicio.darDeBajaProducto(id);
+            sendJsonResponse(java.util.Map.of("mensaje", "Producto dado de baja correctamente"), response, HttpServletResponse.SC_OK);
+
+        } catch (NumberFormatException e) {
+            sendJsonResponse(java.util.Map.of("error", "El ID debe ser un numero"), response, HttpServletResponse.SC_BAD_REQUEST);
+        } catch (BusinessException e) {
+            sendJsonResponse(java.util.Map.of("error", e.getMessage()), response, HttpServletResponse.SC_NOT_FOUND);
+        } catch (ServiceException e) {
+            sendJsonResponse(java.util.Map.of("error", "Error interno al procesar la solicitud"), response, HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
+        }
+    }
+    
     private void sendJsonResponse(Object value, HttpServletResponse response, int statusCode)
                                  throws IOException {
 

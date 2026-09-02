@@ -4,6 +4,7 @@ import com.mycompany.piscinas_gp.daos.ClienteEmpresaDAO;
 import com.mycompany.piscinas_gp.daos.ClienteParticularDAO;
 import com.mycompany.piscinas_gp.daos.LocalidadDAO;
 import com.mycompany.piscinas_gp.daos.VentaDAO;
+import com.mycompany.piscinas_gp.daos.HelperClienteDAO;
 import com.mycompany.piscinas_gp.dtos.ClienteDTO;
 import com.mycompany.piscinas_gp.dtos.ClienteDetalleDTO;
 import com.mycompany.piscinas_gp.dtos.ClienteListadoDTO;
@@ -24,13 +25,15 @@ public class ClienteServicio {
     private final ClienteParticularDAO clienteParticularDAO;
     private final ClienteEmpresaDAO clienteEmpresaDAO;
     private final VentaDAO ventaDAO;
+    private final HelperClienteDAO helperClienteDAO;
     private final LocalidadDAO localidadDAO;
 
     public ClienteServicio(ClienteParticularDAO clienteParticularDAO, ClienteEmpresaDAO clienteEmpresaDAO,
-            VentaDAO ventaDAO, LocalidadDAO localidadDAO) {
+            VentaDAO ventaDAO, HelperClienteDAO helperClienteDAO, LocalidadDAO localidadDAO) {
         this.clienteParticularDAO = clienteParticularDAO;
         this.clienteEmpresaDAO = clienteEmpresaDAO;
         this.ventaDAO = ventaDAO;
+        this.helperClienteDAO = helperClienteDAO;
         this.localidadDAO = localidadDAO;
     }
 
@@ -109,7 +112,8 @@ public class ClienteServicio {
                         dto.getTelefono(),
                         dto.getCalleYnumero(),
                         localidad,
-                        dto.getObservaciones()
+                        dto.getObservaciones(),
+                        dto.isActivo()
                 );
                 ClienteParticular creado = clienteParticularDAO.crear(nuevo);
                 logger.info("Cliente particular creado correctamente");
@@ -125,7 +129,8 @@ public class ClienteServicio {
                         dto.getTelefono(),
                         dto.getCalleYnumero(),
                         localidad,
-                        dto.getObservaciones()
+                        dto.getObservaciones(),
+                        dto.isActivo()
                 );
                 ClienteEmpresa creado = clienteEmpresaDAO.crear(nuevo);
                 logger.info("Cliente empresa creado correctamente");
@@ -161,7 +166,8 @@ public class ClienteServicio {
                         dto.getTelefono(),
                         dto.getCalleYnumero(),
                         localidad,
-                        dto.getObservaciones()
+                        dto.getObservaciones(),
+                        dto.isActivo()
                 );
                 ClienteParticular guardado = clienteParticularDAO.actualizar(actualizado);
                 logger.info("Cliente particular actualizado correctamente");
@@ -178,7 +184,8 @@ public class ClienteServicio {
                         dto.getTelefono(),
                         dto.getCalleYnumero(),
                         localidad,
-                        dto.getObservaciones()
+                        dto.getObservaciones(),
+                        dto.isActivo()
                 );
                 ClienteEmpresa guardado = clienteEmpresaDAO.actualizar(actualizado);
                 logger.info("Cliente empresa actualizado correctamente");
@@ -194,6 +201,28 @@ public class ClienteServicio {
         }
     }
 
+    public void darDeBajaCliente(Long id) throws ServiceException, BusinessException {
+        try {
+            boolean exito = helperClienteDAO.darDeBaja(id);
+            if (!exito) {
+                throw new BusinessException("No existe un cliente con ID " + id);
+            }
+        } catch (PersistenceException e) {
+            throw new ServiceException("Error al dar de baja el cliente", e);
+        }
+    }
+
+    public void reactivarCliente(Long id) throws ServiceException, BusinessException {
+        try {
+            boolean exito = helperClienteDAO.reactivar(id);
+            if (!exito) {
+                throw new BusinessException("No existe un cliente con ID " + id);
+            }
+        } catch (PersistenceException e) {
+            throw new ServiceException("Error al reactivar el cliente", e);
+        }
+    }
+    
     // Busca la Localidad real a partir del ID que manda el DTO, validando que exista
     private Localidad resolverLocalidad(Long localidadId) throws PersistenceException, BusinessException {
         if (localidadId == null) {
@@ -217,6 +246,7 @@ public class ClienteServicio {
         dto.setLocalidadId(c.getLocalidad().getId());
         dto.setLocalidadNombre(c.getLocalidad().getNombre());
         dto.setObservaciones(c.getObservaciones());
+        dto.setActivo(c.isActivo());
         dto.setNombre(c.getNombre());
         dto.setApellido(c.getApellido());
         dto.setCuil(c.getCuil());
@@ -234,6 +264,7 @@ public class ClienteServicio {
         dto.setLocalidadId(c.getLocalidad().getId());
         dto.setLocalidadNombre(c.getLocalidad().getNombre());
         dto.setObservaciones(c.getObservaciones());
+        dto.setActivo(c.isActivo());
         dto.setRazonSocial(c.getRazonSocial());
         dto.setNombreFantasia(c.getNombreFantasia());
         dto.setRubro(c.getRubro());

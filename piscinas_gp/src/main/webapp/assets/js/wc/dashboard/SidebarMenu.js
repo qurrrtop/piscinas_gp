@@ -164,11 +164,14 @@ class SidebarMenu extends HTMLElement {
                     .menu-group:hover {
                         background-color: rgba(11, 79, 157, 1);
                     }
+
                     
-                    .menu-link.active,
-                    .menu-button.active {
-                        border-right: 3px solid #0CE0F5;
-                    }
+                    ${
+                    //.menu-link.active,
+                    //.menu-button.active {
+                        //border-right: 3px solid #0CE0F5;
+                    //}
+                    ''}
         
                     .menu-left, .submenu-left {
                         display: flex;

@@ -128,6 +128,28 @@ public class ProductoServicio {
             throw new ServiceException("Error al crear el producto", e);
         }
     }
+    
+    public void darDeBajaProducto(Long id) throws ServiceException, BusinessException {
+        try {
+            boolean exito = productoDAO.darDeBaja(id);
+            if (!exito) {
+                throw new BusinessException("No existe un producto con ID " + id);
+            }
+        } catch (PersistenceException e) {
+            throw new ServiceException("Error al dar de baja el producto", e);
+        }
+    }
+
+    public void reactivarProducto(Long id) throws ServiceException, BusinessException {
+        try {
+            boolean exito = productoDAO.reactivar(id);
+            if (!exito) {
+                throw new BusinessException("No existe un producto con ID " + id);
+            }
+        } catch (PersistenceException e) {
+            throw new ServiceException("Error al reactivar el producto", e);
+        }
+    }
 
     // Actualiza los datos de un producto existente.
     public Producto actualizarProducto(Producto producto)
@@ -191,29 +213,6 @@ public class ProductoServicio {
         } catch (PersistenceException e) {
             logger.error("Error al actualizar el producto", e);
             throw new ServiceException("Error al actualizar el producto", e);
-        }
-    }
-
-    // Elimina un producto utilizando su ID.
-    public boolean eliminarProducto(Long idProducto)
-            throws ServiceException {
-
-        logger.debug("Eliminando producto con ID {}", idProducto);
-
-        try {
-            boolean eliminado = productoDAO.eliminarPorId(idProducto);
-
-            if (eliminado) {
-                logger.info("Producto eliminado correctamente");
-            } else {
-                logger.warn("No se pudo eliminar el producto con ID {}", idProducto);
-            }
-
-            return eliminado;
-
-        } catch (PersistenceException e) {
-            logger.error("Error al eliminar el producto", e);
-            throw new ServiceException("Error al eliminar el producto", e);
         }
     }
 }

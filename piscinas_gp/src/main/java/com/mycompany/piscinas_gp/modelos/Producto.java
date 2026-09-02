@@ -19,11 +19,12 @@ public class Producto implements Identifiable {
     private BigDecimal contenido;
     private MarcaProducto marcaProducto;
     private CategoriaProducto categoriaProducto;
+    private boolean activo = true;
 
     public Producto() {
     }
 
-    public Producto(String nombre, String descripcion, int stock, int umbralStock, BigDecimal precioActual, UnidadMedida unidadMedida, BigDecimal contenido, MarcaProducto marcaProducto, CategoriaProducto categoriaProducto) {
+    public Producto(String nombre, String descripcion, int stock, int umbralStock, BigDecimal precioActual, UnidadMedida unidadMedida, BigDecimal contenido, MarcaProducto marcaProducto, CategoriaProducto categoriaProducto, boolean activo) {
         setNombre(nombre);
         setDescripcion(descripcion);
         setStock(stock);
@@ -33,9 +34,10 @@ public class Producto implements Identifiable {
         setContenido(contenido);
         setMarcaProducto(marcaProducto);
         setCategoriaProducto(categoriaProducto);
+        setActivo(activo);
     }
 
-    public Producto(Long idProducto, String nombre, String descripcion, int stock, int umbralStock, BigDecimal precioActual, UnidadMedida unidadMedida, BigDecimal contenido, MarcaProducto marcaProducto, CategoriaProducto categoriaProducto) {
+    public Producto(Long idProducto, String nombre, String descripcion, int stock, int umbralStock, BigDecimal precioActual, UnidadMedida unidadMedida, BigDecimal contenido, MarcaProducto marcaProducto, CategoriaProducto categoriaProducto, boolean activo) {
         this.idProducto = idProducto;
         this.nombre = nombre;
         this.descripcion = descripcion;
@@ -46,6 +48,7 @@ public class Producto implements Identifiable {
         this.contenido = contenido;
         this.marcaProducto = marcaProducto;
         this.categoriaProducto = categoriaProducto;
+        this.activo = activo;
     }
     
     
@@ -60,6 +63,7 @@ public class Producto implements Identifiable {
     public BigDecimal getContenido() { return contenido; }
     public MarcaProducto getMarcaProducto() { return marcaProducto; }
     public CategoriaProducto getCategoriaProducto() { return categoriaProducto; }
+    public boolean isActivo() { return activo; }
 
     
 @Override
@@ -133,7 +137,9 @@ public class Producto implements Identifiable {
         this.categoriaProducto = categoriaProducto;
     }
     
-    
-            
+    public void setActivo(boolean activo) {
+        this.activo = activo;
+    }
+           
 }
 

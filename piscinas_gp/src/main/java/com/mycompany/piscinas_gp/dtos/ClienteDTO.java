@@ -10,6 +10,7 @@ public class ClienteDTO {
     private String calleYnumero;
     private Long localidadId;
     private String observaciones;
+    private Boolean activo;
 
     private String nombre;
     private String apellido;
@@ -37,6 +38,8 @@ public class ClienteDTO {
     public void setLocalidadId(Long localidadId) { this.localidadId = localidadId; }
     public String getObservaciones() { return observaciones; }
     public void setObservaciones(String observaciones) { this.observaciones = observaciones; }
+    public Boolean isActivo() { return activo; }
+    public void setActivo(Boolean activo) { this.activo = activo; }
     public String getNombre() { return nombre; }
     public void setNombre(String nombre) { this.nombre = nombre; }
     public String getApellido() { return apellido; }

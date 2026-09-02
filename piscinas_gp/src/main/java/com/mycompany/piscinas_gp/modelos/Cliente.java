@@ -10,25 +10,28 @@ public abstract class Cliente implements Identifiable{
     private String calleYnumero;
     private Localidad localidad;
     private String observaciones;
+    private boolean activo = true;
 
     public Cliente() {       
     }
 
-    public Cliente(String email, String telefono, String calleYnumero, Localidad localidad, String observaciones) {
+    public Cliente(String email, String telefono, String calleYnumero, Localidad localidad, String observaciones, boolean activo) {
         setEmail(email);
         setTelefono (telefono);
         setCalleYnumero(calleYnumero);
         setLocalidad(localidad);
         setObservaciones(observaciones);
+        setActivo(activo);
     }
 
-    public Cliente(Long idCliente, String email, String telefono, String calleYnumero, Localidad localidad, String observaciones) {
+    public Cliente(Long idCliente, String email, String telefono, String calleYnumero, Localidad localidad, String observaciones, boolean activo) {
         this.idCliente = idCliente;
         this.email = email;
         this.telefono = telefono;
         this.calleYnumero = calleYnumero;
         this.localidad = localidad;
         this.observaciones = observaciones;
+        this.activo = activo;
     }
 
     //getters
@@ -39,6 +42,7 @@ public abstract class Cliente implements Identifiable{
     public String getCalleYnumero() { return calleYnumero; }
     public Localidad getLocalidad() { return localidad; }
     public String getObservaciones() { return observaciones; }
+    public boolean isActivo() { return activo; }
 
     
     //setters
@@ -83,6 +87,10 @@ public abstract class Cliente implements Identifiable{
         }
         SetValidator.validar(observaciones, StringFieldType.OBSERVACIONES);
         this.observaciones = observaciones;
+    }
+
+    public void setActivo(boolean activo) {
+        this.activo = activo;
     }
     
 }

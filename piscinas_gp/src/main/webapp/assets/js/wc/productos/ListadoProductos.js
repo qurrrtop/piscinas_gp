@@ -9,6 +9,7 @@ class ListadoProductos extends HTMLElement {
         this._marcaSeleccionada = "";
         this._busqueda = "";
         this._estadoStock = "";
+        this._filtroEstado = "activos";
         this._orden = "nombre_asc";
     }
 
@@ -93,6 +94,10 @@ class ListadoProductos extends HTMLElement {
         const busqueda = this._busqueda.trim().toLowerCase();
 
         let resultado = this._productos.filter(producto => {
+            if (this._filtroEstado === "activos" && !producto.activo) return false;
+            
+            if (this._filtroEstado === "inactivos" && producto.activo) return false;
+            
             if (this._categoriaSeleccionada && producto.categoriaProducto.nombre !== this._categoriaSeleccionada) {
                 return false;
             }
@@ -180,6 +185,15 @@ class ListadoProductos extends HTMLElement {
                         sin_stock: "Sin stock"
                     };
                     return `<span style="color:${color} font-weight:bold;">${etiquetas[estado]}</span>`;
+                }
+            },
+            {
+                clave: "activo",
+                titulo: "Estado",
+                formato: (valor) => {
+                    const color = valor ? "rgba(15,110,22,.5)" : "rgba(173,17,17,.5)";
+                    const etiqueta = valor ? "Activo" : "Inactivo";
+                    return `<span title="${etiqueta}" style="display:inline-block; width:15px; height:15px; border-radius:50%; background:${color}"></span>`;
                 }
             },
             {
@@ -371,6 +385,12 @@ class ListadoProductos extends HTMLElement {
                         <option value="disponible">Disponible</option>
                         <option value="stock_bajo">Stock bajo</option>
                         <option value="sin_stock">Sin stock</option>
+                    </select>
+        
+                    <select id="filtroEstado">
+                        <option value="activos">Activos</option>
+                        <option value="inactivos">Inactivos</option>
+                        <option value="todos">Todos</option>
                     </select>
 
                     <select id="filtroOrden">

@@ -16,9 +16,9 @@ public class ClienteEmpresa extends Cliente {
 
     public ClienteEmpresa(String razonSocial, String nombreFantasia, String rubro, String cuit,
                           String email, String telefono, String calleYnumero, Localidad localidad,
-                          String observaciones) {
+                          String observaciones, boolean activo) {
 
-        super(email, telefono, calleYnumero, localidad, observaciones);
+        super(email, telefono, calleYnumero, localidad, observaciones, activo);
 
         setRazonSocial(razonSocial);
         setNombreFantasia(nombreFantasia);
@@ -28,9 +28,9 @@ public class ClienteEmpresa extends Cliente {
 
     public ClienteEmpresa(Long idCliente, String razonSocial, String nombreFantasia, String rubro,
                              String cuit, String email, String telefono, String calleYnumero,
-                             Localidad localidad, String observaciones) {
+                             Localidad localidad, String observaciones, boolean activo) {
 
-        super(idCliente, email, telefono, calleYnumero, localidad, observaciones);
+        super(idCliente, email, telefono, calleYnumero, localidad, observaciones, activo);
 
         this.razonSocial = razonSocial;
         this.nombreFantasia = nombreFantasia;

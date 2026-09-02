@@ -10,6 +10,7 @@ public class ClienteDetalleDTO {
     private Long localidadId;
     private String localidadNombre;
     private String observaciones;
+    private Boolean activo;
     private int cantidadVentas;
 
     // especificos de Particular
@@ -43,6 +44,8 @@ public class ClienteDetalleDTO {
     public void setLocalidadNombre(String localidadNombre) { this.localidadNombre = localidadNombre; }
     public String getObservaciones() { return observaciones; }
     public void setObservaciones(String observaciones) { this.observaciones = observaciones; }
+    public Boolean isActivo() { return activo; }
+    public void setActivo(Boolean activo) { this.activo = activo; }
     public int getCantidadVentas() { return cantidadVentas; }
     public void setCantidadVentas(int cantidadVentas) { this.cantidadVentas = cantidadVentas; }
     public String getNombre() { return nombre; }

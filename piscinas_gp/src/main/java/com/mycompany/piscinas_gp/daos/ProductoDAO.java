@@ -28,9 +28,11 @@ public class ProductoDAO extends GenericoDAO<Producto> {
         "contenido",
         "unidad_medida_id",
         "marca_producto_id",
-        "categoria_producto_id"
+        "categoria_producto_id",
+        "activo"
     };
     private static final String[] PLACEHOLDER_VALUES = {
+        "?",
         "?",
         "?",
         "?",
@@ -51,7 +53,8 @@ public class ProductoDAO extends GenericoDAO<Producto> {
         "contenido",
         "unidad_medida_id",
         "marca_producto_id",
-        "categoria_producto_id"
+        "categoria_producto_id",
+        "activo"
     };
     private static final String[] COLUMNS_FOR_UPDATE = {
         "nombre = ?",
@@ -62,7 +65,8 @@ public class ProductoDAO extends GenericoDAO<Producto> {
         "contenido = ?",
         "unidad_medida_id = ?",
         "marca_producto_id = ?",
-        "categoria_producto_id = ?"
+        "categoria_producto_id = ?",
+        "activo = ?"
     };
 
     public ProductoDAO(DbConnection dbConn) {
@@ -86,7 +90,7 @@ public class ProductoDAO extends GenericoDAO<Producto> {
     }
 
     public List<Producto> buscarTodos() throws PersistenceException {
-        String sql = "SELECT p.id, p.nombre, p.descripcion, p.stock, p.umbral_stock, p.precio_actual, p.contenido, "
+        String sql = "SELECT p.id, p.nombre, p.descripcion, p.stock, p.umbral_stock, p.precio_actual, p.contenido, p.activo, "
                 + "p.marca_producto_id, mp.nombre AS marca_nombre, "
                 + "p.categoria_producto_id, cp.nombre AS categoria_nombre, "
                 + "p.unidad_medida_id, um.nombre AS unidad_nombre, um.abreviatura AS unidad_abreviatura "
@@ -140,7 +144,8 @@ public class ProductoDAO extends GenericoDAO<Producto> {
                     unidadMedida,
                     rs.getBigDecimal("contenido"),
                     marcaProducto,
-                    categoriaProducto
+                    categoriaProducto,
+                    rs.getBoolean("activo")
             );
         } catch (SQLException e) {
             throw new PersistenceException("Error al mapear el producto con sus datos relacionados", e);
@@ -175,6 +180,28 @@ public class ProductoDAO extends GenericoDAO<Producto> {
         }
 
         return false;
+    }
+    
+    public boolean darDeBaja(Long id) throws PersistenceException {
+        String sql = "UPDATE productos SET activo = FALSE WHERE id = ?";
+        try (Connection conn = dbConn.getConnection();
+                PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            pstmt.setLong(1, id);
+            return pstmt.executeUpdate() > 0;
+        } catch (SQLException e) {
+            throw new PersistenceException("Error al dar de baja el producto con ID " + id, e);
+        }
+    }
+
+    public boolean reactivar(Long id) throws PersistenceException {
+        String sql = "UPDATE productos SET activo = TRUE WHERE id = ?";
+        try (Connection conn = dbConn.getConnection();
+                PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            pstmt.setLong(1, id);
+            return pstmt.executeUpdate() > 0;
+        } catch (SQLException e) {
+            throw new PersistenceException("Error al reactivar el producto con ID " + id, e);
+        }
     }
     
     @Override
@@ -245,7 +272,8 @@ public class ProductoDAO extends GenericoDAO<Producto> {
                     unidadMedida,
                     rs.getBigDecimal("contenido"),
                     marcaProducto,
-                    categoriaProducto
+                    categoriaProducto,
+                    rs.getBoolean("activo")
             );
         } catch (SQLException e) {
             throw new PersistenceException("Error al mapear el producto desde la base de datos", e);
@@ -281,6 +309,9 @@ public class ProductoDAO extends GenericoDAO<Producto> {
             } else {
                 pstmt.setNull(9, java.sql.Types.BIGINT);
             }
+            
+            pstmt.setBoolean(10, producto.isActivo());
+
         
         } catch (SQLException e) {
             throw new PersistenceException("Error al asignar los parametros del producto", e);
