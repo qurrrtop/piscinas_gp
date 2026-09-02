@@ -28,6 +28,8 @@ class DetalleCliente extends HTMLElement {
         const c = this._cliente;
         const esParticular = c.tipo === "Particular";
         const colorTipo = esParticular ? "#2387FA" : "#FE1BD4";
+        const esActivo = c.activo === true;
+        const colorEstado = esActivo ? "rgba(35,143,16,.6)" : "rgba(194,50,50,.6)";
 
         this.shadowRoot.innerHTML = `
             <style>
@@ -39,6 +41,13 @@ class DetalleCliente extends HTMLElement {
                     font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
                 }
 
+                .info-cliente {
+                    display: flex;
+                    align-items: center;
+                    flex-direction: row;
+                    gap: .5rem;
+                }
+                
                 .badge-tipo {
                     align-self: flex-start;
                     background: ${colorTipo}44;
@@ -47,6 +56,14 @@ class DetalleCliente extends HTMLElement {
                     border-radius: 20px;
                     font-size: 1rem;
                     font-weight: 700;
+                }
+        
+                .badge-estado {
+                    display:inline-block;
+                    width: 22px;
+                    height: 22px;
+                    border-radius:50%;
+                    background: ${colorEstado};
                 }
 
                 .fila-stats {
@@ -121,7 +138,10 @@ class DetalleCliente extends HTMLElement {
             </style>
 
             <div class="detalle">
-                <span class="badge-tipo">${c.tipo}</span>
+                <div class="info-cliente">
+                    <span class="badge-tipo">${c.tipo}</span>
+                    <span class="badge-estado"></span>
+                </div>
 
                 <div class="fila-stats">
                     <div class="stat">
