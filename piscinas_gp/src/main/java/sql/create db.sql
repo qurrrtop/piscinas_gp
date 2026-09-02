@@ -182,3 +182,9 @@ INSERT INTO localidades (nombre) VALUES
 ('Chavarría'), ('Paso de los Libres'), ('Bonpland'), ('Parada Pucheta'), ('Tapebicuá'), 
 ('Monte Caseros'), ('Juan Pujol'), ('Colonia Libertad'), ('Sauce'), ('Mocoretá'),
 ('Goya'), ('Corrientes Capital');
+
+-- estaba con not null
+
+alter table ventas
+modify problema text null;
+
