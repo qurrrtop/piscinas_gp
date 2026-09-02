@@ -96,6 +96,7 @@ export default class SetValidator {
         }
 
         // Función para calcular dígito verificador
+        //para calcular cuit de empresa (si es valido)
         const calcDigito = (num) => {
             const mult = [5, 4, 3, 2, 7, 6, 5, 4, 3, 2];
             let s = 0;

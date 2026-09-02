@@ -118,6 +118,7 @@ public class ClienteControlador extends HttpServlet {
         }
     }
     
+    //para no repetir tanto codigo, se arma metodo aparte. todo el codigo de aca se agregaba al try y catch de arriba
     private void sendJsonResponse(Object value, HttpServletResponse response, int statusCode)
                  throws IOException {
 
