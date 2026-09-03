@@ -79,9 +79,9 @@ class HistorialVentas extends HTMLElement {
         const tabla = this.shadowRoot.querySelector("tabla-generica");
 
         const coloresEstado = {
-            "Cerrada": "#4ADE80",
-            "Pendiente": "#FBBF24",
-            "Cancelada": "#F87171"
+            "Cerrada": "rgba(19, 99, 18)",
+            "Pendiente": "rgba(130, 119, 5)",
+            "Cancelada": "rgba(145, 34, 26)"
         };
 
         tabla.columnas = [
@@ -90,7 +90,8 @@ class HistorialVentas extends HTMLElement {
             {
                 clave: "estado",
                 titulo: "Estado",
-                formato: (valor) => `<span style="color:${coloresEstado[valor] || "#888"}; font-weight:600">${valor}</span>`
+                formato: (valor) => `<span style="color:${coloresEstado[valor] || "#888"}; background: ${coloresEstado[valor].replace(")", ", 0.22)")}; padding:.25rem .7rem; border-radius:20px;  font-weight:600">${valor}</span>`
+                // return `<span style="background:${color}22; color:${color}; padding:.25rem .7rem; border-radius:20px; font-size:.9rem; font-weight:600">${valor}</span>`;
             },
             {
                 clave: "fecha",
@@ -240,13 +241,18 @@ class HistorialVentas extends HTMLElement {
                 }
 
                 .btn-limpiar {
-                    background: none;
-                    border: none;
-                    color: #B8D7FF;
-                    text-decoration: underline;
+                    background: transparent;
+                    border: 1px solid rgba(255,255,255,.3);
+                    color: white;
+                    padding: .6rem 1.2rem;
+                    border-radius: 30px;
                     cursor: pointer;
                     font-size: .85rem;
-                    align-self: flex-start;
+                    margin-left: auto;
+                }
+
+                .btn-limpiar:hover {
+                    background: rgba(255,255,255,.08);
                 }
             </style>
 
@@ -272,10 +278,9 @@ class HistorialVentas extends HTMLElement {
                     ${HistorialVentas.ESTADOS_TABS.map(estado => `
                         <button class="tab-estado" data-estado="${estado}">${estado === "Cerrada" ? "Cerradas" : estado === "Pendiente" ? "Pendientes" : "Canceladas"}</button>
                     `).join("")}
+                    <button class="btn-limpiar" id="limpiarFiltros">Limpiar filtros</button>
                 </div>
-
-                <button class="btn-limpiar" id="limpiarFiltros">Limpiar filtros</button>
-
+        
                 <tabla-generica></tabla-generica>
             </div>
         `;
@@ -283,3 +288,24 @@ class HistorialVentas extends HTMLElement {
 }
 
 customElements.define("historial-ventas", HistorialVentas);
+
+/*
+ *  ===========================================================================
+ *  CLIENTES HARDCODEADOS PARA HISTORIAL VENTAS 
+const historial = document.querySelector("dashboard-section")
+    .shadowRoot
+    .querySelector("historial-ventas");
+
+historial._ventas = [
+    { id: 6, clienteNombre: "Román Maidana", clienteCuitCuil: "20304050607", estado: "Cerrada", fecha: "2026-06-11", total: 70000 },
+    { id: 5, clienteNombre: "Micaela Rodriguez", clienteCuitCuil: "20111222339", estado: "Cerrada", fecha: "2026-06-11", total: 143000 },
+    { id: 4, clienteNombre: "HidroWorld Taragui S.A.", clienteCuitCuil: "20222333449", estado: "Pendiente", fecha: "2026-06-11", total: 200000 },
+    { id: 3, clienteNombre: "Facundo Buonanotte", clienteCuitCuil: "20333444559", estado: "Cerrada", fecha: "2026-06-11", total: 70000 },
+    { id: 2, clienteNombre: "AquaTecno del Litoral S.R.L.", clienteCuitCuil: "20444555669", estado: "Pendiente", fecha: "2026-06-11", total: 150000 },
+    { id: 1, clienteNombre: "Nicolas Benitez", clienteCuitCuil: "20304578639", estado: "Cancelada", fecha: "2026-06-11", total: 200000 }
+];
+
+historial.actualizarTarjetas();
+historial.actualizarTabla();
+ * ============================================================================
+ */

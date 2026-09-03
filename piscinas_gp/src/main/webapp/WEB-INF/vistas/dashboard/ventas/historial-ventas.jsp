@@ -15,5 +15,6 @@
         ></dashboard-header>
 
         <historial-ventas></historial-ventas>
+        <br><br><br><br><br>
     </div>
 </div>

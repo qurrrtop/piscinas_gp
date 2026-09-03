@@ -18,6 +18,9 @@
         <script src="${pageContext.request.contextPath}/assets/js/wc/clientes/DetalleCliente.js" type="module" defer></script>
         <script src="${pageContext.request.contextPath}/assets/js/wc/clientes/FormularioCliente.js" type="module" defer></script>
         <script src="${pageContext.request.contextPath}/assets/js/wc/ventas/HistorialVentas.js" type="module" defer></script>
+        <script src="${pageContext.request.contextPath}/assets/js/wc/ventas/NuevaVenta.js" type="module" defer></script>
+        <script src="${pageContext.request.contextPath}/assets/js/wc/ventas/ConfirmacionVenta.js" type="module" defer></script>
+
         
         <title>PiscinasGP</title>
     </head>

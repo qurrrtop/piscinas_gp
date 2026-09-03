@@ -14,6 +14,7 @@
             accion="nav:/dashboard/ventas/historial"
         ></dashboard-header>
 
-        <nueva-venta></nueva-venta>
+        <nueva-venta base-path="${pageContext.request.contextPath}"></nueva-venta>
+        <br><br><br><br><br><br><br><br><br><br>
     </div>
 </div>
