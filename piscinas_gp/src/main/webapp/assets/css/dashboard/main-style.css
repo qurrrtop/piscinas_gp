@@ -32,6 +32,6 @@
     position: absolute;
     inset: 0;
 
-    background: rgba(0, 0, 0, .50); /* oscurece */
-    backdrop-filter: blur(3px);      /* difumina */
+    background: rgba(0, 0, 0, .40); /* oscurece */
+    backdrop-filter: blur(2.5px);      /* difumina */
 }
