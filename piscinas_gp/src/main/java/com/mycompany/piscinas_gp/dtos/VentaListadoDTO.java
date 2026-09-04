@@ -7,11 +7,11 @@ public class VentaListadoDTO {
 
     private Long id;
     private String cliente;
-    private String estado;
+    private Boolean estado;
     private LocalDate fecha;
     private BigDecimal total;
 
-    public VentaListadoDTO(Long id, String cliente, String estado,
+    public VentaListadoDTO(Long id, String cliente, Boolean estado,
                            LocalDate fecha, BigDecimal total) {
         this.id = id;
         this.cliente = cliente;
@@ -22,7 +22,7 @@ public class VentaListadoDTO {
 
     public Long getId() { return id; }
     public String getCliente() { return cliente; }
-    public String getEstado() { return estado; }
+    public Boolean getEstado() { return estado; }
     public LocalDate getFecha() { return fecha; }
     public BigDecimal getTotal() { return total; }
 }
