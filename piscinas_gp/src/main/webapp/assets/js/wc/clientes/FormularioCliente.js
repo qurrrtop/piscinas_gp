@@ -293,7 +293,7 @@ class FormularioCliente extends HTMLElement {
 
             this.limpiarFormulario();
 
-            this.dispatchEvent(new CustomEvent("cliente-guardado", { bubbles: true, composed: true }));
+            this.dispatchEvent(new CustomEvent("cliente-guardado", { bubbles: true, composed: true, detail: data }));
             this.dispatchEvent(new CustomEvent("cerrar-modal", { bubbles: true, composed: true }));
 
         } catch (error) {

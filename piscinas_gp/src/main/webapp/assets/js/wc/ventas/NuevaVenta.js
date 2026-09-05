@@ -25,17 +25,17 @@ class NuevaVenta extends HTMLElement {
 
     async cargarDatosIniciales() {
         try {
-            const [clientes, marcas, categorias, productos] = await Promise.all([
-                fetch(`${this.basePath}/clientes`).then(r => r.json()),
+            await this.cargarClientes();
+            const [marcas, categorias, unidades, productos] = await Promise.all([
                 fetch(`${this.basePath}/marcas`).then(r => r.json()),
                 fetch(`${this.basePath}/categorias`).then(r => r.json()),
+                fetch(`${this.basePath}/unidades-medida`).then(r => r.json()),
                 fetch(`${this.basePath}/productos`).then(r => r.json())
             ]);
-            this._clientes = clientes.filter(c => c.activo);
             this._marcas = marcas;
             this._categorias = categorias;
+            this._unidades = unidades;
             this._productos = productos.filter(p => p.activo);
-            this.poblarDatalistClientes();
         } catch (error) {
             console.error("Error al cargar datos iniciales:", error);
         }
@@ -95,16 +95,87 @@ class NuevaVenta extends HTMLElement {
         });
     }
 
+    obtenerIniciales(nombre) {
+        const partes = nombre.trim().split(" ");
+        return ((partes[0]?.[0] || "") + (partes[1]?.[0] || "")).toUpperCase();
+    }
+
+    renderSelectorCliente() {
+        const contenedor = this.shadowRoot.querySelector("#seccionCliente");
+        contenedor.innerHTML = `
+            <label>BUSCAR CLIENTE <span class="required">*</span></label>
+            <div class="buscador-cliente">
+                <input type="text" id="buscarCliente" autocomplete="off" placeholder="Nombre, CUIL o CUIT del cliente...">
+                <div class="resultados-cliente" id="resultadosCliente" style="display:none"></div>
+            </div>
+        `;
+
+        const input = this.shadowRoot.querySelector("#buscarCliente");
+        const resultados = this.shadowRoot.querySelector("#resultadosCliente");
+        let temporizador = null;
+
+        const buscarYRenderizar = async (texto) => {
+            const busqueda = texto.trim();
+
+            if (!busqueda) {
+                resultados.innerHTML = `<div class="resultado-crear" id="btnCrearClienteRapido">+ Crear nuevo cliente</div>`;
+                resultados.style.display = "block";
+                resultados.querySelector("#btnCrearClienteRapido").addEventListener("click", () => this.abrirCreacionRapidaCliente());
+                return;
+            }
+
+            try {
+                const coincidencias = await fetch(`${this.basePath}/clientes?buscar=${encodeURIComponent(busqueda)}`).then(r => r.json());
+
+                resultados.innerHTML = `
+                    ${coincidencias.map(c => `
+                        <div class="resultado-cliente" data-id="${c.id}">
+                            <span class="avatar avatar-${c.tipo === 'Empresa' ? 'empresa' : 'particular'}">${this.obtenerIniciales(c.nombreCompleto)}</span>
+                            <div>
+                                <strong>${c.nombreCompleto}</strong>
+                                <small>${c.email || "Sin email"} - CUIL/CUIT: ${c.cuitCuil}</small>
+                            </div>
+                        </div>
+                    `).join("")}
+                    <div class="resultado-crear" id="btnCrearClienteRapido">+ Crear nuevo cliente "${busqueda}"</div>
+                `;
+
+                resultados.style.display = "block";
+
+                resultados.querySelectorAll(".resultado-cliente").forEach(el => {
+                    el.addEventListener("click", () => {
+                        this._clienteSeleccionado = coincidencias.find(c => c.id === el.dataset.id);
+                        this.renderClienteSeleccionado();
+                    });
+                });
+
+                resultados.querySelector("#btnCrearClienteRapido").addEventListener("click", () => {
+                    this.abrirCreacionRapidaCliente();
+                });
+
+            } catch (error) {
+                console.error("Error al buscar clientes:", error);
+            }
+        };
+
+        input.addEventListener("input", (e) => {
+            clearTimeout(temporizador);
+            const texto = e.target.value;
+            temporizador = setTimeout(() => buscarYRenderizar(texto), 300);
+        });
+    }
+
     renderClienteSeleccionado() {
         const contenedor = this.shadowRoot.querySelector("#seccionCliente");
         const c = this._clienteSeleccionado;
         contenedor.innerHTML = `
             <div class="cliente-chip">
-                <div>
+                <span class="avatar avatar-${c.tipo === 'Empresa' ? 'empresa' : 'particular'}">${this.obtenerIniciales(c.nombreCompleto)}</span>
+                <div class="cliente-info">
                     <strong>${c.nombreCompleto}</strong>
-                    <span class="cliente-sub">${c.email || "Sin email"} · CUIT/CUIL: ${c.cuitCuil}</span>
+                    <small>${c.email || "Sin email"} · CUIL/CUIT: ${c.cuitCuil}</small>
                 </div>
-                <button id="btnCambiarCliente">Cambiar</button>
+                <button type="button" id="btnCambiarCliente">✎ Cambiar</button>
             </div>
         `;
         this.shadowRoot.querySelector("#btnCambiarCliente").addEventListener("click", () => {
@@ -113,115 +184,137 @@ class NuevaVenta extends HTMLElement {
         });
     }
 
-    renderSelectorCliente() {
-        const contenedor = this.shadowRoot.querySelector("#seccionCliente");
-        contenedor.innerHTML = `
-            <label>BUSCAR CLIENTE <span class="required">*</span></label>
-            <input type="text" id="buscarCliente" list="listaClientes" placeholder="Nombre, CUIL o CUIT del cliente...">
-            <datalist id="listaClientes"></datalist>
-        `;
-        this.poblarDatalistClientes();
-        this.shadowRoot.querySelector("#buscarCliente").addEventListener("change", (e) => {
-            const texto = e.target.value;
-            const encontrado = this._clientes.find(c => `${c.nombreCompleto} - ${c.cuitCuil}` === texto);
-            if (encontrado) {
-                this._clienteSeleccionado = encontrado;
-                this.renderClienteSeleccionado();
-            }
-        });
-    }
-
     renderFormProducto() {
         const contenedor = this.shadowRoot.querySelector("#areaProductos");
+        const colorCat = {
+            "Químico": "#00690C",
+            "Repuesto": "#9F6C00",
+            "Accesorios de Instalación": "#A22EA0"
+        };
 
         contenedor.innerHTML = `
+        
             <div class="form-producto">
                 <label>CATEGORÍA</label>
                 <div class="tabs-categoria-mini">
-                    ${this._categorias.map(cat => `<button type="button" class="tab-cat-mini" data-id="${cat.id}">${cat.nombre}</button>`).join("")}
+                    <button type="button" class="tab-cat-mini activo" data-id="">Todas</button>
+                    ${this._categorias.map(cat => `<button type="button" class="tab-cat-mini" data-id="${cat.id}" style="{ padding: .8rem 1rem; background: ${colorCat[cat.nombre]};"
+                }>${cat.nombre}</button>`).join("")}
                 </div>
 
-                <label>MARCA</label>
-                <select id="selectMarca">
-                    <option value="">Seleccioná una marca</option>
-                    ${this._marcas.map(m => `<option value="${m.id}">${m.nombre}</option>`).join("")}
-                </select>
-
-                <label>PRODUCTO</label>
-                <select id="selectProducto">
-                    <option value="">Seleccioná un producto</option>
-                </select>
-
-                <div class="fila-precio-cantidad">
+                <div class="fila-selects">
                     <div>
-                        <label>PRECIO UNIT.</label>
-                        <input type="text" id="precioUnitario" disabled value="$ 0">
+                        <label>MARCA</label>
+                        <select id="selectMarca">
+                            <option value="">Todas las marcas</option>
+                            ${this._marcas.map(m => `<option value="${m.id}">${m.nombre}</option>`).join("")}
+                        </select>
                     </div>
                     <div>
-                        <label>CANTIDAD</label>
-                        <input type="number" id="cantidadProducto" value="1" min="1">
+                        <label>UNIDAD DE MEDIDA</label>
+                        <select id="selectUnidad">
+                            <option value="">Todas</option>
+                            ${this._unidades.map(u => `<option value="${u.id}">${u.nombre}</option>`).join("")}
+                        </select>
+                    </div>
+                </div>
+
+                <label>BUSCAR PRODUCTO</label>
+                <input type="text" id="buscarProducto" placeholder="Escribí el nombre del producto...">
+
+                <div class="lista-productos-filtrados" id="listaProductosFiltrados"></div>
+
+                <div id="productoElegido" style="display:none">
+                    <div class="fila-precio-cantidad">
+                        <div>
+                            <label>PRECIO UNIT.</label>
+                            <input type="text" id="precioUnitario" disabled value="$ 0">
+                        </div>
+                        <div>
+                            <label>CANTIDAD</label>
+                            <input type="number" id="cantidadProducto" value="1" min="1">
+                        </div>
                     </div>
                 </div>
 
                 <div class="acciones-form-producto">
                     <button type="button" id="btnCancelarProducto">Cancelar</button>
-                    <button type="button" id="btnAgregarAlCarrito">+ Agregar producto</button>
+                    <button type="button" id="btnAgregarAlCarrito" disabled>+ Agregar producto</button>
                 </div>
             </div>
         `;
 
-        let categoriaSeleccionada = null;
+        let categoriaId = "";
+        let productoSeleccionado = null;
+        const listaEl = this.shadowRoot.querySelector("#listaProductosFiltrados");
+        const btnAgregar = this.shadowRoot.querySelector("#btnAgregarAlCarrito");
 
-        const actualizarProductosFiltrados = () => {
+        const renderLista = () => {
             const marcaId = this.shadowRoot.querySelector("#selectMarca").value;
+            const unidadId = this.shadowRoot.querySelector("#selectUnidad").value;
+            const texto = this.shadowRoot.querySelector("#buscarProducto").value.trim().toLowerCase();
+
             const disponibles = this._productos.filter(p =>
-                (!categoriaSeleccionada || p.categoriaProducto.id == categoriaSeleccionada) &&
-                (!marcaId || p.marcaProducto.id == marcaId)
-            );
-            const selectProducto = this.shadowRoot.querySelector("#selectProducto");
-            selectProducto.innerHTML = `<option value="">Seleccioná un producto</option>` +
-                disponibles.map(p => `<option value="${p.id}">${p.nombre} - ${p.contenido} ${p.unidadMedida.abreviatura}</option>`).join("");
+                (!categoriaId || p.categoriaProducto.id == categoriaId) &&
+                (!marcaId || p.marcaProducto.id == marcaId) &&
+                (!unidadId || p.unidadMedida.id == unidadId) &&
+                (!texto || p.nombre.toLowerCase().includes(texto))
+            ).slice(0, 25);
+
+            listaEl.innerHTML = disponibles.length
+                ? disponibles.map(p => `
+                    <div class="item-producto-lista" data-id="${p.id}">
+                        <div>
+                            <strong>${p.nombre}</strong>
+                            <small>${p.marcaProducto.nombre} · ${p.contenido} ${p.unidadMedida.abreviatura}</small>
+                        </div>
+                        <span>$${Number(p.precioActual).toLocaleString("es-AR")}</span>
+                    </div>
+                `).join("")
+                : `<p class="sin-resultados">No se encontraron productos</p>`;
+
+            listaEl.querySelectorAll(".item-producto-lista").forEach(el => {
+                el.addEventListener("click", () => {
+                    productoSeleccionado = this._productos.find(p => p.id == el.dataset.id);
+                    listaEl.querySelectorAll(".item-producto-lista").forEach(x => x.classList.remove("seleccionado"));
+                    el.classList.add("seleccionado");
+                    this.shadowRoot.querySelector("#precioUnitario").value = `$ ${Number(productoSeleccionado.precioActual).toLocaleString("es-AR")}`;
+                    this.shadowRoot.querySelector("#productoElegido").style.display = "block";
+                    btnAgregar.disabled = false;
+                });
+            });
         };
 
         this.shadowRoot.querySelectorAll(".tab-cat-mini").forEach(tab => {
             tab.addEventListener("click", () => {
-                categoriaSeleccionada = tab.dataset.id;
+                categoriaId = tab.dataset.id;
                 this.shadowRoot.querySelectorAll(".tab-cat-mini").forEach(t => t.classList.remove("activo"));
                 tab.classList.add("activo");
-                actualizarProductosFiltrados();
+                renderLista();
             });
         });
 
-        this.shadowRoot.querySelector("#selectMarca").addEventListener("change", actualizarProductosFiltrados);
+        this.shadowRoot.querySelector("#selectMarca").addEventListener("change", renderLista);
+        this.shadowRoot.querySelector("#selectUnidad").addEventListener("change", renderLista);
+        this.shadowRoot.querySelector("#buscarProducto").addEventListener("input", renderLista);
 
-        this.shadowRoot.querySelector("#selectProducto").addEventListener("change", (e) => {
-            const producto = this._productos.find(p => p.id == e.target.value);
-            this.shadowRoot.querySelector("#precioUnitario").value = producto ? `$ ${Number(producto.precioActual).toLocaleString("es-AR")}` : "$ 0";
-        });
+        renderLista();
 
         this.shadowRoot.querySelector("#btnCancelarProducto").addEventListener("click", () => {
             this._mostrandoFormProducto = false;
             this.renderAreaProductos();
         });
 
-        this.shadowRoot.querySelector("#btnAgregarAlCarrito").addEventListener("click", () => {
-            const productoId = this.shadowRoot.querySelector("#selectProducto").value;
+        btnAgregar.addEventListener("click", () => {
+            if (!productoSeleccionado) return;
             const cantidad = Number(this.shadowRoot.querySelector("#cantidadProducto").value) || 1;
-            const producto = this._productos.find(p => p.id == productoId);
-
-            if (!producto) {
-                document.dispatchEvent(new CustomEvent("mostrar-notificacion", {
-                    detail: { mensaje: "Seleccioná un producto para agregar", tipo: "error" }
-                }));
-                return;
-            }
 
             this._carrito.push({
-                productoId: producto.id,
-                nombre: producto.nombre,
-                marca: producto.marcaProducto.nombre,
-                categoria: producto.categoriaProducto.nombre,
-                precioUnitario: Number(producto.precioActual),
+                productoId: productoSeleccionado.id,
+                nombre: productoSeleccionado.nombre,
+                marca: productoSeleccionado.marcaProducto.nombre,
+                categoria: productoSeleccionado.categoriaProducto.nombre,
+                precioUnitario: Number(productoSeleccionado.precioActual),
                 cantidad
             });
 
@@ -301,6 +394,35 @@ class NuevaVenta extends HTMLElement {
             this._mostrandoFormProducto = true;
             this.renderAreaProductos();
         });
+    }
+    
+    abrirCreacionRapidaCliente() {
+        const modal = document.createElement("modal-component");
+        modal.setAttribute("titulo", "Nuevo cliente");
+        modal.setAttribute("subTitulo", "CREAR RÁPIDO");
+
+        const formulario = document.createElement("formulario-cliente");
+        formulario.setAttribute("base-path", this.basePath);
+
+        formulario.addEventListener("cliente-guardado", async (evento) => {
+            await this.cargarClientes();
+            if (evento.detail?.id) {
+                this._clienteSeleccionado = this._clientes.find(c => c.id === evento.detail.id) || evento.detail;
+                this.renderClienteSeleccionado();
+            }
+        });
+
+        modal.appendChild(formulario);
+        document.body.appendChild(modal);
+    }
+
+    async cargarClientes() {
+        try {
+            const clientes = await fetch(`${this.basePath}/clientes`).then(r => r.json());
+            this._clientes = clientes.filter(c => c.activo);
+        } catch (error) {
+            console.error("Error al cargar clientes:", error);
+        }
     }
 
     actualizarResumen() {
@@ -410,7 +532,7 @@ class NuevaVenta extends HTMLElement {
                 }
 
                 .card {
-                    background: rgba(134, 128, 128, 0.7);
+                    background: rgba(134, 128, 128, 0.9);
                     border: 1px solid rgba(255,255,255,.3);
                     border-radius: 10px;
                     overflow: hidden;
@@ -438,6 +560,150 @@ class NuevaVenta extends HTMLElement {
                 .card-body {
                     padding: 1.2rem;
                 }
+        
+                .buscador-cliente {
+                    position: relative;
+                }
+
+                .resultados-cliente {
+                    position: absolute;
+                    top: 100%;
+                    left: 0;
+                    right: 0;
+                    z-index: 20;
+                    background: rgba(1, 49, 104, 1);
+                    border: 1px solid rgba(255,255,255,.3);
+                    border-radius: 8px;
+                    margin-top: .4rem;
+                    max-height: 320px;
+                    overflow-y: auto;
+                }
+
+                .resultado-cliente {
+                    display: flex;
+                    align-items: center;
+                    gap: .8rem;
+                    padding: .8rem 1rem;
+                    cursor: pointer;
+                    border-bottom: 1px solid rgba(255,255,255,.1);
+                }
+
+                .resultado-cliente:hover {
+                    background: rgba(255,255,255,.08);
+                }
+
+                .resultado-cliente strong {
+                    display: block;
+                    font-size: .95rem;
+                }
+
+                .resultado-cliente small {
+                    color: rgba(255,255,255,.65);
+                    font-size: .78rem;
+                }
+
+                .avatar {
+                    width: 42px;
+                    height: 42px;
+                    border-radius: 50%;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    font-weight: 700;
+                    font-size: .95rem;
+                    color: white;
+                    flex-shrink: 0;
+                }
+
+                .avatar-particular {
+                    background: linear-gradient(160deg, #5FD9E8, #0B5C7A);
+                }
+
+                .avatar-empresa {
+                    background: linear-gradient(160deg, #E85FC9, #6A1B6E);
+                }
+
+                .resultado-crear {
+                    padding: .9rem 1rem;
+                    text-align: center;
+                    font-weight: 700;
+                    color: #B8D7FF;
+                    cursor: pointer;
+                    background: rgba(255,255,255,.05);
+                }
+
+                .resultado-crear:hover {
+                    background: rgba(255,255,255,.1);
+                }
+
+                .sin-resultados {
+                    padding: 1rem;
+                    text-align: center;
+                    color: rgba(255,255,255,.6);
+                    font-size: .85rem;
+                }
+
+                .cliente-chip {
+                    display: flex;
+                    align-items: center;
+                    gap: .9rem;
+                    background: rgba(255,255,255,.08);
+                    border-radius: 8px;
+                    padding: .9rem 1rem;
+                }
+
+                .cliente-info {
+                    flex: 1;
+                }
+
+                .cliente-info strong { display: block; }
+                .cliente-info small { color: rgba(255,255,255,.7); font-size: .8rem; }
+
+                .cliente-chip button {
+                    background: #37E0E0;
+                    color: #05448D;
+                    border: none;
+                    padding: .5rem 1.1rem;
+                    border-radius: 6px;
+                    cursor: pointer;
+                    font-weight: 700;
+                    white-space: nowrap;
+                }
+        
+                .fila-selects {
+                    display: grid;
+                    grid-template-columns: 1fr 1fr;
+                    gap: 1rem;
+                }
+
+                .lista-productos-filtrados {
+                    max-height: 220px;
+                    overflow-y: auto;
+                    border: 1px solid rgba(255,255,255,.2);
+                    border-radius: 8px;
+                    margin-top: .6rem;
+                }
+
+                .item-producto-lista {
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: center;
+                    padding: .7rem 1rem;
+                    cursor: pointer;
+                    border-bottom: 1px solid rgba(255,255,255,.1);
+                }
+
+                .item-producto-lista:hover {
+                    background: rgba(255,255,255,.06);
+                }
+
+                .item-producto-lista.seleccionado {
+                    background: rgba(55,164,255,.2);
+                    border-left: 3px solid #37A4FF;
+                }
+
+                .item-producto-lista strong { display: block; font-size: .9rem; }
+                .item-producto-lista small { color: rgba(255,255,255,.6); font-size: .78rem; }
 
                 label {
                     display: block;
@@ -457,30 +723,38 @@ class NuevaVenta extends HTMLElement {
                     padding: .6rem .8rem;
                     border-radius: 6px;
                     border: 1px solid rgba(196,196,196,1);
-                    background: rgba(255,255,255,.15);
+                    background: rgba(255,255,255,.4);
                     color: white;
                     font-family: inherit;
                 }
+        
+                input, textarea {
+                    outline: none;
+                }
+        
+                input:focus, textarea:focus {
+                    border-color: rgba(1, 49, 104, 0.8);
+                }
 
                 input::placeholder, textarea::placeholder {
-                    color: rgba(255,255,255,.6);
+                    color: rgba(000,000,000,.30);
+                    font-weight: 700;
                 }
 
                 select option { color: black; }
 
-                .required { color: #ff4d4d; }
+                .required { color: #CC2727; }
 
                 .carrito-vacio {
                     text-align: center;
                     padding: 2.5rem 1rem;
-                    color: rgba(255,255,255,.7);
+                    color: rgba(255,255,255);
                     border: 2px dashed rgba(255,255,255,.3);
                     border-radius: 8px;
                 }
 
                 .carrito-vacio img {
                     width: 40px;
-                    opacity: .5;
                     margin-bottom: .8rem;
                     filter: brightness(0) invert(1);
                 }
@@ -565,7 +839,7 @@ class NuevaVenta extends HTMLElement {
                         </div>
                         <div class="card-body" id="seccionCliente">
                             <label>BUSCAR CLIENTE <span class="required">*</span></label>
-                            <input type="text" id="buscarCliente" list="listaClientes" placeholder="Nombre o RUT del cliente...">
+                            <input type="text" id="buscarCliente" list="listaClientes" placeholder="Nombre o Cuil/Cuit del cliente...">
                             <datalist id="listaClientes"></datalist>
                         </div>
                     </div>
