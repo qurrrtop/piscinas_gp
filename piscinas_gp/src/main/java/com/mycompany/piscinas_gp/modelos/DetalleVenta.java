@@ -51,6 +51,7 @@ public class DetalleVenta implements Identifiable {
         if (producto == null) {
             throw new IllegalArgumentException("El producto no puede estar vacio");
         }
+        this.producto = producto;
     }
 
     public void setCantidad(int cantidad) {

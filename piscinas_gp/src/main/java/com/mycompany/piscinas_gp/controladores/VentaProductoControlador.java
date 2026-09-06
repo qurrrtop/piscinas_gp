@@ -1,0 +1,414 @@
+package com.mycompany.piscinas_gp.controladores;
+
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.SerializationFeature;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
+import com.mycompany.piscinas_gp.config.DbConnection;
+import com.mycompany.piscinas_gp.daos.ClienteEmpresaDAO;
+import com.mycompany.piscinas_gp.daos.ClienteParticularDAO;
+import com.mycompany.piscinas_gp.daos.DetalleVentaDAO;
+import com.mycompany.piscinas_gp.daos.EstadoVentaDAO;
+import com.mycompany.piscinas_gp.daos.MetodoPagoDAO;
+import com.mycompany.piscinas_gp.daos.ProductoDAO;
+import com.mycompany.piscinas_gp.daos.VentaProductoDAO;
+import com.mycompany.piscinas_gp.dtos.DetalleVentaDTO;
+import com.mycompany.piscinas_gp.dtos.VentaDTO;
+import com.mycompany.piscinas_gp.exceptions.BusinessException;
+import com.mycompany.piscinas_gp.exceptions.ServiceException;
+import com.mycompany.piscinas_gp.modelos.DetalleVenta;
+import com.mycompany.piscinas_gp.modelos.Producto;
+import com.mycompany.piscinas_gp.modelos.VentaProducto;
+import com.mycompany.piscinas_gp.servicios.VentaProductoServicio;
+import jakarta.servlet.ServletException;
+import jakarta.servlet.annotation.WebServlet;
+import jakarta.servlet.http.HttpServlet;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
+import java.io.IOException;
+import java.time.LocalDate;
+import java.time.format.DateTimeParseException;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+
+@WebServlet(
+        name = "VentaProductoControlador",
+        urlPatterns = {"/ventas/productos", "/ventas/productos/*"}
+)
+public class VentaProductoControlador extends HttpServlet {
+
+    private VentaProductoServicio ventaProductoServicio;
+
+    @Override
+    public void init() throws ServletException {
+        DbConnection db = DbConnection.getInstance();
+
+        ventaProductoServicio = new VentaProductoServicio(
+                new VentaProductoDAO(db),
+                new DetalleVentaDAO(db),
+                new ProductoDAO(db),
+                new ClienteParticularDAO(db),
+                new ClienteEmpresaDAO(db),
+                new EstadoVentaDAO(db),
+                new MetodoPagoDAO(db)
+        );
+    }
+
+    protected void processRequest(
+            HttpServletRequest request,
+            HttpServletResponse response
+    ) throws ServletException, IOException {
+    }
+
+    @Override
+    protected void doGet(
+            HttpServletRequest request,
+            HttpServletResponse response
+    ) throws ServletException, IOException {
+
+        String pathInfo = request.getPathInfo();
+
+        try {
+            if (pathInfo == null || pathInfo.equals("/")) {
+                String cliente = request.getParameter("cliente");
+                String estado = request.getParameter("estado");
+
+                LocalDate fechaDesde =
+                        parseFechaOpcional(request.getParameter("fechaDesde"));
+
+                LocalDate fechaHasta =
+                        parseFechaOpcional(request.getParameter("fechaHasta"));
+
+                List<VentaProducto> ventas =
+                        ventaProductoServicio.listarVentas(
+                                cliente, estado, fechaDesde, fechaHasta
+                        );
+
+                sendJsonResponse(
+                        ventas,
+                        response,
+                        HttpServletResponse.SC_OK
+                );
+
+            } else {
+                Long id = Long.parseLong(pathInfo.substring(1));
+
+                VentaProducto venta =
+                        ventaProductoServicio.buscarVentaPorId(id);
+
+                sendJsonResponse(
+                        venta,
+                        response,
+                        HttpServletResponse.SC_OK
+                );
+            }
+
+        } catch (NumberFormatException | DateTimeParseException e) {
+            sendJsonResponse(
+                    java.util.Map.of(
+                            "error",
+                            "El ID o la fecha enviada no tiene un formato válido"
+                    ),
+                    response,
+                    HttpServletResponse.SC_BAD_REQUEST
+            );
+
+        } catch (BusinessException e) {
+            sendJsonResponse(
+                    java.util.Map.of("error", e.getMessage()),
+                    response,
+                    HttpServletResponse.SC_NOT_FOUND
+            );
+
+        } catch (ServiceException e) {
+            sendJsonResponse(
+                    java.util.Map.of(
+                            "error",
+                            "Error interno al procesar la solicitud"
+                    ),
+                    response,
+                    HttpServletResponse.SC_INTERNAL_SERVER_ERROR
+            );
+        }
+    }
+
+    @Override
+    protected void doPost(
+            HttpServletRequest request,
+            HttpServletResponse response
+    ) throws ServletException, IOException {
+
+        request.setCharacterEncoding("UTF-8");
+        ObjectMapper mapper = crearMapper();
+
+        try {
+            VentaDTO dto = mapper.readValue(
+                    request.getReader(),
+                    VentaDTO.class
+            );
+
+            VentaProducto venta = crearVentaDesdeDTO(dto);
+
+            VentaProducto ventaCreada =
+                    ventaProductoServicio.crearVenta(
+                            venta,
+                            dto.getClienteId(),
+                            dto.getEstadoVentaId(),
+                            dto.getMetodoPagoId()
+                    );
+
+            sendJsonResponse(
+                    ventaCreada,
+                    response,
+                    HttpServletResponse.SC_CREATED
+            );
+
+        } catch (IllegalArgumentException | BusinessException e) {
+            sendJsonResponse(
+                    java.util.Map.of("error", e.getMessage()),
+                    response,
+                    HttpServletResponse.SC_BAD_REQUEST
+            );
+
+        } catch (ServiceException e) {
+            sendJsonResponse(
+                    java.util.Map.of(
+                            "error",
+                            "Error interno al procesar la solicitud"
+                    ),
+                    response,
+                    HttpServletResponse.SC_INTERNAL_SERVER_ERROR
+            );
+        }
+    }
+
+    @Override
+    protected void doPut(
+            HttpServletRequest request,
+            HttpServletResponse response
+    ) throws ServletException, IOException {
+
+        request.setCharacterEncoding("UTF-8");
+        ObjectMapper mapper = crearMapper();
+
+        try {
+            VentaDTO dto = mapper.readValue(
+                    request.getReader(),
+                    VentaDTO.class
+            );
+
+            if (dto.getId() == null) {
+                sendJsonResponse(
+                        java.util.Map.of(
+                                "error",
+                                "El ID de la venta es requerido"
+                        ),
+                        response,
+                        HttpServletResponse.SC_BAD_REQUEST
+                );
+                return;
+            }
+
+            VentaProducto venta = crearVentaDesdeDTO(dto);
+            venta.setId(dto.getId());
+
+            VentaProducto ventaActualizada =
+                    ventaProductoServicio.actualizarVenta(
+                            venta,
+                            dto.getClienteId(),
+                            dto.getEstadoVentaId(),
+                            dto.getMetodoPagoId()
+                    );
+
+            sendJsonResponse(
+                    ventaActualizada,
+                    response,
+                    HttpServletResponse.SC_OK
+            );
+
+        } catch (IllegalArgumentException | BusinessException e) {
+            sendJsonResponse(
+                    java.util.Map.of("error", e.getMessage()),
+                    response,
+                    HttpServletResponse.SC_BAD_REQUEST
+            );
+
+        } catch (ServiceException e) {
+            sendJsonResponse(
+                    java.util.Map.of(
+                            "error",
+                            "Error interno al procesar la solicitud"
+                    ),
+                    response,
+                    HttpServletResponse.SC_INTERNAL_SERVER_ERROR
+            );
+        }
+    }
+
+    @Override
+    protected void doDelete(
+            HttpServletRequest request,
+            HttpServletResponse response
+    ) throws ServletException, IOException {
+
+        String pathInfo = request.getPathInfo();
+
+        try {
+            if (pathInfo == null || pathInfo.equals("/")) {
+                sendJsonResponse(
+                        java.util.Map.of(
+                                "error",
+                                "El ID de la venta es requerido"
+                        ),
+                        response,
+                        HttpServletResponse.SC_BAD_REQUEST
+                );
+                return;
+            }
+
+            Long id = Long.parseLong(pathInfo.substring(1));
+
+            VentaProducto ventaCancelada =
+                    ventaProductoServicio.cancelarVenta(id);
+
+            sendJsonResponse(
+                    ventaCancelada,
+                    response,
+                    HttpServletResponse.SC_OK
+            );
+
+        } catch (NumberFormatException e) {
+            sendJsonResponse(
+                    java.util.Map.of(
+                            "error",
+                            "El ID debe ser un número"
+                    ),
+                    response,
+                    HttpServletResponse.SC_BAD_REQUEST
+            );
+
+        } catch (BusinessException e) {
+            sendJsonResponse(
+                    java.util.Map.of("error", e.getMessage()),
+                    response,
+                    HttpServletResponse.SC_NOT_FOUND
+            );
+
+        } catch (ServiceException e) {
+            sendJsonResponse(
+                    java.util.Map.of(
+                            "error",
+                            "Error interno al procesar la solicitud"
+                    ),
+                    response,
+                    HttpServletResponse.SC_INTERNAL_SERVER_ERROR
+            );
+        }
+    }
+
+    private VentaProducto crearVentaDesdeDTO(VentaDTO dto) {
+        VentaProducto venta = new VentaProducto();
+
+        LocalDate fechaInicio = dto.getFechaInicio() != null
+                ? dto.getFechaInicio()
+                : LocalDate.now();
+
+        venta.setFecha(
+                dto.getFecha() != null
+                        ? dto.getFecha()
+                        : fechaInicio
+        );
+
+        venta.setFechaInicio(fechaInicio);
+        venta.setFechaCierre(dto.getFechaCierre());
+
+        venta.setObservacion(
+                dto.getObservacion() == null || dto.getObservacion().isBlank()
+                        ? "Sin observaciones"
+                        : dto.getObservacion()
+        );
+
+        venta.setDescuentoGlobal(dto.getDescuentoGlobal());
+        venta.setDetallesVenta(
+                convertirDetalles(dto.getDetallesVenta())
+        );
+
+        return venta;
+    }
+
+    private List<DetalleVenta> convertirDetalles(
+            List<DetalleVentaDTO> detallesDTO
+    ) {
+        if (detallesDTO == null) {
+            return Collections.emptyList();
+        }
+
+        List<DetalleVenta> detalles = new ArrayList<>();
+
+        for (DetalleVentaDTO detalleDTO : detallesDTO) {
+            if (detalleDTO == null
+                    || detalleDTO.getProductoId() == null) {
+
+                throw new IllegalArgumentException(
+                        "Cada detalle debe indicar un producto"
+                );
+            }
+
+            Producto producto = new Producto();
+            producto.setId(detalleDTO.getProductoId());
+
+            DetalleVenta detalle = new DetalleVenta();
+
+            if (detalleDTO.getId() != null) {
+                detalle.setId(detalleDTO.getId());
+            }
+
+            detalle.setProducto(producto);
+            detalle.setCantidad(detalleDTO.getCantidad());
+
+            detalles.add(detalle);
+        }
+
+        return detalles;
+    }
+
+    private LocalDate parseFechaOpcional(String fecha) {
+        if (fecha == null || fecha.isBlank()) {
+            return null;
+        }
+
+        return LocalDate.parse(fecha);
+    }
+
+    private ObjectMapper crearMapper() {
+        ObjectMapper mapper = new ObjectMapper();
+
+        mapper.registerModule(new JavaTimeModule());
+        mapper.disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
+
+        return mapper;
+    }
+
+    private void sendJsonResponse(
+            Object value,
+            HttpServletResponse response,
+            int statusCode
+    ) throws IOException {
+
+        ObjectMapper mapper = crearMapper();
+
+        String json = mapper.writeValueAsString(value);
+
+        response.setStatus(statusCode);
+        response.setContentType("application/json");
+        response.setCharacterEncoding("UTF-8");
+
+        response.getWriter().write(json);
+    }
+
+    @Override
+    public String getServletInfo() {
+        return "Controlador de ventas de productos";
+    }
+}
+

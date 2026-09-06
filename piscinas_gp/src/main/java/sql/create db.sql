@@ -190,3 +190,9 @@ ADD COLUMN activo BOOLEAN NOT NULL DEFAULT TRUE;
 
 ALTER TABLE clientes
 ADD COLUMN activo BOOLEAN NOT NULL DEFAULT TRUE;
+
+-- estaba con not null
+
+alter table ventas
+modify problema text null;
+
