@@ -202,7 +202,7 @@ public class VentaProductoDAO extends GenericoDAO<VentaProducto> {
             EstadoVenta estadoVenta = new EstadoVenta(
                     rs.getLong("estado_id"), rs.getString("estado_nombre"));
             MetodoPago metodoPago = new MetodoPago(
-                    rs.getLong("metodo_pago_id"), rs.getString("metodo_pago_nombre"), null);
+                    rs.getLong("metodo_pago_id"), rs.getString("metodo_pago_nombre"));
 
             LocalDate fechaInicio = rs.getDate("fecha_inicio").toLocalDate();
             Date fechaCierreSql = rs.getDate("fecha_cierre");
@@ -304,7 +304,7 @@ public class VentaProductoDAO extends GenericoDAO<VentaProducto> {
             EstadoVenta estadoVenta = new EstadoVenta(
                     rs.getLong("estado_venta_id"), "sin especificar");
             MetodoPago metodoPago = new MetodoPago(
-                    rs.getLong("metodo_pago_id"), "sin especificar", null);
+                    rs.getLong("metodo_pago_id"), "sin especificar");
 
             LocalDate fechaInicio = rs.getDate("fecha_inicio").toLocalDate();
             Date fechaCierreSql = rs.getDate("fecha_cierre");
