@@ -20,6 +20,7 @@ class NuevaVenta extends HTMLElement {
         this.basePath = this.getAttribute("base-path") || "";
         this.render();
         await this.cargarDatosIniciales();
+        this.renderSelectorCliente();
         this.setupListeners();
     }
 
@@ -41,13 +42,6 @@ class NuevaVenta extends HTMLElement {
         }
     }
 
-    poblarDatalistClientes() {
-        const datalist = this.shadowRoot.querySelector("#listaClientes");
-        datalist.innerHTML = this._clientes
-            .map(c => `<option value="${c.nombreCompleto} - ${c.cuitCuil}"></option>`)
-            .join("");
-    }
-
     get subtotal() {
         return this._carrito.reduce((acc, item) => acc + item.precioUnitario * item.cantidad, 0);
     }
@@ -61,15 +55,6 @@ class NuevaVenta extends HTMLElement {
     }
 
     setupListeners() {
-        this.shadowRoot.querySelector("#buscarCliente").addEventListener("change", (e) => {
-            const texto = e.target.value;
-            const encontrado = this._clientes.find(c => `${c.nombreCompleto} - ${c.cuitCuil}` === texto);
-            if (encontrado) {
-                this._clienteSeleccionado = encontrado;
-                this.renderClienteSeleccionado();
-            }
-        });
-
         this.shadowRoot.querySelector("#btnAgregarProductos").addEventListener("click", () => {
             this._mostrandoFormProducto = true;
             this.renderFormProducto();
@@ -112,56 +97,53 @@ class NuevaVenta extends HTMLElement {
 
         const input = this.shadowRoot.querySelector("#buscarCliente");
         const resultados = this.shadowRoot.querySelector("#resultadosCliente");
-        let temporizador = null;
 
-        const buscarYRenderizar = async (texto) => {
-            const busqueda = texto.trim();
+        const renderResultados = (texto) => {
+            const busqueda = texto.trim().toLowerCase();
 
             if (!busqueda) {
-                resultados.innerHTML = `<div class="resultado-crear" id="btnCrearClienteRapido">+ Crear nuevo cliente</div>`;
-                resultados.style.display = "block";
-                resultados.querySelector("#btnCrearClienteRapido").addEventListener("click", () => this.abrirCreacionRapidaCliente());
+                resultados.style.display = "none";
                 return;
             }
 
-            try {
-                const coincidencias = await fetch(`${this.basePath}/clientes?buscar=${encodeURIComponent(busqueda)}`).then(r => r.json());
+            const coincidencias = this._clientes.filter(c =>
+                c.nombreCompleto.toLowerCase().includes(busqueda) ||
+                c.cuitCuil.toLowerCase().includes(busqueda)
+            ).slice(0, 8);
 
-                resultados.innerHTML = `
-                    ${coincidencias.map(c => `
-                        <div class="resultado-cliente" data-id="${c.id}">
-                            <span class="avatar avatar-${c.tipo === 'Empresa' ? 'empresa' : 'particular'}">${this.obtenerIniciales(c.nombreCompleto)}</span>
-                            <div>
-                                <strong>${c.nombreCompleto}</strong>
-                                <small>${c.email || "Sin email"} - CUIL/CUIT: ${c.cuitCuil}</small>
-                            </div>
+            resultados.innerHTML = `
+                ${coincidencias.map(c => `
+                    <div class="resultado-cliente" data-id="${c.id}">
+                        <span class="avatar avatar-${c.tipo === 'Empresa' ? 'empresa' : 'particular'}">${this.obtenerIniciales(c.nombreCompleto)}</span>
+                        <div>
+                            <strong>${c.nombreCompleto}</strong>
+                            <small>${c.email || "Sin email"} - CUIL/CUIT: ${c.cuitCuil}</small>
                         </div>
-                    `).join("")}
-                    <div class="resultado-crear" id="btnCrearClienteRapido">+ Crear nuevo cliente "${busqueda}"</div>
-                `;
+                    </div>
+                `).join("")}
+                <div class="resultado-crear" id="btnCrearClienteRapido">+ Crear nuevo cliente "${texto}"</div>
+            `;
 
-                resultados.style.display = "block";
+            resultados.style.display = "block";
 
-                resultados.querySelectorAll(".resultado-cliente").forEach(el => {
-                    el.addEventListener("click", () => {
-                        this._clienteSeleccionado = coincidencias.find(c => c.id === el.dataset.id);
-                        this.renderClienteSeleccionado();
-                    });
+            resultados.querySelectorAll(".resultado-cliente").forEach(el => {
+                el.addEventListener("click", () => {
+                    this._clienteSeleccionado = this._clientes.find(c => c.id == el.dataset.id);
+                    this.renderClienteSeleccionado();
                 });
+            });
 
-                resultados.querySelector("#btnCrearClienteRapido").addEventListener("click", () => {
-                    this.abrirCreacionRapidaCliente();
-                });
-
-            } catch (error) {
-                console.error("Error al buscar clientes:", error);
-            }
+            resultados.querySelector("#btnCrearClienteRapido").addEventListener("click", () => {
+                this.abrirCreacionRapidaCliente();
+            });
         };
 
-        input.addEventListener("input", (e) => {
-            clearTimeout(temporizador);
-            const texto = e.target.value;
-            temporizador = setTimeout(() => buscarYRenderizar(texto), 300);
+        input.addEventListener("input", (e) => renderResultados(e.target.value));
+
+        document.addEventListener("click", (e) => {
+            if (!this.shadowRoot.contains(e.composedPath()[0])) {
+                resultados.style.display = "none";
+            }
         });
     }
 
@@ -186,34 +168,27 @@ class NuevaVenta extends HTMLElement {
 
     renderFormProducto() {
         const contenedor = this.shadowRoot.querySelector("#areaProductos");
-        const colorCat = {
-            "Químico": "#00690C",
-            "Repuesto": "#9F6C00",
-            "Accesorios de Instalación": "#A22EA0"
-        };
 
         contenedor.innerHTML = `
-        
             <div class="form-producto">
                 <label>CATEGORÍA</label>
                 <div class="tabs-categoria-mini">
                     <button type="button" class="tab-cat-mini activo" data-id="">Todas</button>
-                    ${this._categorias.map(cat => `<button type="button" class="tab-cat-mini" data-id="${cat.id}" style="{ padding: .8rem 1rem; background: ${colorCat[cat.nombre]};"
-                }>${cat.nombre}</button>`).join("")}
+                    ${this._categorias.map(cat => `<button type="button" class="tab-cat-mini" data-id="${cat.id}" style="--color-cat:${this.colorCategoria(cat.nombre)}">${cat.nombre}</button>`).join("")}
                 </div>
 
                 <div class="fila-selects">
                     <div>
                         <label>MARCA</label>
                         <select id="selectMarca">
-                            <option value="">Todas las marcas</option>
+                            <option value="">Seleccioná una marca</option>
                             ${this._marcas.map(m => `<option value="${m.id}">${m.nombre}</option>`).join("")}
                         </select>
                     </div>
                     <div>
                         <label>UNIDAD DE MEDIDA</label>
                         <select id="selectUnidad">
-                            <option value="">Todas</option>
+                            <option value="">Seleccioná una unidad</option>
                             ${this._unidades.map(u => `<option value="${u.id}">${u.nombre}</option>`).join("")}
                         </select>
                     </div>
@@ -222,37 +197,29 @@ class NuevaVenta extends HTMLElement {
                 <label>BUSCAR PRODUCTO</label>
                 <input type="text" id="buscarProducto" placeholder="Escribí el nombre del producto...">
 
-                <div class="lista-productos-filtrados" id="listaProductosFiltrados"></div>
-
-                <div id="productoElegido" style="display:none">
-                    <div class="fila-precio-cantidad">
-                        <div>
-                            <label>PRECIO UNIT.</label>
-                            <input type="text" id="precioUnitario" disabled value="$ 0">
-                        </div>
-                        <div>
-                            <label>CANTIDAD</label>
-                            <input type="number" id="cantidadProducto" value="1" min="1">
-                        </div>
-                    </div>
+                <div class="lista-productos-filtrados" id="listaProductosFiltrados">
+                    <p class="sin-resultados">Elegí al menos una categoría, marca o unidad para ver productos</p>
                 </div>
 
                 <div class="acciones-form-producto">
                     <button type="button" id="btnCancelarProducto">Cancelar</button>
-                    <button type="button" id="btnAgregarAlCarrito" disabled>+ Agregar producto</button>
                 </div>
             </div>
         `;
 
         let categoriaId = "";
-        let productoSeleccionado = null;
         const listaEl = this.shadowRoot.querySelector("#listaProductosFiltrados");
-        const btnAgregar = this.shadowRoot.querySelector("#btnAgregarAlCarrito");
 
         const renderLista = () => {
             const marcaId = this.shadowRoot.querySelector("#selectMarca").value;
             const unidadId = this.shadowRoot.querySelector("#selectUnidad").value;
             const texto = this.shadowRoot.querySelector("#buscarProducto").value.trim().toLowerCase();
+
+            // Punto 2: no mostrar nada hasta que haya al menos un filtro activo
+            if (!categoriaId && !marcaId && !unidadId && !texto) {
+                listaEl.innerHTML = `<p class="sin-resultados">Elegí al menos una categoría, marca o unidad para ver productos</p>`;
+                return;
+            }
 
             const disponibles = this._productos.filter(p =>
                 (!categoriaId || p.categoriaProducto.id == categoriaId) &&
@@ -275,12 +242,8 @@ class NuevaVenta extends HTMLElement {
 
             listaEl.querySelectorAll(".item-producto-lista").forEach(el => {
                 el.addEventListener("click", () => {
-                    productoSeleccionado = this._productos.find(p => p.id == el.dataset.id);
-                    listaEl.querySelectorAll(".item-producto-lista").forEach(x => x.classList.remove("seleccionado"));
-                    el.classList.add("seleccionado");
-                    this.shadowRoot.querySelector("#precioUnitario").value = `$ ${Number(productoSeleccionado.precioActual).toLocaleString("es-AR")}`;
-                    this.shadowRoot.querySelector("#productoElegido").style.display = "block";
-                    btnAgregar.disabled = false;
+                    const producto = this._productos.find(p => p.id == el.dataset.id);
+                    this.agregarAlCarrito(producto);
                 });
             });
         };
@@ -298,32 +261,47 @@ class NuevaVenta extends HTMLElement {
         this.shadowRoot.querySelector("#selectUnidad").addEventListener("change", renderLista);
         this.shadowRoot.querySelector("#buscarProducto").addEventListener("input", renderLista);
 
-        renderLista();
-
         this.shadowRoot.querySelector("#btnCancelarProducto").addEventListener("click", () => {
             this._mostrandoFormProducto = false;
             this.renderAreaProductos();
         });
-
-        btnAgregar.addEventListener("click", () => {
-            if (!productoSeleccionado) return;
-            const cantidad = Number(this.shadowRoot.querySelector("#cantidadProducto").value) || 1;
-
-            this._carrito.push({
-                productoId: productoSeleccionado.id,
-                nombre: productoSeleccionado.nombre,
-                marca: productoSeleccionado.marcaProducto.nombre,
-                categoria: productoSeleccionado.categoriaProducto.nombre,
-                precioUnitario: Number(productoSeleccionado.precioActual),
-                cantidad
-            });
-
-            this._mostrandoFormProducto = false;
-            this.renderAreaProductos();
-            this.actualizarResumen();
-        });
     }
 
+    agregarAlCarrito(producto) {
+        const existente = this._carrito.find(item => item.productoId === producto.id);
+        if (existente) {
+            existente.cantidad++;
+        } else {
+            this._carrito.push({
+                productoId: producto.id,
+                nombre: producto.nombre,
+                marca: producto.marcaProducto.nombre,
+                categoria: producto.categoriaProducto.nombre,
+                contenido: producto.contenido,
+                unidadAbrev: producto.unidadMedida.abreviatura,
+                precioUnitario: Number(producto.precioActual),
+                cantidad: 1
+            });
+        }
+
+        this._mostrandoFormProducto = false;
+        this.renderAreaProductos();
+        this.actualizarResumen();
+
+        document.dispatchEvent(new CustomEvent("mostrar-notificacion", {
+            detail: { mensaje: `${producto.nombre} agregado al carrito`, tipo: "exito" }
+        }));
+    }
+
+    colorCategoria(nombre) {
+        const colores = {
+            "Químico": "#4ADE80",
+            "Repuesto": "#FB923C",
+            "Accesorios de Instalación": "#A855F7"
+        };
+        return colores[nombre] || "#888888";
+    }
+    
     renderAreaProductos() {
         const contenedor = this.shadowRoot.querySelector("#areaProductos");
 
@@ -335,32 +313,46 @@ class NuevaVenta extends HTMLElement {
         if (this._carrito.length === 0) {
             contenedor.innerHTML = `
                 <div class="carrito-vacio">
-                    <p>Aún no hay productos en esta venta. Agregalos abajo.</p>
+                    <img src="${this.basePath}/assets/img/iconos/shopping-cart.svg">
+                    <p>Aún no hay productos en esta venta.<br>Agrégalos abajo.</p>
                 </div>
                 <button type="button" id="btnAgregarProductos" class="btn-agregar-productos">+ Agregar productos</button>
             `;
         } else {
             contenedor.innerHTML = `
-                <div class="lista-carrito">
-                    ${this._carrito.map((item, index) => `
-                        <div class="item-carrito">
-                            <div>
-                                <strong>${item.nombre}</strong>
-                                <div class="item-tags">
-                                    <span>${item.categoria}</span>
-                                    <span>${item.marca}</span>
-                                </div>
-                            </div>
-                            <div class="item-cantidad">
-                                <button type="button" class="btn-restar" data-index="${index}">-</button>
-                                <span>${item.cantidad}</span>
-                                <button type="button" class="btn-sumar" data-index="${index}">+</button>
-                            </div>
-                            <div class="item-subtotal">$${(item.precioUnitario * item.cantidad).toLocaleString("es-AR")}</div>
-                            <button type="button" class="btn-quitar" data-index="${index}">&times;</button>
-                        </div>
-                    `).join("")}
-                </div>
+                <table class="tabla-carrito">
+                    <thead>
+                        <tr>
+                            <th>Producto</th>
+                            <th class="col-centro">Cant.</th>
+                            <th class="col-derecha">Subtotal</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${this._carrito.map((item, index) => `
+                            <tr>
+                                <td>
+                                    <div class="nombre-producto">${item.nombre}</div>
+                                    <div class="detalle-producto">${item.contenido || ""} ${item.unidadAbrev || ""}</div>
+                                    <div class="badges-producto">
+                                        <span class="badge-mini" style="background:${this.colorCategoria(item.categoria)}22; color:${this.colorCategoria(item.categoria)}">${item.categoria}</span>
+                                        <span class="badge-mini" style="background:rgba(255,255,255,.1); color:rgba(255,255,255,.8)">${item.marca}</span>
+                                    </div>
+                                </td>
+                                <td>
+                                    <div class="item-cantidad">
+                                        <button type="button" class="btn-restar" data-index="${index}">-</button>
+                                        <span>${item.cantidad}</span>
+                                        <button type="button" class="btn-sumar" data-index="${index}">+</button>
+                                    </div>
+                                </td>
+                                <td class="item-subtotal">$${(item.precioUnitario * item.cantidad).toLocaleString("es-AR")}</td>
+                                <td><button type="button" class="btn-quitar-fila" data-index="${index}">&times;</button></td>
+                            </tr>
+                        `).join("")}
+                    </tbody>
+                </table>
                 <button type="button" id="btnAgregarProductos" class="btn-agregar-productos">+ Agregar producto</button>
             `;
 
@@ -380,7 +372,7 @@ class NuevaVenta extends HTMLElement {
                     this.actualizarResumen();
                 });
             });
-            this.shadowRoot.querySelectorAll(".btn-quitar").forEach(btn => {
+            this.shadowRoot.querySelectorAll(".btn-quitar-fila").forEach(btn => {
                 btn.addEventListener("click", () => {
                     const i = Number(btn.dataset.index);
                     this._carrito.splice(i, 1);
@@ -395,7 +387,7 @@ class NuevaVenta extends HTMLElement {
             this.renderAreaProductos();
         });
     }
-    
+  
     abrirCreacionRapidaCliente() {
         const modal = document.createElement("modal-component");
         modal.setAttribute("titulo", "Nuevo cliente");
@@ -418,8 +410,19 @@ class NuevaVenta extends HTMLElement {
 
     async cargarClientes() {
         try {
-            const clientes = await fetch(`${this.basePath}/clientes`).then(r => r.json());
-            this._clientes = clientes.filter(c => c.activo);
+            const url = `${this.basePath}/clientes`;
+
+            console.log("URL CLIENTES:", url);
+
+            const clientes = await fetch(url).then(r => r.json());
+
+            console.log("CLIENTES RECIBIDOS:", clientes);
+            console.log("PRIMER CLIENTE COMPLETO:", clientes[0]);
+
+            this._clientes = clientes;
+
+            console.log("CLIENTES:", this._clientes);
+
         } catch (error) {
             console.error("Error al cargar clientes:", error);
         }
@@ -535,8 +538,8 @@ class NuevaVenta extends HTMLElement {
                     background: rgba(134, 128, 128, 0.9);
                     border: 1px solid rgba(255,255,255,.3);
                     border-radius: 10px;
-                    overflow: hidden;
                     margin-bottom: 1.2rem;
+                    position: relative;
                 }
 
                 .card-header {
@@ -549,6 +552,8 @@ class NuevaVenta extends HTMLElement {
                     font-weight: 700;
                     text-transform: uppercase;
                     letter-spacing: .04em;
+                    border-top-left-radius: 10px;
+                    border-top-right-radius: 10px;
                 }
 
                 .card-header img {
@@ -570,13 +575,14 @@ class NuevaVenta extends HTMLElement {
                     top: 100%;
                     left: 0;
                     right: 0;
-                    z-index: 20;
+                    z-index: 9999;
                     background: rgba(1, 49, 104, 1);
                     border: 1px solid rgba(255,255,255,.3);
                     border-radius: 8px;
                     margin-top: .4rem;
                     max-height: 320px;
                     overflow-y: auto;
+                    box-shadow: 0 8px 20px rgba(0,0,0,.4);
                 }
 
                 .resultado-cliente {
@@ -660,8 +666,8 @@ class NuevaVenta extends HTMLElement {
                 .cliente-info small { color: rgba(255,255,255,.7); font-size: .8rem; }
 
                 .cliente-chip button {
-                    background: #37E0E0;
-                    color: #05448D;
+                    background: rgba(1, 49, 104, 0.9);
+                    color: white;
                     border: none;
                     padding: .5rem 1.1rem;
                     border-radius: 6px;
@@ -713,6 +719,30 @@ class NuevaVenta extends HTMLElement {
                     margin-top: .8rem;
                     text-transform: uppercase;
                     letter-spacing: .03em;
+                }
+                
+                .tabs-categoria-mini {  
+                    display: flex;
+                    flex-direction: row;
+                    gap: .6rem;
+                    padding: .5rem 0;
+                }
+        
+                .tab-cat-mini {
+                    padding: .4rem .9rem;
+                    border-radius: 20px;
+                    border: 1px solid rgba(255,255,255,.3);
+                    background: rgba(255,255,255,.06);
+                    color: white;
+                    cursor: pointer;
+                    font-size: .8rem;
+                    font-weight: 600;
+                }
+
+                .tab-cat-mini.activo {
+                    background: var(--color-cat, #37A4FF);
+                    color: white;
+                    border-color: var(--color-cat, #37A4FF);
                 }
 
                 label:first-child { margin-top: 0; }
@@ -780,6 +810,101 @@ class NuevaVenta extends HTMLElement {
                 .btn-agregar-productos:hover {
                     background: rgba(1, 49, 104, 0.8);
                 }
+                
+                .tabla-carrito {
+                    width: 100%;
+                    border-collapse: collapse;
+                }
+
+                .tabla-carrito thead th {
+                    text-align: left;
+                    font-size: .75rem;
+                    text-transform: uppercase;
+                    letter-spacing: .04em;
+                    color: #B8D7FF;
+                    padding: 0 0 .6rem 0;
+                    border-bottom: 1px solid rgba(255,255,255,.25);
+                }
+
+                .tabla-carrito thead th.col-centro { text-align: center; }
+                .tabla-carrito thead th.col-derecha { text-align: right; }
+
+                .tabla-carrito tbody td {
+                    padding: .8rem 0;
+                    border-bottom: 1px solid rgba(255,255,255,.12);
+                    vertical-align: middle;
+                }
+
+                .nombre-producto {
+                    font-weight: 700;
+                    font-size: .95rem;
+                }
+
+                .detalle-producto {
+                    font-size: .8rem;
+                    color: rgba(255,255,255,.65);
+                    margin-top: .15rem;
+                }
+
+                .badges-producto {
+                    display: flex;
+                    gap: .4rem;
+                    margin-top: .4rem;
+                }
+
+                .badge-mini {
+                    font-size: .68rem;
+                    font-weight: 700;
+                    padding: .15rem .55rem;
+                    border-radius: 20px;
+                }
+
+                .item-cantidad {
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    gap: .6rem;
+                }
+
+                .item-cantidad button {
+                    width: 1.7rem;
+                    height: 1.7rem;
+                    border-radius: 5px;
+                    border: 1px solid rgba(255,255,255,.3);
+                    background: rgba(255,255,255,.08);
+                    color: white;
+                    cursor: pointer;
+                    font-size: .9rem;
+                }
+
+                .item-cantidad button:hover {
+                    background: rgba(255,255,255,.18);
+                }
+
+                .item-cantidad span {
+                    min-width: 1.2rem;
+                    text-align: center;
+                    font-weight: 600;
+                }
+
+                .item-subtotal {
+                    text-align: right;
+                    font-weight: 700;
+                    white-space: nowrap;
+                }
+
+                .btn-quitar-fila {
+                    background: none;
+                    border: none;
+                    color: rgba(255,255,255,.5);
+                    font-size: 1.2rem;
+                    cursor: pointer;
+                    padding: 0 0 0 .8rem;
+                }
+
+                .btn-quitar-fila:hover {
+                    color: #F87171;
+                }
 
                 .resumen-fila {
                     display: flex;
@@ -837,11 +962,7 @@ class NuevaVenta extends HTMLElement {
                         <div class="card-header">
                             <img src="${this.basePath}/assets/img/iconos/users.svg"> Cliente
                         </div>
-                        <div class="card-body" id="seccionCliente">
-                            <label>BUSCAR CLIENTE <span class="required">*</span></label>
-                            <input type="text" id="buscarCliente" list="listaClientes" placeholder="Nombre o Cuil/Cuit del cliente...">
-                            <datalist id="listaClientes"></datalist>
-                        </div>
+                        <div class="card-body" id="seccionCliente"></div>
                     </div>
 
                     <div class="card">
