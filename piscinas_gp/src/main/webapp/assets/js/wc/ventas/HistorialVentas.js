@@ -40,7 +40,10 @@ class HistorialVentas extends HTMLElement {
         if (this._fechaHasta) params.set("fechaHasta", this._fechaHasta);
 
         try {
+            console.log("URL VENTAS:", `${this.basePath}/ventas/productos?${params}`);
             this._ventas = await fetch(`${this.basePath}/ventas/productos?${params}`).then(r => r.json());
+            
+            console.log("VENTAS RECIBIDAS:", this._ventas);
         } catch (error) {
             console.error("Error al cargar ventas:", error);
         }
@@ -127,7 +130,7 @@ class HistorialVentas extends HTMLElement {
             }
         ];
 
-        tabla.datos = this.ventas();
+        tabla.datos = this._ventas;
     }
 
     setupListeners() {

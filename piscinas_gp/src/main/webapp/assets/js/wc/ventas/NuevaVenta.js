@@ -14,6 +14,9 @@ class NuevaVenta extends HTMLElement {
         this._metodoPago = "Efectivo";
         this._observaciones = "";
         this._mostrandoFormProducto = false;
+        this._estadosVenta = [];
+        this._metodosPago = [];
+        this._estadoVenta = "cerrada";
     }
 
     async connectedCallback() {
@@ -27,21 +30,61 @@ class NuevaVenta extends HTMLElement {
     async cargarDatosIniciales() {
         try {
             await this.cargarClientes();
-            const [marcas, categorias, unidades, productos] = await Promise.all([
+            const [marcas, categorias, unidades, productos, estadosVenta, metodosPago] = await Promise.all([
                 fetch(`${this.basePath}/marcas`).then(r => r.json()),
                 fetch(`${this.basePath}/categorias`).then(r => r.json()),
                 fetch(`${this.basePath}/unidades-medida`).then(r => r.json()),
-                fetch(`${this.basePath}/productos`).then(r => r.json())
+                fetch(`${this.basePath}/productos`).then(r => r.json()),
+                fetch(`${this.basePath}/estados-venta`).then(r => r.json()),
+                fetch(`${this.basePath}/metodos-pago`).then(r => r.json())
             ]);
             this._marcas = marcas;
             this._categorias = categorias;
             this._unidades = unidades;
             this._productos = productos.filter(p => p.activo);
+            this._estadosVenta = estadosVenta;
+            this._metodosPago = metodosPago;
+            
+            this.cargarEstadosVenta();
+            this.cargarMetodosPago();
         } catch (error) {
             console.error("Error al cargar datos iniciales:", error);
         }
     }
 
+    cargarEstadosVenta() {
+        const select = this.shadowRoot.querySelector("#estadoVenta");
+
+        select.innerHTML = this._estadosVenta.map(estado => `
+            <option value="${estado.nombre}" ${estado.nombre === this._estadoVenta ? "selected" : ""}>
+                ${estado.nombre.charAt(0).toUpperCase() + estado.nombre.slice(1)}
+            </option>
+        `).join("");
+    }
+    
+    cargarMetodosPago() {
+        const contenedor = this.shadowRoot.querySelector("#metodosPago");
+
+        contenedor.innerHTML = [...this._metodosPago]
+            .sort((a, b) => {
+                if (a.nombre === "efectivo") return -1;
+                if (b.nombre === "efectivo") return 1;
+                return 0;
+            })
+            .map(metodo => `
+                <label class="radio-metodo">
+                    <input 
+                        type="radio" 
+                        name="metodoPago" 
+                        value="${metodo.nombre}"
+                        ${metodo.nombre === this._metodoPago.toLowerCase() ? "checked" : ""}
+                    >
+                    ${metodo.nombre.charAt(0).toUpperCase() + metodo.nombre.slice(1)}
+                </label>
+            `)
+            .join("");
+    }
+    
     get subtotal() {
         return this._carrito.reduce((acc, item) => acc + item.precioUnitario * item.cantidad, 0);
     }
@@ -73,6 +116,10 @@ class NuevaVenta extends HTMLElement {
             radio.addEventListener("change", (e) => {
                 this._metodoPago = e.target.value;
             });
+        });
+        
+        this.shadowRoot.querySelector("#estadoVenta").addEventListener("change", (e) => {
+            this._estadoVenta = e.target.value;
         });
 
         this.shadowRoot.querySelector("#btnConfirmarVenta").addEventListener("click", () => {
@@ -474,16 +521,18 @@ class NuevaVenta extends HTMLElement {
 
     async registrarVenta(generarFactura) {
         try {
+            const estadoElegido = this._estadosVenta.find(e => e.nombre.toLowerCase() === this._estadoVenta.toLowerCase());
+            const metodoElegido = this._metodosPago.find(m => m.nombre.toLowerCase() === this._metodoPago.toLowerCase());
+
             const body = {
                 clienteId: this._clienteSeleccionado.id,
-                metodoPago: this._metodoPago,
+                estadoVentaId: estadoElegido.id,
+                metodoPagoId: metodoElegido.id,
                 descuentoGlobal: this._descuentoGlobal,
-                observaciones: this._observaciones,
-                generarFactura,
-                detalles: this._carrito.map(item => ({
+                observacion: this._observaciones,
+                detallesVenta: this._carrito.map(item => ({
                     productoId: item.productoId,
-                    cantidad: item.cantidad,
-                    precioUnitario: item.precioUnitario
+                    cantidad: item.cantidad
                 }))
             };
 
@@ -771,8 +820,6 @@ class NuevaVenta extends HTMLElement {
                     font-weight: 700;
                 }
 
-                select option { color: black; }
-
                 .required { color: #CC2727; }
 
                 .carrito-vacio {
@@ -941,6 +988,34 @@ class NuevaVenta extends HTMLElement {
                     accent-color: white;
                     margin: 0;
                 }
+        
+                .estado-venta {
+                    margin-top: 1.2rem;
+                }
+
+                .estado-venta label {
+                    margin-top: 0;
+                }
+
+                #estadoVenta {
+                    background: rgba(1, 49, 104, 0.9);
+                    color: white;
+                    border: 1px solid rgba(255, 255, 255, 0.3);
+                    font-weight: 600;
+                    cursor: pointer;
+                    outline: none;
+                }
+
+                #estadoVenta option {
+                    background: white;
+                    color: #222;
+                    font-weight: 400;
+                }
+        
+                #estadoVenta:focus {
+                    outline: none;
+                    border-color: rgba(255, 255, 255, 0.3);
+                }
 
                 .btn-confirmar {
                     width: 100%;
@@ -952,7 +1027,7 @@ class NuevaVenta extends HTMLElement {
                     font-weight: 700;
                     font-size: 1rem;
                     cursor: pointer;
-                    margin-top: 1.2rem;
+                    margin-top: .1rem;
                 }
             </style>
 
@@ -1008,15 +1083,25 @@ class NuevaVenta extends HTMLElement {
                             <img src="${this.basePath}/assets/img/iconos/credit-card.svg"> Método de pago
                         </div>
                         <div class="card-body">
-                            <label class="radio-metodo"><input type="radio" name="metodoPago" value="Efectivo" checked> Efectivo</label>
-                            <label class="radio-metodo"><input type="radio" name="metodoPago" value="Transferencia"> Transferencia</label>
-                            <label class="radio-metodo"><input type="radio" name="metodoPago" value="Tarjeta de crédito"> Tarjeta de crédito</label>
-                            <label class="radio-metodo"><input type="radio" name="metodoPago" value="Tarjeta de débito"> Tarjeta de débito</label>
+                            <div id="metodosPago"></div>
+                        </div> 
+                    </div>
+        
+                    <div class="card">
+                        <div class="card-header">
+                            <img src="${this.basePath}/assets/img/iconos/clipboard-list.svg">
+                            Estado de la venta
+                        </div>
 
-                            <button type="button" id="btnConfirmarVenta" class="btn-confirmar">✓ Confirmar venta</button>
+                        <div class="card-body">
+                            <label for="estadoVenta">ESTADO DE LA VENTA</label>
+                            <select id="estadoVenta"></select>
                         </div>
                     </div>
-                </div>
+
+                    <button type="button" id="btnConfirmarVenta" class="btn-confirmar">
+                        ✓ Confirmar venta
+                    </button>
             </div>
         `;
     }
