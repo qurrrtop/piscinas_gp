@@ -13,11 +13,14 @@ import com.mycompany.piscinas_gp.daos.ProductoDAO;
 import com.mycompany.piscinas_gp.daos.VentaProductoDAO;
 import com.mycompany.piscinas_gp.dtos.DetalleVentaDTO;
 import com.mycompany.piscinas_gp.dtos.VentaDTO;
+import com.mycompany.piscinas_gp.dtos.VentaListadoDTO;
 import com.mycompany.piscinas_gp.exceptions.BusinessException;
 import com.mycompany.piscinas_gp.exceptions.ServiceException;
 import com.mycompany.piscinas_gp.modelos.DetalleVenta;
 import com.mycompany.piscinas_gp.modelos.Producto;
 import com.mycompany.piscinas_gp.modelos.VentaProducto;
+import com.mycompany.piscinas_gp.modelos.ClienteEmpresa;
+import com.mycompany.piscinas_gp.modelos.ClienteParticular;
 import com.mycompany.piscinas_gp.servicios.VentaProductoServicio;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.WebServlet;
@@ -72,23 +75,25 @@ public class VentaProductoControlador extends HttpServlet {
             if (pathInfo == null || pathInfo.equals("/")) {
                 String cliente = request.getParameter("cliente");
                 String estado = request.getParameter("estado");
+                LocalDate fechaDesde = parseFechaOpcional(request.getParameter("fechaDesde"));
+                LocalDate fechaHasta = parseFechaOpcional(request.getParameter("fechaHasta"));
 
-                LocalDate fechaDesde =
-                        parseFechaOpcional(request.getParameter("fechaDesde"));
+                List<VentaProducto> ventas = ventaProductoServicio.listarVentas(cliente, estado, fechaDesde, fechaHasta);
 
-                LocalDate fechaHasta =
-                        parseFechaOpcional(request.getParameter("fechaHasta"));
+                List<VentaListadoDTO> listado = new ArrayList<>();
+                for (VentaProducto v : ventas) {
+                    String nombreCliente = (v.getCliente() instanceof ClienteParticular cp)
+                            ? cp.getNombre() + " " + cp.getApellido()
+                            : ((ClienteEmpresa) v.getCliente()).getRazonSocial();
 
-                List<VentaProducto> ventas =
-                        ventaProductoServicio.listarVentas(
-                                cliente, estado, fechaDesde, fechaHasta
-                        );
+                    listado.add(new VentaListadoDTO(
+                            v.getId(), nombreCliente, v.getEstadoVenta().getNombre(),
+                            v.getFechaInicio(), v.getTotal()
+                    ));
+                }
 
-                sendJsonResponse(
-                        ventas,
-                        response,
-                        HttpServletResponse.SC_OK
-                );
+                sendJsonResponse(listado, response, HttpServletResponse.SC_OK);
+                return;
 
             } else {
                 Long id = Long.parseLong(pathInfo.substring(1));

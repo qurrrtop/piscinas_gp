@@ -30,7 +30,7 @@ class HistorialVentas extends HTMLElement {
 
     async cargarDatos() {
         try {
-            this._ventas = await fetch(`${this.basePath}/ventas`).then(r => r.json());
+            this._ventas = await fetch(`${this.basePath}/ventas/productos`).then(r => r.json());
         } catch (error) {
             console.error("Error al cargar ventas:", error);
         }

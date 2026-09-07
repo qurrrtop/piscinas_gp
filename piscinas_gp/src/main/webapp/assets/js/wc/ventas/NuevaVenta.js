@@ -487,7 +487,7 @@ class NuevaVenta extends HTMLElement {
                 }))
             };
 
-            const response = await fetch(`${this.basePath}/ventas`, {
+            const response = await fetch(`${this.basePath}/ventas/productos`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify(body)
