@@ -203,6 +203,56 @@ public class ProductoDAO extends GenericoDAO<Producto> {
             throw new PersistenceException("Error al reactivar el producto con ID " + id, e);
         }
     }
+
+    /**
+     * Descuenta stock dentro de una transaccion ya abierta. La condicion
+     * stock >= cantidad evita que el stock quede negativo ante ventas
+     * simultaneas.
+     */
+    public void descontarStock(Long productoId, int cantidad, Connection conn)
+            throws PersistenceException {
+
+        String sql = "UPDATE productos "
+                + "SET stock = stock - ? "
+                + "WHERE id = ? AND activo = TRUE AND stock >= ?";
+
+        try (PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            pstmt.setInt(1, cantidad);
+            pstmt.setLong(2, productoId);
+            pstmt.setInt(3, cantidad);
+
+            if (pstmt.executeUpdate() == 0) {
+                throw new PersistenceException(
+                        "Stock insuficiente o producto inactivo para el ID "
+                        + productoId);
+            }
+
+        } catch (SQLException e) {
+            throw new PersistenceException(
+                    "Error al descontar stock del producto " + productoId, e);
+        }
+    }
+
+    /** Reincorpora stock dentro de una transaccion ya abierta. */
+    public void reponerStock(Long productoId, int cantidad, Connection conn)
+            throws PersistenceException {
+
+        String sql = "UPDATE productos SET stock = stock + ? WHERE id = ?";
+
+        try (PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            pstmt.setInt(1, cantidad);
+            pstmt.setLong(2, productoId);
+
+            if (pstmt.executeUpdate() == 0) {
+                throw new PersistenceException(
+                        "No existe el producto para reponer stock: " + productoId);
+            }
+
+        } catch (SQLException e) {
+            throw new PersistenceException(
+                    "Error al reponer stock del producto " + productoId, e);
+        }
+    }
     
     @Override
     protected String getTableName() {

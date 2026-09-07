@@ -45,14 +45,25 @@ public class DetalleVentaDAO extends GenericoDAO<DetalleVenta> {
     public DetalleVenta crear(DetalleVenta detalle, Long ventaId)
             throws PersistenceException {
 
+        try (Connection conn = dbConn.getConnection()) {
+            return crear(detalle, ventaId, conn);
+        } catch (SQLException e) {
+            throw new PersistenceException(
+                    "Error al abrir la conexion para crear el detalle de venta", e);
+        }
+    }
+
+    public DetalleVenta crear(
+            DetalleVenta detalle, Long ventaId, Connection conn
+    ) throws PersistenceException {
+
         String sql = """
             INSERT INTO detalle_ventas
             (precio_unitario, cantidad, observacion, venta_id, producto_id)
             VALUES (?, ?, ?, ?, ?)
             """;
 
-        try (Connection conn = dbConn.getConnection();
-             PreparedStatement pstmt = conn.prepareStatement(
+        try (PreparedStatement pstmt = conn.prepareStatement(
                      sql, Statement.RETURN_GENERATED_KEYS)) {
 
             pstmt.setBigDecimal(1, detalle.getPrecioUnitario());
@@ -84,9 +95,48 @@ public class DetalleVentaDAO extends GenericoDAO<DetalleVenta> {
 
         return updateObject(PRIMARY_KEY, detalle);
     }
+
+    public DetalleVenta actualizar(DetalleVenta detalle, Connection conn)
+            throws PersistenceException {
+
+        String sql = "UPDATE " + TABLE_NAME
+                + " SET cantidad = ? WHERE " + PRIMARY_KEY + " = ?";
+
+        try (PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            pstmt.setInt(1, detalle.getCantidad());
+            pstmt.setLong(2, detalle.getId());
+
+            if (pstmt.executeUpdate() == 0) {
+                throw new PersistenceException(
+                        "No existe el detalle de venta a actualizar");
+            }
+
+            return detalle;
+
+        } catch (SQLException e) {
+            throw new PersistenceException(
+                    "Error al actualizar el detalle de venta", e);
+        }
+    }
     
     public boolean eliminarPorId(Long id) throws PersistenceException {
         return deleteObject(PRIMARY_KEY, id);
+    }
+
+    public boolean eliminarPorId(Long id, Connection conn)
+            throws PersistenceException {
+
+        String sql = "DELETE FROM " + TABLE_NAME
+                + " WHERE " + PRIMARY_KEY + " = ?";
+
+        try (PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            pstmt.setLong(1, id);
+            return pstmt.executeUpdate() > 0;
+
+        } catch (SQLException e) {
+            throw new PersistenceException(
+                    "Error al eliminar el detalle de venta", e);
+        }
     }
     
     public DetalleVenta buscarPorId(Long id) throws PersistenceException {

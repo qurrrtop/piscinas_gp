@@ -15,6 +15,7 @@ import java.sql.Date;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.sql.Statement;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -61,8 +62,61 @@ public class VentaProductoDAO extends GenericoDAO<VentaProducto> {
         return createObject(venta);
     }
 
+    public VentaProducto crear(VentaProducto venta, Connection conn)
+            throws PersistenceException {
+
+        String sql = "INSERT INTO " + TABLE_NAME
+                + " (" + String.join(", ", COLUMNS_FOR_INSERT) + ")"
+                + " VALUES (" + String.join(", ", PLACEHOLDER_VALUES) + ")";
+
+        try (PreparedStatement pstmt = conn.prepareStatement(
+                sql, Statement.RETURN_GENERATED_KEYS)) {
+
+            setInsertParams(pstmt, venta);
+            pstmt.executeUpdate();
+
+            try (ResultSet generatedKeys = pstmt.getGeneratedKeys()) {
+                if (generatedKeys.next()) {
+                    venta.setId(generatedKeys.getLong(1));
+                    return venta;
+                }
+            }
+
+            throw new PersistenceException(
+                    "No se pudo generar el ID de la venta de producto");
+
+        } catch (SQLException e) {
+            throw new PersistenceException(
+                    "Error al crear la venta de producto", e);
+        }
+    }
+
     public VentaProducto actualizar(VentaProducto venta) throws PersistenceException {
         return updateObject(PRIMARY_KEY, venta);
+    }
+
+    public VentaProducto actualizar(VentaProducto venta, Connection conn)
+            throws PersistenceException {
+
+        String sql = "UPDATE " + TABLE_NAME
+                + " SET " + String.join(", ", COLUMNS_FOR_UPDATE)
+                + " WHERE " + PRIMARY_KEY + " = ?";
+
+        try (PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            setUpdateParams(pstmt, venta);
+            pstmt.setLong(COLUMNS_FOR_UPDATE.length + 1, venta.getId());
+
+            if (pstmt.executeUpdate() == 0) {
+                throw new PersistenceException(
+                        "No existe la venta de producto a actualizar");
+            }
+
+            return venta;
+
+        } catch (SQLException e) {
+            throw new PersistenceException(
+                    "Error al actualizar la venta de producto", e);
+        }
     }
 
     public boolean eliminarPorId(Long id) throws PersistenceException {

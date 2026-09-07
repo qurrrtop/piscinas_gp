@@ -7,6 +7,7 @@ import com.mycompany.piscinas_gp.daos.EstadoVentaDAO;
 import com.mycompany.piscinas_gp.daos.MetodoPagoDAO;
 import com.mycompany.piscinas_gp.daos.ProductoDAO;
 import com.mycompany.piscinas_gp.daos.VentaProductoDAO;
+import com.mycompany.piscinas_gp.config.DbConnection;
 import com.mycompany.piscinas_gp.exceptions.BusinessException;
 import com.mycompany.piscinas_gp.exceptions.PersistenceException;
 import com.mycompany.piscinas_gp.exceptions.ServiceException;
@@ -21,7 +22,9 @@ import com.mycompany.piscinas_gp.modelos.VentaProducto;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDate;
-import java.util.ArrayList;
+import java.sql.Connection;
+import java.sql.SQLException;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -41,6 +44,7 @@ public class VentaProductoServicio {
     private final ClienteEmpresaDAO clienteEmpresaDAO;
     private final EstadoVentaDAO estadoVentaDAO;
     private final MetodoPagoDAO metodopagoDAO;
+    private final DbConnection dbConn;
     
     public VentaProductoServicio(
             VentaProductoDAO ventaProductoDAO1, 
@@ -58,6 +62,7 @@ public class VentaProductoServicio {
         this.clienteEmpresaDAO = clienteEmpresaDAO1;
         this.estadoVentaDAO = estadoVentaDAO1;
         this.metodopagoDAO = metodoPagoDAO1;
+        this.dbConn = DbConnection.getInstance();
     }
             
     public List<VentaProducto> listarVentas() throws ServiceException {
@@ -121,21 +126,19 @@ public class VentaProductoServicio {
             throw new BusinessException("la venta es requerida");
         }
         
-        try { prepararVenta( venta, clienteId, estadoVentaId, metodoPagoId, true );
-        
-        VentaProducto ventaCreada = ventaProductoDAO.crear(venta);
-        
-        for (DetalleVenta detalle : venta.getDetallesVenta()) {
-            detalleVentaDAO.crear(detalle, ventaCreada.getId());
-        }
-        
-        ventaCreada.setDetallesVenta(venta.getDetallesVenta());
-        
-        logger.info("venta de producto creada correctamente con id {}", ventaCreada.getId());
-        
-        return ventaCreada;
-        
-        } catch ( PersistenceException e ) {
+        try {
+            prepararVenta(
+                    venta, clienteId, estadoVentaId, metodoPagoId, true,
+                    Collections.emptyList()
+            );
+
+            VentaProducto ventaCreada = crearEnTransaccion(venta);
+
+            logger.info("venta de producto creada correctamente con id {}", ventaCreada.getId());
+
+            return ventaCreada;
+
+        } catch (PersistenceException | SQLException e) {
             logger.error("error al crear la venta de producto", e);
             throw new ServiceException("error al crear la venta", e);
         }
@@ -161,18 +164,16 @@ public class VentaProductoServicio {
                 buscarVentaPorId(venta.getId());
 
             prepararVenta(
-                venta, clienteId, estadoVentaId, metodoPagoId, false);
-
-            VentaProducto ventaActualizada =
-                ventaProductoDAO.actualizar(venta);
-
-            sincronizarDetalles(
-                ventaExistente.getDetallesVenta(),
-                venta.getDetallesVenta(),
-                venta.getId()
+                    venta, clienteId, estadoVentaId, metodoPagoId, false,
+                    estaCerrada(ventaExistente)
+                            ? ventaExistente.getDetallesVenta()
+                            : Collections.emptyList()
             );
 
-            ventaActualizada.setDetallesVenta(venta.getDetallesVenta());
+            VentaProducto ventaActualizada = actualizarEnTransaccion(
+                    venta,
+                    ventaExistente
+            );
 
             logger.info(
                 "Venta de producto actualizada correctamente con ID {}",
@@ -181,7 +182,7 @@ public class VentaProductoServicio {
 
             return ventaActualizada;
             
-        } catch (PersistenceException e) {
+        } catch (PersistenceException | SQLException e) {
             logger.error(
                 "Error al actualizar la venta de producto con ID {}",
                 venta.getId(), e
@@ -207,18 +208,15 @@ public class VentaProductoServicio {
                 throw new BusinessException("no existe el estado de venta 'cancelada'");
             }
                 
-            venta.setEstadoVenta(estadoCancelada);
-            venta.setFechaCierre(LocalDate.now());
-                
-            VentaProducto ventaCancelada = ventaProductoDAO.actualizar(venta);
-                
-            ventaCancelada.setDetallesVenta(venta.getDetallesVenta());
+            VentaProducto ventaCancelada = cancelarEnTransaccion(
+                    venta, estadoCancelada
+            );
                 
             logger.info("venta de producto cancelada correctamente con id {}", ventaId);
             
             return ventaCancelada;
                 
-        } catch (PersistenceException e) {
+        } catch (PersistenceException | SQLException e) {
             logger.error(
                     "Error al cancelar la venta de producto con ID {}",
                     ventaId, e
@@ -232,7 +230,8 @@ public class VentaProductoServicio {
             Long clienteId,
             Long estadoVentaId,
             Long metodoPagoId,
-            boolean esNueva
+            boolean esNueva,
+            List<DetalleVenta> detallesStockAReponer
     ) throws PersistenceException, BusinessException {
             
         Cliente cliente = buscarClienteReal(clienteId);
@@ -247,7 +246,9 @@ public class VentaProductoServicio {
         venta.setEstadoVenta(estadoVenta);
         venta.setMetodoPago(metodoPago);
             
-        validarYPrepararDetalles(venta.getDetallesVenta());
+        validarYPrepararDetalles(
+                venta.getDetallesVenta(), detallesStockAReponer
+        );
             
         BigDecimal total = calcularTotal( venta.getDetallesVenta(), venta.getDescuentoGlobal());
             
@@ -307,55 +308,95 @@ public class VentaProductoServicio {
         return metodoPago;
     }
         
-    private void validarYPrepararDetalles( List<DetalleVenta> detalles ) throws PersistenceException, BusinessException {
-            
-        if ( detalles == null || detalles.isEmpty() ) {
-            throw new BusinessException("la venta debe tener al menos un producto");
+    private void validarYPrepararDetalles(
+            List<DetalleVenta> detalles,
+            List<DetalleVenta> detallesStockAReponer
+    ) throws PersistenceException, BusinessException {
+
+        if (detalles == null || detalles.isEmpty()) {
+            throw new BusinessException(
+                    "la venta debe tener al menos un producto");
         }
-            
-        Map<Long, Integer> cantidadesPorProducto = new HashMap<>();
+
+        Map<Long, Integer> cantidadesPorProducto =
+                agruparCantidades(detalles);
+
+        // Cuando se edita una venta ya cerrada, su stock anterior se repone
+        // dentro de la transaccion antes de descontar el detalle nuevo.
+        Map<Long, Integer> cantidadesAReponer =
+                agruparCantidades(detallesStockAReponer);
+
         Map<Long, Producto> productosReales = new HashMap<>();
-            
-        for ( DetalleVenta detalle : detalles ) {
-            if ( detalle == null || detalle.getProducto() == null || detalle.getProducto().getId() == null ) {
-               throw new BusinessException("todos los detalles deben indicar un producto");
-             }
-            
-        Long productoId = detalle.getProducto().getId();
-            
-        cantidadesPorProducto.merge(productoId, detalle.getCantidad(), Integer::sum );
-            
-        }
-            
-        for ( Map.Entry<Long, Integer> entrada : cantidadesPorProducto.entrySet() ) {
-                
+
+        for (Map.Entry<Long, Integer> entrada
+                : cantidadesPorProducto.entrySet()) {
+
             Long productoId = entrada.getKey();
             int cantidadSolicitada = entrada.getValue();
-                
+
             Producto producto = productoDAO.buscarPorId(productoId);
-                
-            if ( producto == null ) {
-                throw new BusinessException("no existe el producto con id "+ productoId);
+
+            if (producto == null) {
+                throw new BusinessException(
+                        "no existe el producto con id " + productoId);
             }
-                
-            if ( producto.getStock() < cantidadSolicitada ) {
-                throw new BusinessException("stock insuficiente para el producto "+ producto.getNombre() + ". disponible: "+ producto.getStock());
-                    
+
+            if (!producto.isActivo()) {
+                throw new BusinessException(
+                        "el producto " + producto.getNombre()
+                        + " se encuentra inactivo");
             }
-                
+
+            int stockDisponible = producto.getStock()
+                    + cantidadesAReponer.getOrDefault(productoId, 0);
+
+            if (stockDisponible < cantidadSolicitada) {
+                throw new BusinessException(
+                        "stock insuficiente para el producto "
+                        + producto.getNombre() + ". disponible: "
+                        + stockDisponible);
+            }
+
             productosReales.put(productoId, producto);
         }
-            
-        for ( DetalleVenta detalle : detalles ) {
-            Producto productoReal = productosReales.get(detalle.getProducto().getId());
-                
+
+        for (DetalleVenta detalle : detalles) {
+            Producto productoReal = productosReales.get(
+                    detalle.getProducto().getId());
+
             detalle.setProducto(productoReal);
-                
-            //el precio se toma de la base, asi se evita que el usuario modifique el improte que envio
-                
+
+            // El precio se toma de la base para evitar modificar el importe
+            // desde el JSON enviado por el cliente.
             detalle.setPrecioUnitario(productoReal.getPrecioActual());
         }
-            
+    }
+
+    private Map<Long, Integer> agruparCantidades(
+            List<DetalleVenta> detalles
+    ) throws BusinessException {
+
+        Map<Long, Integer> cantidades = new HashMap<>();
+
+        if (detalles == null) {
+            return cantidades;
+        }
+
+        for (DetalleVenta detalle : detalles) {
+            if (detalle == null || detalle.getProducto() == null
+                    || detalle.getProducto().getId() == null) {
+                throw new BusinessException(
+                        "todos los detalles deben indicar un producto");
+            }
+
+            cantidades.merge(
+                    detalle.getProducto().getId(),
+                    detalle.getCantidad(),
+                    Integer::sum
+            );
+        }
+
+        return cantidades;
     }
         
     private BigDecimal calcularTotal( List<DetalleVenta> detalles, int descuentoGlobal ) {
@@ -372,7 +413,158 @@ public class VentaProductoServicio {
         return subtotal.subtract(descuento).setScale(2, RoundingMode.HALF_UP);
     }
         
-    private void sincronizarDetalles( List<DetalleVenta> detallesAnteriores, List<DetalleVenta> detallesNuevos, Long ventaId ) throws PersistenceException, BusinessException {
+    private VentaProducto crearEnTransaccion(VentaProducto venta)
+            throws PersistenceException, BusinessException, SQLException {
+
+        try (Connection conn = dbConn.getConnection()) {
+            conn.setAutoCommit(false);
+
+            try {
+                VentaProducto ventaCreada = ventaProductoDAO.crear(venta, conn);
+
+                for (DetalleVenta detalle : venta.getDetallesVenta()) {
+                    detalleVentaDAO.crear(detalle, ventaCreada.getId(), conn);
+                }
+
+                if (estaCerrada(ventaCreada)) {
+                    descontarStockDeDetalles(ventaCreada.getDetallesVenta(), conn);
+                }
+
+                ventaCreada.setDetallesVenta(venta.getDetallesVenta());
+                conn.commit();
+
+                return ventaCreada;
+
+            } catch (PersistenceException | BusinessException | SQLException | RuntimeException e) {
+                rollbackTransaccion(conn);
+                throw e;
+            } finally {
+                conn.setAutoCommit(true);
+            }
+        }
+    }
+
+    private VentaProducto actualizarEnTransaccion(
+            VentaProducto venta, VentaProducto ventaExistente
+    ) throws PersistenceException, BusinessException, SQLException {
+
+        try (Connection conn = dbConn.getConnection()) {
+            conn.setAutoCommit(false);
+
+            try {
+                if (estaCerrada(ventaExistente)) {
+                    reponerStockDeDetalles(
+                            ventaExistente.getDetallesVenta(), conn
+                    );
+                }
+
+                VentaProducto ventaActualizada =
+                        ventaProductoDAO.actualizar(venta, conn);
+
+                sincronizarDetalles(
+                        ventaExistente.getDetallesVenta(),
+                        venta.getDetallesVenta(),
+                        venta.getId(),
+                        conn
+                );
+
+                if (estaCerrada(ventaActualizada)) {
+                    descontarStockDeDetalles(
+                            ventaActualizada.getDetallesVenta(), conn
+                    );
+                }
+
+                ventaActualizada.setDetallesVenta(venta.getDetallesVenta());
+                conn.commit();
+
+                return ventaActualizada;
+
+            } catch (PersistenceException | BusinessException | SQLException | RuntimeException e) {
+                rollbackTransaccion(conn);
+                throw e;
+            } finally {
+                conn.setAutoCommit(true);
+            }
+        }
+    }
+
+    private VentaProducto cancelarEnTransaccion(
+            VentaProducto venta, EstadoVenta estadoCancelada
+    ) throws PersistenceException, BusinessException, SQLException {
+
+        try (Connection conn = dbConn.getConnection()) {
+            conn.setAutoCommit(false);
+
+            try {
+                if (estaCerrada(venta)) {
+                    reponerStockDeDetalles(venta.getDetallesVenta(), conn);
+                }
+
+                venta.setEstadoVenta(estadoCancelada);
+                venta.setFechaCierre(LocalDate.now());
+
+                VentaProducto ventaCancelada =
+                        ventaProductoDAO.actualizar(venta, conn);
+
+                ventaCancelada.setDetallesVenta(venta.getDetallesVenta());
+                conn.commit();
+
+                return ventaCancelada;
+
+            } catch (PersistenceException | BusinessException | SQLException | RuntimeException e) {
+                rollbackTransaccion(conn);
+                throw e;
+            } finally {
+                conn.setAutoCommit(true);
+            }
+        }
+    }
+
+    private boolean estaCerrada(VentaProducto venta) {
+        return venta != null
+                && venta.getEstadoVenta() != null
+                && "cerrada".equalsIgnoreCase(
+                        venta.getEstadoVenta().getNombre());
+    }
+
+    private void descontarStockDeDetalles(
+            List<DetalleVenta> detalles, Connection conn
+    ) throws PersistenceException, BusinessException {
+
+        for (Map.Entry<Long, Integer> entrada
+                : agruparCantidades(detalles).entrySet()) {
+            productoDAO.descontarStock(
+                    entrada.getKey(), entrada.getValue(), conn
+            );
+        }
+    }
+
+    private void reponerStockDeDetalles(
+            List<DetalleVenta> detalles, Connection conn
+    ) throws PersistenceException, BusinessException {
+
+        for (Map.Entry<Long, Integer> entrada
+                : agruparCantidades(detalles).entrySet()) {
+            productoDAO.reponerStock(
+                    entrada.getKey(), entrada.getValue(), conn
+            );
+        }
+    }
+
+    private void rollbackTransaccion(Connection conn) {
+        try {
+            conn.rollback();
+        } catch (SQLException e) {
+            logger.error("No se pudo revertir la transaccion de venta", e);
+        }
+    }
+
+    private void sincronizarDetalles(
+            List<DetalleVenta> detallesAnteriores,
+            List<DetalleVenta> detallesNuevos,
+            Long ventaId,
+            Connection conn
+    ) throws PersistenceException, BusinessException {
             
             Map<Long, DetalleVenta> anterioresPorId = new HashMap<>();
             
@@ -384,7 +576,7 @@ public class VentaProductoServicio {
             
         for ( DetalleVenta detalleNuevo : detallesNuevos ) {
             if ( detalleNuevo.getId() == null ) {
-                detalleVentaDAO.crear(detalleNuevo, ventaId);
+                detalleVentaDAO.crear(detalleNuevo, ventaId, conn);
                 continue;
             }
                 
@@ -392,13 +584,13 @@ public class VentaProductoServicio {
                 throw new BusinessException("el detalle con id "+ detalleNuevo.getId() + " no pertenece a esta venta");
             }
                 
-            detalleVentaDAO.actualizar(detalleNuevo);
+            detalleVentaDAO.actualizar(detalleNuevo, conn);
             idsRecibidos.add(detalleNuevo.getId());
         }
             
         for ( Long idDetalleAnterior : anterioresPorId.keySet() ) {
             if ( !idsRecibidos.contains(idDetalleAnterior) ) {
-                detalleVentaDAO.eliminarPorId(idDetalleAnterior);
+                detalleVentaDAO.eliminarPorId(idDetalleAnterior, conn);
             }
         }
     }
