@@ -10,6 +10,10 @@ class HistorialVentas extends HTMLElement {
         this._fechaHasta = "";
         this.basePath = "";
     }
+    
+    capitalizar(texto) {
+        return texto.charAt(0).toUpperCase() + texto.slice(1);
+    }
 
     static ESTADOS_TABS = ["Cerrada", "Pendiente", "Cancelada"];
 
@@ -29,18 +33,25 @@ class HistorialVentas extends HTMLElement {
     }
 
     async cargarDatos() {
+        const params = new URLSearchParams();
+        if (this._busqueda) params.set("cliente", this._busqueda);
+        if (this._estadoSeleccionado) params.set("estado", this._estadoSeleccionado.toLowerCase());
+        if (this._fechaDesde) params.set("fechaDesde", this._fechaDesde);
+        if (this._fechaHasta) params.set("fechaHasta", this._fechaHasta);
+
         try {
-            this._ventas = await fetch(`${this.basePath}/ventas/productos`).then(r => r.json());
+            this._ventas = await fetch(`${this.basePath}/ventas/productos?${params}`).then(r => r.json());
         } catch (error) {
             console.error("Error al cargar ventas:", error);
         }
     }
 
+    /*
     obtenerVentasFiltradas() {
         const busqueda = this._busqueda.trim().toLowerCase();
 
         let resultado = this._ventas.filter(venta => {
-            if (this._estadoSeleccionado && venta.estado !== this._estadoSeleccionado) {
+            if (this._estadoSeleccionado && venta.estado.toLowerCase() !== this._estadoSeleccionado.toLowerCase()) {
                 return false;
             }
 
@@ -58,14 +69,15 @@ class HistorialVentas extends HTMLElement {
 
         return resultado.sort((a, b) => b.id - a.id);
     }
+    */
 
     actualizarTarjetas() {
         const tarjetas = this.shadowRoot.querySelector("tarjetas-resumen");
 
         const total = this._ventas.length;
-        const cerradas = this._ventas.filter(v => v.estado === "Cerrada").length;
-        const pendientes = this._ventas.filter(v => v.estado === "Pendiente").length;
-        const canceladas = this._ventas.filter(v => v.estado === "Cancelada").length;
+        const cerradas = this._ventas.filter(v => v.estado.toLowerCase() === "cerrada").length;
+        const pendientes = this._ventas.filter(v => v.estado.toLowerCase() === "pendiente").length;
+        const canceladas = this._ventas.filter(v => v.estado.toLowerCase() === "cancelada").length;
 
         tarjetas.tarjetas = [
             { titulo: "Total ventas", valor: total },
@@ -86,12 +98,22 @@ class HistorialVentas extends HTMLElement {
 
         tabla.columnas = [
             { clave: "id", titulo: "N° venta", formato: valor => `#${String(valor).padStart(5, "0")}` },
-            { clave: "clienteNombre", titulo: "Cliente" },
+            { clave: "cliente", titulo: "Cliente" },
             {
                 clave: "estado",
                 titulo: "Estado",
-                formato: (valor) => `<span style="color:${coloresEstado[valor] || "#888"}; background: ${coloresEstado[valor].replace(")", ", 0.22)")}; padding:.25rem .7rem; border-radius:20px;  font-weight:600">${valor}</span>`
-                // return `<span style="background:${color}22; color:${color}; padding:.25rem .7rem; border-radius:20px; font-size:.9rem; font-weight:600">${valor}</span>`;
+                formato: (valor) => {
+                    const estado = this.capitalizar(valor);
+                    const color = coloresEstado[estado] || "#888";
+
+                    return `<span style="
+                        color:${color};
+                        background:${color.replace(")", ", 0.22)")};
+                        padding:.25rem .7rem;
+                        border-radius:20px;
+                        font-weight:600
+                    ">${estado}</span>`;
+                }
             },
             {
                 clave: "fecha",
@@ -105,7 +127,7 @@ class HistorialVentas extends HTMLElement {
             }
         ];
 
-        tabla.datos = this.obtenerVentasFiltradas();
+        tabla.datos = this.ventas();
     }
 
     setupListeners() {
@@ -113,23 +135,26 @@ class HistorialVentas extends HTMLElement {
             this.abrirDetalleVenta(evento.detail);
         });
 
-        this.shadowRoot.querySelector("#filtroBusqueda").addEventListener("input", (e) => {
+        this.shadowRoot.querySelector("#filtroBusqueda").addEventListener("input", async (e) => {
             this._busqueda = e.target.value;
+            await this.cargarDatos();
             this.actualizarTabla();
         });
 
-        this.shadowRoot.querySelector("#fechaDesde").addEventListener("change", (e) => {
+        this.shadowRoot.querySelector("#fechaDesde").addEventListener("change", async (e) => {
             this._fechaDesde = e.target.value;
+            await this.cargarDatos();
             this.actualizarTabla();
         });
 
-        this.shadowRoot.querySelector("#fechaHasta").addEventListener("change", (e) => {
+        this.shadowRoot.querySelector("#fechaHasta").addEventListener("change", async (e) => {
             this._fechaHasta = e.target.value;
+            await this.cargarDatos();
             this.actualizarTabla();
         });
 
         this.shadowRoot.querySelectorAll(".tab-estado").forEach(tab => {
-            tab.addEventListener("click", () => {
+            tab.addEventListener("click", async () => {
                 const valor = tab.dataset.estado || null;
                 this._estadoSeleccionado = this._estadoSeleccionado === valor ? null : valor;
 
@@ -137,11 +162,12 @@ class HistorialVentas extends HTMLElement {
                 if (this._estadoSeleccionado) tab.classList.add("activo");
                 else this.shadowRoot.querySelector('.tab-estado[data-estado=""]')?.classList.add("activo");
 
+                await this.cargarDatos();
                 this.actualizarTabla();
             });
         });
 
-        this.shadowRoot.querySelector("#limpiarFiltros").addEventListener("click", () => {
+        this.shadowRoot.querySelector("#limpiarFiltros").addEventListener("click", async () => {
             this._busqueda = "";
             this._fechaDesde = "";
             this._fechaHasta = "";
@@ -150,9 +176,13 @@ class HistorialVentas extends HTMLElement {
             this.shadowRoot.querySelector("#filtroBusqueda").value = "";
             this.shadowRoot.querySelector("#fechaDesde").value = "";
             this.shadowRoot.querySelector("#fechaHasta").value = "";
+          
             this.shadowRoot.querySelectorAll(".tab-estado").forEach(t => t.classList.remove("activo"));
-            this.shadowRoot.querySelector('.tab-estado[data-estado=""]')?.classList.add("activo");
 
+            this.shadowRoot.querySelector('.tab-estado[data-estado=""]')
+                ?.classList.add("activo");
+
+            await this.cargarDatos();
             this.actualizarTabla();
         });
     }
