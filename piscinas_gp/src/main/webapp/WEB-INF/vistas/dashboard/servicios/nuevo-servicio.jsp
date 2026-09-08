@@ -14,7 +14,8 @@
             accion="nav:/dashboard/servicios/historial"
         ></dashboard-header>
 
-        <nuevo-servicio></nuevo-servicio>
+        <nuevo-servicio base-path="${pageContext.request.contextPath}"></nuevo-servicio>
+        <br><br><br><br><br><br><br>
     </div>
 </div>
             

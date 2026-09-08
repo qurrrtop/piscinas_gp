@@ -881,6 +881,21 @@ class NuevaVenta extends HTMLElement {
                     border-bottom: 1px solid rgba(255,255,255,.12);
                     vertical-align: middle;
                 }
+        
+                #btnCancelarProducto {
+                    border-radius: 8px;
+                    background: rgba(1, 49, 104, 0.9);
+                    outline: none;
+                    border: none;
+                    padding: .5rem 1rem;
+                    color: white;
+                    margin-top: .5rem;
+                    cursor: pointer;
+                }
+        
+                #btnCancelarProducto:hover {
+                    background: rgba(1, 49, 104, 0.8);
+                }
 
                 .nombre-producto {
                     font-weight: 700;

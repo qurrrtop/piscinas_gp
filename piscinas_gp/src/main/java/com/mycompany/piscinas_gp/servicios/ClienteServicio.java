@@ -115,7 +115,7 @@ public class ClienteServicio {
                         dto.getCalleYnumero(),
                         localidad,
                         dto.getObservaciones(),
-                        dto.isActivo()
+                        true
                 );
                 ClienteParticular creado = clienteParticularDAO.crear(nuevo);
                 logger.info("Cliente particular creado correctamente");
@@ -132,7 +132,7 @@ public class ClienteServicio {
                         dto.getCalleYnumero(),
                         localidad,
                         dto.getObservaciones(),
-                        dto.isActivo()
+                        true
                 );
                 ClienteEmpresa creado = clienteEmpresaDAO.crear(nuevo);
                 logger.info("Cliente empresa creado correctamente");

@@ -302,6 +302,7 @@ class FormularioCliente extends HTMLElement {
             }));
         }
     }
+ 
 
     async actualizarCliente(cliente) {
         try {
