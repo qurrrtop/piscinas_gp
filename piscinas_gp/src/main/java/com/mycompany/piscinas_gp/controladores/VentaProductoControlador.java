@@ -38,10 +38,14 @@ import java.util.List;
         name = "VentaProductoControlador",
         urlPatterns = {"/ventas/productos", "/ventas/productos/*"}
 )
+
 public class VentaProductoControlador extends HttpServlet {
 
     private VentaProductoServicio ventaProductoServicio;
 
+    //clase controlador, Se ejecuta al inicializar el Servlet.
+    //obtiene conexion a bd y instancia el service
+    //inyecta DAOs necesarios (ventas, detalles, productos, clientes)
     @Override
     public void init() throws ServletException {
         DbConnection db = DbConnection.getInstance();
@@ -63,6 +67,10 @@ public class VentaProductoControlador extends HttpServlet {
     ) throws ServletException, IOException {
     }
 
+    //maneja peticiones GET: 
+    // Sin id url (ventas/producto) lee parametros, llama service y obtiene listado
+    //transforma a un dto simplificado y devuelve un 200 ok con json 
+    // con ID (/ventas/producto/{id} extrae id de la ruta y busca venta en el servicio
     @Override
     protected void doGet(
             HttpServletRequest request,
@@ -136,7 +144,10 @@ public class VentaProductoControlador extends HttpServlet {
             );
         }
     }
-
+    
+    //maneja creacion venta (POST /ventas/producto)
+    //lee json recibido de peticion y lo mapea a ventaDTO
+    //llama service para dar alta, y retorna objeto
     @Override
     protected void doPost(
             HttpServletRequest request,
@@ -186,7 +197,10 @@ public class VentaProductoControlador extends HttpServlet {
             );
         }
     }
-
+    
+    //maneja actualizacion venta existente (PUT /ventas/productos)
+    //parsea json a un VentaDTO, valida que contenga id valido
+    //actualiza registro por el servicio
     @Override
     protected void doPut(
             HttpServletRequest request,
@@ -249,7 +263,10 @@ public class VentaProductoControlador extends HttpServlet {
             );
         }
     }
-
+    
+    //maneja cancelacion/eliminacion 
+    //DELTE /ventas/producto/{id}. extrae el id de la url
+    //delega al servicio la accion, y devuelve el resultado con estado
     @Override
     protected void doDelete(
             HttpServletRequest request,
@@ -310,7 +327,9 @@ public class VentaProductoControlador extends HttpServlet {
             );
         }
     }
-
+    
+    //metodo de conversion y mapeo
+    //convierte objeto DTO recibido de la vista y convierte lista de detalles
     private VentaProducto crearVentaDesdeDTO(VentaDTO dto) {
         VentaProducto venta = new VentaProducto();
 
@@ -340,7 +359,9 @@ public class VentaProductoControlador extends HttpServlet {
 
         return venta;
     }
-
+    
+    //reccore la lista items/lineas de la venta recibida dto
+    //mapea lista de objetos, asigna id y los valida q no sea nulo
     private List<DetalleVenta> convertirDetalles(
             List<DetalleVentaDTO> detallesDTO
     ) {
@@ -377,6 +398,9 @@ public class VentaProductoControlador extends HttpServlet {
         return detalles;
     }
 
+    //metodos auxiliares y formato json
+    
+    //convierte cadena de texto a LOCALDATE, si viene nulo devuelve null
     private LocalDate parseFechaOpcional(String fecha) {
         if (fecha == null || fecha.isBlank()) {
             return null;
@@ -384,7 +408,11 @@ public class VentaProductoControlador extends HttpServlet {
 
         return LocalDate.parse(fecha);
     }
-
+    
+    // configura y retorna una instancia de ObjectMapper de jackson
+    //para q soporte fechas modernas (javaTimeModule)
+    //asegura que la fechas LOCALDATE serialicen en formato iso legible
+    // en lugar de TIMESTAMPS
     private ObjectMapper crearMapper() {
         ObjectMapper mapper = new ObjectMapper();
 
@@ -393,7 +421,10 @@ public class VentaProductoControlador extends HttpServlet {
 
         return mapper;
     }
-
+    
+    //helper de repuestas https (paginas web)
+    //configura cabeceras (application/json) y codificacion UTF-8
+    //serializa objeto de java a un string JSON y envia respuesta
     private void sendJsonResponse(
             Object value,
             HttpServletResponse response,
