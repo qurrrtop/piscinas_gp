@@ -55,11 +55,14 @@ class NuevaVenta extends HTMLElement {
     cargarEstadosVenta() {
         const select = this.shadowRoot.querySelector("#estadoVenta");
 
-        select.innerHTML = this._estadosVenta.map(estado => `
-            <option value="${estado.nombre}" ${estado.nombre === this._estadoVenta ? "selected" : ""}>
-                ${estado.nombre.charAt(0).toUpperCase() + estado.nombre.slice(1)}
-            </option>
-        `).join("");
+        select.innerHTML = this._estadosVenta
+            .filter(estado => estado.nombre.toLowerCase() !== "cancelada")
+            .map(estado => `
+                <option value="${estado.nombre}" ${estado.nombre === this._estadoVenta ? "selected" : ""}>
+                    ${estado.nombre.charAt(0).toUpperCase() + estado.nombre.slice(1)}
+                </option>
+            `)
+            .join("");
     }
     
     cargarMetodosPago() {
@@ -212,9 +215,21 @@ class NuevaVenta extends HTMLElement {
             this.renderSelectorCliente();
         });
     }
+    
+    estadoStockDe(producto) {
+        if (producto.stock === 0) return "sin_stock";
+        if (producto.stock <= producto.umbralStock) return "stock_bajo";
+        return "disponible";
+    }
 
     renderFormProducto() {
         const contenedor = this.shadowRoot.querySelector("#areaProductos");
+        
+        const coloresEstado = {
+            disponible: "rgba(15, 209, 73,.80)",
+            stock_bajo: "rgba(226, 140, 21,.80)",
+            sin_stock: "#FF1500"
+        };
 
         contenedor.innerHTML = `
             <div class="form-producto">
@@ -276,16 +291,54 @@ class NuevaVenta extends HTMLElement {
             ).slice(0, 25);
 
             listaEl.innerHTML = disponibles.length
-                ? disponibles.map(p => `
+            ? disponibles.map(p => {
+
+                const estado = this.estadoStockDe(p);
+                const color = coloresEstado[estado];
+
+                const referencia = p.umbralStock > 0
+                    ? p.umbralStock * 4
+                    : 50;
+
+                const porcentaje = Math.min(
+                    100,
+                    Math.round((p.stock / referencia) * 100)
+                );
+
+                return `
                     <div class="item-producto-lista" data-id="${p.id}">
-                        <div>
-                            <strong>${p.nombre}</strong>
-                            <small>${p.marcaProducto.nombre} · ${p.contenido} ${p.unidadMedida.abreviatura}</small>
+
+                        <div class="info-producto">
+                            <span>
+                                ${p.nombre} - ${p.contenido} ${p.unidadMedida.abreviatura}
+                            </span>
+
+                            <small>
+                                ${p.marcaProducto.nombre} 
+                            </small>
+
+                            <div class="stock-producto">
+                                <span style="color:white;">
+                                    Stock: ${p.stock} / min ${p.umbralStock}
+                                </span>
+
+                                <div class="barra-stock">
+                                    <div 
+                                        class="barra-stock-progreso"
+                                        style="background:${color}; width:${porcentaje}%">
+                                    </div>
+                                </div>
+                            </div>
                         </div>
-                        <span>$${Number(p.precioActual).toLocaleString("es-AR")}</span>
+
+                        <span>
+                            $${Number(p.precioActual).toLocaleString("es-AR")}
+                        </span>
+
                     </div>
-                `).join("")
-                : `<p class="sin-resultados">No se encontraron productos</p>`;
+                `;
+            }).join("")
+            : `<p class="sin-resultados">No se encontraron productos</p>`;
 
             listaEl.querySelectorAll(".item-producto-lista").forEach(el => {
                 el.addEventListener("click", () => {
@@ -342,9 +395,9 @@ class NuevaVenta extends HTMLElement {
 
     colorCategoria(nombre) {
         const colores = {
-            "Químico": "#4ADE80",
-            "Repuesto": "#FB923C",
-            "Accesorios de Instalación": "#A855F7"
+            "Químico": "rgba(23, 153, 32,.60)",
+            "Repuesto": "rgba(186, 85, 26,.60)",
+            "Accesorios de Instalación": "rgba(161, 29, 136,.60)"
         };
         return colores[nombre] || "#888888";
     }
@@ -380,10 +433,12 @@ class NuevaVenta extends HTMLElement {
                         ${this._carrito.map((item, index) => `
                             <tr>
                                 <td>
-                                    <div class="nombre-producto">${item.nombre}</div>
-                                    <div class="detalle-producto">${item.contenido || ""} ${item.unidadAbrev || ""}</div>
+                                    <div class="info-producto-seleccionado">
+                                        <div class="nombre-producto">${item.nombre}</div>
+                                        <div class="detalle-producto">${item.contenido || ""} ${item.unidadAbrev || ""}</div>
+                                    </div>
                                     <div class="badges-producto">
-                                        <span class="badge-mini" style="background:${this.colorCategoria(item.categoria)}22; color:${this.colorCategoria(item.categoria)}">${item.categoria}</span>
+                                        <span class="badge-mini" style="background:rgba(255,255,255,.1); color:rgba(255,255,255,.8)">${item.categoria}</span>
                                         <span class="badge-mini" style="background:rgba(255,255,255,.1); color:rgba(255,255,255,.8)">${item.marca}</span>
                                     </div>
                                 </td>
@@ -740,16 +795,18 @@ class NuevaVenta extends HTMLElement {
                 }
 
                 .item-producto-lista {
-                    display: flex;
-                    justify-content: space-between;
+                    display: grid;
+                    grid-template-columns: 2fr 1fr 1.5fr auto;
                     align-items: center;
+                    gap: 1.5rem;
                     padding: .7rem 1rem;
                     cursor: pointer;
                     border-bottom: 1px solid rgba(255,255,255,.1);
+                    background: rgba(1, 49, 104, 0.9);
                 }
 
                 .item-producto-lista:hover {
-                    background: rgba(255,255,255,.06);
+                    background: rgba(1, 49, 104, 0.8);
                 }
 
                 .item-producto-lista.seleccionado {
@@ -757,7 +814,17 @@ class NuevaVenta extends HTMLElement {
                     border-left: 3px solid #37A4FF;
                 }
 
-                .item-producto-lista strong { display: block; font-size: .9rem; }
+                .item-producto-lista > span:last-child {
+                    text-align: right;
+                    white-space: nowrap;
+                }
+        
+                .info-producto > span:first-of-type {
+                    font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+                    font-size: .8rem;
+                    font-weight: 600;
+                }
+                
                 .item-producto-lista small { color: rgba(255,255,255,.6); font-size: .78rem; }
 
                 label {
@@ -765,7 +832,8 @@ class NuevaVenta extends HTMLElement {
                     font-size: .8rem;
                     font-weight: 600;
                     margin-bottom: .4rem;
-                    margin-top: .8rem;
+                    margin-top: .5rem;
+                    margin-bottom: .5rem;
                     text-transform: uppercase;
                     letter-spacing: .03em;
                 }
@@ -775,6 +843,7 @@ class NuevaVenta extends HTMLElement {
                     flex-direction: row;
                     gap: .6rem;
                     padding: .5rem 0;
+                    margin-bottom: .8rem;
                 }
         
                 .tab-cat-mini {
@@ -789,34 +858,44 @@ class NuevaVenta extends HTMLElement {
                 }
 
                 .tab-cat-mini.activo {
-                    background: var(--color-cat, #37A4FF);
+                    background: var(--color-cat, rgba(55, 164, 255,.60));
                     color: white;
-                    border-color: var(--color-cat, #37A4FF);
+                    border-color: rgba(255,255,255,.50);
                 }
 
                 label:first-child { margin-top: 0; }
 
-                input, select, textarea {
+                input,
+                select,
+                textarea {
                     width: 100%;
                     box-sizing: border-box;
                     padding: .6rem .8rem;
                     border-radius: 6px;
-                    border: 1px solid rgba(196,196,196,1);
-                    background: rgba(255,255,255,.4);
+                    border: 1px solid rgba(196, 196, 196, 1);
+                    background: rgba(255, 255, 255, .15);
                     color: white;
-                    font-family: inherit;
+                }
+
+                select option {
+                    background: white;
+                    color: black;
+                }
+        
+                #selectMarca, #selectUnidad {
+                    margin-bottom: .8rem;
                 }
         
                 input, textarea {
                     outline: none;
                 }
         
-                input:focus, textarea:focus {
-                    border-color: rgba(1, 49, 104, 0.8);
+                input:focus, select:focus, textarea:focus {
+                    outline: none;
                 }
 
                 input::placeholder, textarea::placeholder {
-                    color: rgba(000,000,000,.30);
+                    color: rgba(255,255,255,.80);
                     font-weight: 700;
                 }
 
@@ -882,12 +961,17 @@ class NuevaVenta extends HTMLElement {
                     vertical-align: middle;
                 }
         
+                .acciones-form-producto {
+                    display: flex;
+                    justify-content: end;
+                }
+        
                 #btnCancelarProducto {
                     border-radius: 8px;
                     background: rgba(1, 49, 104, 0.9);
                     outline: none;
                     border: none;
-                    padding: .5rem 1rem;
+                    padding: .6rem 1.5rem;
                     color: white;
                     margin-top: .5rem;
                     cursor: pointer;
@@ -895,6 +979,51 @@ class NuevaVenta extends HTMLElement {
         
                 #btnCancelarProducto:hover {
                     background: rgba(1, 49, 104, 0.8);
+                }
+       
+                .info-producto {
+                    display: contents;
+                }
+
+                .info-producto small {
+                    min-width: 180px;
+                }
+        
+                .stock-producto {
+                    display: flex;
+                    flex-direction: column;
+                    gap: .3rem;
+                    min-width: 0;
+                }
+        
+                .stock-producto span {
+                    font-size: .9rem;
+                    font-weight: 500;
+                }
+        
+                .barra-stock {
+                    width: 100%;
+                    height: 6px;
+                    background: rgba(255, 255, 255, .35);
+                    border-radius: 10px;
+                    overflow: hidden;
+                }
+
+                .barra-stock-progreso {
+                    height: 100%;
+                    border-radius: 10px;
+                    transition: width .2s ease;
+                }
+                
+                .info-producto-seleccionado {
+                    display: flex;
+                    align-items: center;
+                    gap: .5rem;
+                }
+
+                .nombre-producto,
+                .detalle-producto {
+                    display: inline;
                 }
 
                 .nombre-producto {
@@ -915,7 +1044,7 @@ class NuevaVenta extends HTMLElement {
                 }
 
                 .badge-mini {
-                    font-size: .68rem;
+                    font-size: .75rem;
                     font-weight: 700;
                     padding: .15rem .55rem;
                     border-radius: 20px;
@@ -959,7 +1088,7 @@ class NuevaVenta extends HTMLElement {
                     background: none;
                     border: none;
                     color: rgba(255,255,255,.5);
-                    font-size: 1.2rem;
+                    font-size: 1.8rem;
                     cursor: pointer;
                     padding: 0 0 0 .8rem;
                 }
