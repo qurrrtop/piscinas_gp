@@ -22,15 +22,16 @@ class NuevaVenta extends HTMLElement {
     async connectedCallback() {
         this.basePath = this.getAttribute("base-path") || "";
         this.render();
-        await this.cargarDatosIniciales();
+        
         this.renderSelectorCliente();
         this.setupListeners();
+        await this.cargarDatosIniciales();
     }
 
     async cargarDatosIniciales() {
         try {
-            await this.cargarClientes();
-            const [marcas, categorias, unidades, productos, estadosVenta, metodosPago] = await Promise.all([
+            const [clientes, marcas, categorias, unidades, productos, estadosVenta, metodosPago] = await Promise.all([
+                fetch(`${this.basePath}/clientes`).then(r => r.json()),
                 fetch(`${this.basePath}/marcas`).then(r => r.json()),
                 fetch(`${this.basePath}/categorias`).then(r => r.json()),
                 fetch(`${this.basePath}/unidades-medida`).then(r => r.json()),
@@ -38,6 +39,7 @@ class NuevaVenta extends HTMLElement {
                 fetch(`${this.basePath}/estados-venta`).then(r => r.json()),
                 fetch(`${this.basePath}/metodos-pago`).then(r => r.json())
             ]);
+            this._clientes = clientes;
             this._marcas = marcas;
             this._categorias = categorias;
             this._unidades = unidades;
@@ -369,9 +371,23 @@ class NuevaVenta extends HTMLElement {
 
     agregarAlCarrito(producto) {
         const existente = this._carrito.find(item => item.productoId === producto.id);
+
         if (existente) {
-            existente.cantidad++;
+
+            if (existente.cantidad < existente.stock) {
+                existente.cantidad++;
+            } else {
+                document.dispatchEvent(new CustomEvent("mostrar-notificacion", {
+                    detail: {
+                        mensaje: `No hay más stock disponible de ${producto.nombre}`, tipo: "advertencia"
+                    }
+                }));
+
+                return;
+            }
+
         } else {
+
             this._carrito.push({
                 productoId: producto.id,
                 nombre: producto.nombre,
@@ -380,6 +396,7 @@ class NuevaVenta extends HTMLElement {
                 contenido: producto.contenido,
                 unidadAbrev: producto.unidadMedida.abreviatura,
                 precioUnitario: Number(producto.precioActual),
+                stock: Number(producto.stock),
                 cantidad: 1
             });
         }
@@ -389,7 +406,9 @@ class NuevaVenta extends HTMLElement {
         this.actualizarResumen();
 
         document.dispatchEvent(new CustomEvent("mostrar-notificacion", {
-            detail: { mensaje: `${producto.nombre} agregado al carrito`, tipo: "exito" }
+            detail: {
+                mensaje: `${producto.nombre} agregado al carrito`, tipo: "exito"
+            }
         }));
     }
 
@@ -469,9 +488,20 @@ class NuevaVenta extends HTMLElement {
             this.shadowRoot.querySelectorAll(".btn-sumar").forEach(btn => {
                 btn.addEventListener("click", () => {
                     const i = Number(btn.dataset.index);
-                    this._carrito[i].cantidad++;
-                    this.renderAreaProductos();
-                    this.actualizarResumen();
+                    const item = this._carrito[i];
+
+                    if (item.cantidad < item.stock) {
+                        item.cantidad++;
+                        this.renderAreaProductos();
+                        this.actualizarResumen();
+                    } else {
+                        document.dispatchEvent(new CustomEvent("mostrar-notificacion", {
+                            detail: {
+                                mensaje: `No hay más stock disponible de ${item.nombre}`,
+                                tipo: "advertencia"
+                            }
+                        }));
+                    }
                 });
             });
             this.shadowRoot.querySelectorAll(".btn-quitar-fila").forEach(btn => {
@@ -508,26 +538,6 @@ class NuevaVenta extends HTMLElement {
 
         modal.appendChild(formulario);
         document.body.appendChild(modal);
-    }
-
-    async cargarClientes() {
-        try {
-            const url = `${this.basePath}/clientes`;
-
-            console.log("URL CLIENTES:", url);
-
-            const clientes = await fetch(url).then(r => r.json());
-
-            console.log("CLIENTES RECIBIDOS:", clientes);
-            console.log("PRIMER CLIENTE COMPLETO:", clientes[0]);
-
-            this._clientes = clientes;
-
-            console.log("CLIENTES:", this._clientes);
-
-        } catch (error) {
-            console.error("Error al cargar clientes:", error);
-        }
     }
 
     actualizarResumen() {
@@ -1127,10 +1137,42 @@ class NuevaVenta extends HTMLElement {
                 .radio-metodo:last-of-type { margin-bottom: 0; }
 
                 .radio-metodo input[type="radio"] {
+                    appearance: none;
+                    -webkit-appearance: none;
+
+                    flex: 0 0 18px;
                     width: 18px;
                     height: 18px;
-                    accent-color: white;
+                    min-width: 18px;
+                    min-height: 18px;
+
                     margin: 0;
+                    padding: 0;
+
+                    border: 2px solid rgba(255, 255, 255, 0.7);
+                    border-radius: 50%;
+                    background: transparent;
+
+                    display: grid;
+                    place-items: center;
+                    box-sizing: border-box;
+                }
+
+                .radio-metodo input[type="radio"]::before {
+                    content: "";
+
+                    width: 8px;
+                    height: 8px;
+
+                    border-radius: 50%;
+                    background: white;
+
+                    transform: scale(0);
+                    transition: transform 0.15s ease;
+                }
+
+                .radio-metodo input[type="radio"]:checked::before {
+                    transform: scale(1);
                 }
         
                 .estado-venta {

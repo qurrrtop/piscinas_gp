@@ -8,8 +8,16 @@ class DetalleVenta extends HTMLElement {
     }
 
     set venta(valor) {
+        console.log("VENTA RECIBIDA POR DETALLE:", valor);
+
         this._venta = valor;
-        this.render();
+
+        try {
+            this.render();
+            console.log("DETALLE RENDERIZADO CORRECTAMENTE");
+        } catch (error) {
+            console.error("ERROR DENTRO DE DETALLE-VENTA:", error);
+        }
     }
 
     connectedCallback() {
@@ -76,6 +84,18 @@ class DetalleVenta extends HTMLElement {
         });
     }
 
+    obtenerNombreCliente(c) {
+        return c.nombre ? `${c.nombre} ${c.apellido}` : c.razonSocial;
+    }
+
+    esClienteEmpresa(c) {
+        return !!c.razonSocial;
+    }
+
+    obtenerCuitCuil(c) {
+        return c.cuil || c.cuit || "Sin dato";
+    }
+
     render() {
         if (!this._venta) {
             this.shadowRoot.innerHTML = `<p style="color:white;padding:1rem">Cargando...</p>`;
@@ -84,8 +104,13 @@ class DetalleVenta extends HTMLElement {
 
         const v = this._venta;
         const c = v.cliente;
-        const colorEst = this.colorEstado(v.estado);
-        const estaCancelada = (v.estado || "").toLowerCase() === "cancelada";
+        const esEmpresa = this.esClienteEmpresa(c);
+        const nombreCliente = this.obtenerNombreCliente(c);
+        const colorEst = this.colorEstado(v.estadoVenta.nombre);
+        const estaCancelada = v.estadoVenta.nombre.toLowerCase() === "cancelada";
+
+        const subtotal = v.detallesVenta.reduce((acc, d) => acc + (d.precioUnitario * d.cantidad), 0);
+        const montoDescuento = subtotal * (v.descuentoGlobal / 100);
 
         this.shadowRoot.innerHTML = `
             <style>
@@ -95,17 +120,6 @@ class DetalleVenta extends HTMLElement {
                     gap: 1.2rem;
                     color: white;
                     font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
-                }
-
-                .encabezado {
-                    display: flex;
-                    align-items: center;
-                    gap: .8rem;
-                }
-
-                .encabezado h3 {
-                    margin: 0;
-                    font-size: 1.3rem;
                 }
 
                 .badge-estado {
@@ -187,21 +201,32 @@ class DetalleVenta extends HTMLElement {
                     width: 100%;
                     border-collapse: collapse;
                     font-size: .88rem;
+                    padding: .5rem;
+                    border-radius: 10px;
+                    overflow: hidden;
                 }
-
+        
+                thead {
+                    background: rgba(255,255,255,.08);
+                }
+        
                 table.tabla-productos thead th {
                     text-align: left;
                     font-size: .72rem;
                     text-transform: uppercase;
                     color: #B8D7FF;
-                    padding-bottom: .5rem;
+                    padding: .5rem;
                     border-bottom: 1px solid rgba(255,255,255,.25);
                 }
 
                 table.tabla-productos thead th.col-num { text-align: right; }
+                
+                tbody {
+                    background: rgba(255,255,255,.08);
+                }
 
                 table.tabla-productos tbody td {
-                    padding: .7rem 0;
+                    padding: .7rem;
                     border-bottom: 1px solid rgba(255,255,255,.1);
                     vertical-align: top;
                 }
@@ -216,10 +241,11 @@ class DetalleVenta extends HTMLElement {
                     padding: .12rem .5rem;
                     border-radius: 20px;
                 }
-
+        
                 .totales {
-                    align-self: flex-end;
-                    width: 260px;
+                    background: rgba(255,255,255,.08);
+                    padding: .5rem;
+                    border-radius: 10px;
                 }
 
                 .totales-fila {
@@ -272,26 +298,22 @@ class DetalleVenta extends HTMLElement {
             </style>
 
             <div class="detalle">
-                <div class="encabezado">
-                    <h3>#${String(v.id).padStart(5, "0")}</h3>
-                    <span class="badge-estado">${this.capitalizar(v.estado)}</span>
-                </div>
 
                 <div class="grid-info">
                     <div><label>Fecha</label><div class="valor">${new Date(v.fecha).toLocaleDateString("es-AR")}</div></div>
-                    <div><label>Método de pago</label><div class="valor">${this.capitalizar(v.metodoPago)}</div></div>
-                    <div><label>Estado</label><div class="valor" style="color:${colorEst}">${this.capitalizar(v.estado)}</div></div>
+                    <div><label>Método de pago</label><div class="valor">${this.capitalizar(v.metodoPago.nombre)}</div></div>
+                    <div><label>Estado</label><span class="badge-estado">${this.capitalizar(v.estadoVenta.nombre)}</span></div>
                 </div>
 
                 <div>
                     <div class="titulo-seccion" style="margin-bottom:.6rem">Cliente</div>
                     <div class="cliente-chip">
-                        <span class="avatar avatar-${c.tipo === 'Empresa' ? 'empresa' : 'particular'}">${this.obtenerIniciales(c.nombreCompleto)}</span>
+                        <span class="avatar avatar-${esEmpresa ? 'empresa' : 'particular'}">${this.obtenerIniciales(nombreCliente)}</span>
                         <div class="cliente-info">
-                            <strong>${c.nombreCompleto}</strong>
-                            <small>${c.email || "Sin email"} · ${c.telefono || "Sin teléfono"} · CUIL/CUIT: ${c.cuitCuil}</small>
+                            <strong>${nombreCliente}</strong>
+                            <small>${c.email || "Sin email"} · ${c.telefono || "Sin teléfono"} · CUIL/CUIT: ${this.obtenerCuitCuil(c)}</small>
                         </div>
-                        <span class="badge-tipo">${c.tipo}</span>
+                        <span class="badge-tipo">${esEmpresa ? "Empresa" : "Particular"}</span>
                     </div>
                 </div>
 
@@ -310,15 +332,15 @@ class DetalleVenta extends HTMLElement {
                             ${v.detallesVenta.map(d => `
                                 <tr>
                                     <td>
-                                        <strong>${d.productoNombre}</strong>
+                                        <strong>${d.producto.nombre}</strong>
                                         <div class="badges-producto">
-                                            ${d.categoria ? `<span class="badge-mini" style="background:${this.colorCategoria(d.categoria)}22;color:${this.colorCategoria(d.categoria)}">${d.categoria}</span>` : ""}
-                                            ${d.marca ? `<span class="badge-mini" style="background:rgba(255,255,255,.1)">${d.marca}</span>` : ""}
+                                            ${d.producto.categoriaProducto ? `<span class="badge-mini" style="background:${this.colorCategoria(d.producto.categoriaProducto.nombre)}22;color:${this.colorCategoria(d.producto.categoriaProducto.nombre)}">${d.producto.categoriaProducto.nombre}</span>` : ""}
+                                            ${d.producto.marcaProducto ? `<span class="badge-mini" style="background:rgba(255,255,255,.1)">${d.producto.marcaProducto.nombre}</span>` : ""}
                                         </div>
                                     </td>
                                     <td class="col-num">$${Number(d.precioUnitario).toLocaleString("es-AR")}</td>
                                     <td class="col-num">${d.cantidad}</td>
-                                    <td class="col-num">$${Number(d.subtotal).toLocaleString("es-AR")}</td>
+                                    <td class="col-num">$${Number(d.precioUnitario * d.cantidad).toLocaleString("es-AR")}</td>
                                 </tr>
                             `).join("")}
                         </tbody>
@@ -326,8 +348,8 @@ class DetalleVenta extends HTMLElement {
                 </div>
 
                 <div class="totales">
-                    <div class="totales-fila"><span>Subtotal</span><span>$${Number(v.subtotal).toLocaleString("es-AR")}</span></div>
-                    <div class="totales-fila"><span>Descuento global</span><span>-$${Number(v.subtotal - v.total).toLocaleString("es-AR")}</span></div>
+                    <div class="totales-fila"><span>Subtotal</span><span>$${subtotal.toLocaleString("es-AR")}</span></div>
+                    <div class="totales-fila"><span>Descuento global (${v.descuentoGlobal}%)</span><span>-$${montoDescuento.toLocaleString("es-AR")}</span></div>
                     <div class="totales-fila total"><span>Total</span><span>$${Number(v.total).toLocaleString("es-AR")}</span></div>
                 </div>
 

@@ -60,6 +60,10 @@ class NotificacionToast extends HTMLElement {
             .toast-error {
                 background: #D64545;
             }
+        
+            .toast-advertencia {
+                background: #635656;
+            }
 
             .toast.saliendo {
                 animation: salir .3s ease-in forwards;

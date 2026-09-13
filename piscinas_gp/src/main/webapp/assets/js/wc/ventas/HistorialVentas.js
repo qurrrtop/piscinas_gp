@@ -190,9 +190,37 @@ class HistorialVentas extends HTMLElement {
         });
     }
 
-    abrirDetalleVenta(venta) {
-        // Placeholder: acá se conecta el detalle de venta cuando esté armado
-        console.log("Ver detalle de venta:", venta);
+    async abrirDetalleVenta(ventaResumen) {
+        const modal = document.createElement("modal-component");
+        modal.setAttribute("titulo", `Venta #${String(ventaResumen.id).padStart(5, "0")}`);
+        modal.setAttribute("subTitulo", "DETALLE DE VENTA");
+
+        const detalle = document.createElement("detalle-venta");
+        detalle.setAttribute("base-path", this.basePath);
+
+        detalle.addEventListener("editar-venta", (evento) => {
+            modal.remove();
+            // acá se conecta el flujo de edición cuando lo armemos
+            console.log("Editar venta:", evento.detail);
+        });
+
+        modal.appendChild(detalle);
+        document.body.appendChild(modal);
+
+        try {
+            const response = await fetch(`${this.basePath}/ventas/productos/${ventaResumen.id}`);
+
+            console.log("STATUS DETALLE:", response.status);
+
+            const ventaCompleta = await response.json();
+
+            console.log("DETALLE VENTA RECIBIDO:", ventaCompleta);
+            console.log("DETALLE PRIMER PRODUCTO:", ventaCompleta.detallesVenta[0]);
+
+            detalle.venta = ventaCompleta;
+        } catch (error) {
+            console.error("Error al cargar el detalle de la venta:", error);
+        }
     }
 
     renderShell() {
@@ -321,24 +349,3 @@ class HistorialVentas extends HTMLElement {
 }
 
 customElements.define("historial-ventas", HistorialVentas);
-
-/*
- *  ===========================================================================
- *  CLIENTES HARDCODEADOS PARA HISTORIAL VENTAS 
-const historial = document.querySelector("dashboard-section")
-    .shadowRoot
-    .querySelector("historial-ventas");
-
-historial._ventas = [
-    { id: 6, clienteNombre: "Román Maidana", clienteCuitCuil: "20304050607", estado: "Cerrada", fecha: "2026-06-11", total: 70000 },
-    { id: 5, clienteNombre: "Micaela Rodriguez", clienteCuitCuil: "20111222339", estado: "Cerrada", fecha: "2026-06-11", total: 143000 },
-    { id: 4, clienteNombre: "HidroWorld Taragui S.A.", clienteCuitCuil: "20222333449", estado: "Pendiente", fecha: "2026-06-11", total: 200000 },
-    { id: 3, clienteNombre: "Facundo Buonanotte", clienteCuitCuil: "20333444559", estado: "Cerrada", fecha: "2026-06-11", total: 70000 },
-    { id: 2, clienteNombre: "AquaTecno del Litoral S.R.L.", clienteCuitCuil: "20444555669", estado: "Pendiente", fecha: "2026-06-11", total: 150000 },
-    { id: 1, clienteNombre: "Nicolas Benitez", clienteCuitCuil: "20304578639", estado: "Cancelada", fecha: "2026-06-11", total: 200000 }
-];
-
-historial.actualizarTarjetas();
-historial.actualizarTabla();
- * ============================================================================
- */

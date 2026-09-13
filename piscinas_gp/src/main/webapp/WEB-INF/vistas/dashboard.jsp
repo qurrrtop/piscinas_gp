@@ -18,6 +18,7 @@
         <script src="${pageContext.request.contextPath}/assets/js/wc/clientes/DetalleCliente.js" type="module" defer></script>
         <script src="${pageContext.request.contextPath}/assets/js/wc/clientes/FormularioCliente.js" type="module" defer></script>
         <script src="${pageContext.request.contextPath}/assets/js/wc/ventas/HistorialVentas.js" type="module" defer></script>
+        <script src="${pageContext.request.contextPath}/assets/js/wc/ventas/DetalleVenta.js" type="module" defer></script>
         <script src="${pageContext.request.contextPath}/assets/js/wc/ventas/NuevaVenta.js" type="module" defer></script>
         <script src="${pageContext.request.contextPath}/assets/js/wc/ventas/ConfirmacionVenta.js" type="module" defer></script>
         <script src="${pageContext.request.contextPath}/assets/js/wc/servicios/NuevoServicio.js" type="module" defer></script>
