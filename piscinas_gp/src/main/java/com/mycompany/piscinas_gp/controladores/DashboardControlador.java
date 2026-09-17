@@ -50,6 +50,7 @@ public class DashboardControlador extends HttpServlet {
             case "/principal" -> request.getRequestDispatcher("/WEB-INF/vistas/dashboard/principal/principal.jsp").forward(request, response);
             case "/ventas/historial" -> request.getRequestDispatcher("/WEB-INF/vistas/dashboard/ventas/historial-ventas.jsp").forward(request, response);
             case "/ventas/nueva" -> request.getRequestDispatcher("/WEB-INF/vistas/dashboard/ventas/nueva-venta.jsp").forward(request, response);
+            case "/ventas/editar" -> request.getRequestDispatcher("/WEB-INF/vistas/dashboard/ventas/editar-venta.jsp").forward(request, response);
             case "/servicios/historial" -> request.getRequestDispatcher("/WEB-INF/vistas/dashboard/servicios/historial-servicios.jsp").forward(request, response);
             case "/servicios/nuevo" -> request.getRequestDispatcher("/WEB-INF/vistas/dashboard/servicios/nuevo-servicio.jsp").forward(request, response);
             case "/pendientes/historial" -> request.getRequestDispatcher("/WEB-INF/vistas/dashboard/pendientes/historial-pendientes.jsp").forward(request, response);

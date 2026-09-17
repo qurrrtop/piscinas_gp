@@ -30,6 +30,7 @@ class ConfirmacionVenta extends HTMLElement {
                     font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
                     max-height: 60vh;
                     overflow-y: auto;
+                    padding-right: 1rem;
                 }
 
                 .cliente-nombre { font-weight: 700; font-size: 1.05rem; }

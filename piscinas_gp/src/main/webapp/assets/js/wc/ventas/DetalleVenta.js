@@ -38,7 +38,7 @@ class DetalleVenta extends HTMLElement {
     }
 
     colorCategoria(nombre) {
-        const colores = { "Químico": "#4ADE80", "Repuesto": "#FB923C", "Accesorios de Instalación": "#A855F7" };
+        const colores = { "Químico": "#4ADE80", "Repuesto": "#FB923C", "Accesorios de Instalación": "#AC67F5" };
         return colores[nombre] || "#888888";
     }
 
@@ -76,11 +76,13 @@ class DetalleVenta extends HTMLElement {
         });
 
         this.shadowRoot.querySelector("#btnEditarVenta")?.addEventListener("click", () => {
-            this.dispatchEvent(new CustomEvent("editar-venta", {
-                detail: this._venta,
-                bubbles: true,
-                composed: true
+            document.dispatchEvent(new CustomEvent("navigateTo", {
+                bubbles: true, composed: true,
+                detail: { path: `${this.basePath}/dashboard/ventas/editar?id=${this._venta.id}` }
             }));
+
+            const modal = this.closest("modal-component") || document.querySelector("modal-component");
+            if (modal) modal.remove();
         });
     }
 
@@ -207,7 +209,7 @@ class DetalleVenta extends HTMLElement {
                 }
         
                 thead {
-                    background: rgba(255,255,255,.08);
+                    background: rgba(6, 76, 156);
                 }
         
                 table.tabla-productos thead th {
@@ -215,7 +217,7 @@ class DetalleVenta extends HTMLElement {
                     font-size: .72rem;
                     text-transform: uppercase;
                     color: #B8D7FF;
-                    padding: .5rem;
+                    padding: .8rem .7rem;
                     border-bottom: 1px solid rgba(255,255,255,.25);
                 }
 
@@ -228,23 +230,32 @@ class DetalleVenta extends HTMLElement {
                 table.tabla-productos tbody td {
                     padding: .7rem;
                     border-bottom: 1px solid rgba(255,255,255,.1);
-                    vertical-align: top;
+                    vertical-align: middle;
                 }
 
-                table.tabla-productos tbody td.col-num { text-align: right; white-space: nowrap; }
+                table.tabla-productos thead th.col-num,
+                table.tabla-productos tbody td.col-num {
+                    text-align: right;
+                    white-space: nowrap;
+                }
+        
+                table.tabla-productos thead th.col-cant,
+                table.tabla-productos tbody td.col-cant {
+                    text-align: center;
+                }
 
                 .badges-producto { display: flex; gap: .35rem; margin-top: .35rem; }
 
                 .badge-mini {
-                    font-size: .65rem;
+                    font-size: .70rem;
                     font-weight: 700;
-                    padding: .12rem .5rem;
+                    padding: .14rem .52rem;
                     border-radius: 20px;
                 }
         
                 .totales {
                     background: rgba(255,255,255,.08);
-                    padding: .5rem;
+                    padding: .8rem;
                     border-radius: 10px;
                 }
 
@@ -284,7 +295,7 @@ class DetalleVenta extends HTMLElement {
                     border-radius: 8px;
                     cursor: pointer;
                     font-weight: 700;
-                    border: none;
+                    border: 1px solid rgba(255, 255, 255, .25);
                 }
 
                 .acciones button:disabled {
@@ -292,9 +303,21 @@ class DetalleVenta extends HTMLElement {
                     cursor: not-allowed;
                 }
 
-                #btnCancelarVenta { background: #F87171; color: white; }
-                #btnVerFactura { background: rgba(255,255,255,.12); color: white; border: 1px solid rgba(255,255,255,.3); }
+                #btnCancelarVenta { background: rgba(222, 31, 31, .7); color: white; }
+                #btnVerFactura { background: transparent; color: white; border: 1px solid rgba(255,255,255,.3); }
                 #btnEditarVenta { background: #37E0E0; color: #05448D; }
+        
+                #btnCancelarVenta:hover {
+                    background: rgba(222, 31, 31, .6);
+                }
+        
+                #btnVerFactura:hover {
+                    background: rgba(255,255,255,.04);
+                }
+        
+                #btnEditarVenta:hover {
+                    background: rgba(55, 224, 224,.90);
+                }
             </style>
 
             <div class="detalle">
@@ -324,7 +347,7 @@ class DetalleVenta extends HTMLElement {
                             <tr>
                                 <th>Producto</th>
                                 <th class="col-num">Precio unit.</th>
-                                <th class="col-num">Cant.</th>
+                                <th class="col-cant">Cant.</th>
                                 <th class="col-num">Subtotal</th>
                             </tr>
                         </thead>
@@ -339,7 +362,7 @@ class DetalleVenta extends HTMLElement {
                                         </div>
                                     </td>
                                     <td class="col-num">$${Number(d.precioUnitario).toLocaleString("es-AR")}</td>
-                                    <td class="col-num">${d.cantidad}</td>
+                                    <td class="col-cant">${d.cantidad}</td>
                                     <td class="col-num">$${Number(d.precioUnitario * d.cantidad).toLocaleString("es-AR")}</td>
                                 </tr>
                             `).join("")}

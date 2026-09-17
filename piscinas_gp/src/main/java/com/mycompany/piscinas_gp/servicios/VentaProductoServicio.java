@@ -163,9 +163,10 @@ public class VentaProductoServicio {
             VentaProducto ventaExistente =
                 buscarVentaPorId(venta.getId());
 
-            prepararVenta(
-                    venta, clienteId, estadoVentaId, metodoPagoId, false,
-                    estaCerrada(ventaExistente)
+            // Se le informa a la validacion que ese stock va a volver dentro de la
+            // transaccion, para que no rechace la edicion por falta de stock.
+            prepararVenta(venta, clienteId, estadoVentaId, metodoPagoId, false,
+                    !estaCancelada(ventaExistente)
                             ? ventaExistente.getDetallesVenta()
                             : Collections.emptyList()
             );
@@ -321,8 +322,8 @@ public class VentaProductoServicio {
         Map<Long, Integer> cantidadesPorProducto =
                 agruparCantidades(detalles);
 
-        // Cuando se edita una venta ya cerrada, su stock anterior se repone
-        // dentro de la transaccion antes de descontar el detalle nuevo.
+        // Al editar, el stock de los detalles anteriores se repone dentro de la
+        // transaccion antes de descontar los nuevos, asi que se suma al disponible.
         Map<Long, Integer> cantidadesAReponer =
                 agruparCantidades(detallesStockAReponer);
 
@@ -426,9 +427,9 @@ public class VentaProductoServicio {
                     detalleVentaDAO.crear(detalle, ventaCreada.getId(), conn);
                 }
 
-                if (estaCerrada(ventaCreada)) {
-                    descontarStockDeDetalles(ventaCreada.getDetallesVenta(), conn);
-                }
+                // Se descuenta siempre: crear una venta ya reserva el stock.
+                // (crear con estado "cancelada" esta bloqueado en prepararVenta)
+                descontarStockDeDetalles(ventaCreada.getDetallesVenta(), conn);
 
                 ventaCreada.setDetallesVenta(venta.getDetallesVenta());
                 conn.commit();
@@ -445,21 +446,20 @@ public class VentaProductoServicio {
     }
 
     private VentaProducto actualizarEnTransaccion(
-            VentaProducto venta, VentaProducto ventaExistente
+        VentaProducto venta, VentaProducto ventaExistente
     ) throws PersistenceException, BusinessException, SQLException {
 
         try (Connection conn = dbConn.getConnection()) {
             conn.setAutoCommit(false);
 
             try {
-                if (estaCerrada(ventaExistente)) {
-                    reponerStockDeDetalles(
-                            ventaExistente.getDetallesVenta(), conn
-                    );
+                // Se repone el stock anterior salvo que la venta ya estuviera cancelada
+                // (en ese caso el stock ya habia vuelto al cancelarla).
+                if (!estaCancelada(ventaExistente)) {
+                    reponerStockDeDetalles(ventaExistente.getDetallesVenta(), conn);
                 }
 
-                VentaProducto ventaActualizada =
-                        ventaProductoDAO.actualizar(venta, conn);
+                VentaProducto ventaActualizada = ventaProductoDAO.actualizar(venta, conn);
 
                 sincronizarDetalles(
                         ventaExistente.getDetallesVenta(),
@@ -468,10 +468,10 @@ public class VentaProductoServicio {
                         conn
                 );
 
-                if (estaCerrada(ventaActualizada)) {
-                    descontarStockDeDetalles(
-                            ventaActualizada.getDetallesVenta(), conn
-                    );
+                // Se vuelve a descontar con los detalles nuevos, salvo que la venta
+                // quede cancelada tras la edicion.
+                if (!estaCancelada(ventaActualizada)) {
+                    descontarStockDeDetalles(ventaActualizada.getDetallesVenta(), conn);
                 }
 
                 ventaActualizada.setDetallesVenta(venta.getDetallesVenta());
@@ -496,7 +496,9 @@ public class VentaProductoServicio {
             conn.setAutoCommit(false);
 
             try {
-                if (estaCerrada(venta)) {
+                // Cancelar siempre devuelve el stock, porque cualquier venta no cancelada
+                // lo tiene descontado.
+                if (!estaCancelada(venta)) {
                     reponerStockDeDetalles(venta.getDetallesVenta(), conn);
                 }
 
@@ -520,11 +522,14 @@ public class VentaProductoServicio {
         }
     }
 
-    private boolean estaCerrada(VentaProducto venta) {
+    // Regla de negocio: toda venta descuenta stock al crearse, sin importar si
+    // queda pendiente o cerrada. El unico estado que NO tiene stock descontado
+    // es "cancelada". Por eso el criterio pasa a ser
+    // "esta cancelada?" en lugar del anterior "esta cerrada?".
+    private boolean estaCancelada(VentaProducto venta) {
         return venta != null
                 && venta.getEstadoVenta() != null
-                && "cerrada".equalsIgnoreCase(
-                        venta.getEstadoVenta().getNombre());
+                && "cancelada".equalsIgnoreCase(venta.getEstadoVenta().getNombre());
     }
 
     private void descontarStockDeDetalles(

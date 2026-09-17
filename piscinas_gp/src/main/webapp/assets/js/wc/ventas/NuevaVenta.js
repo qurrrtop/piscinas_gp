@@ -17,15 +17,28 @@ class NuevaVenta extends HTMLElement {
         this._estadosVenta = [];
         this._metodosPago = [];
         this._estadoVenta = "cerrada";
+        this._modo = "crear";
+        this._ventaId = null;
+        this._detalleIdPorProducto = new Map();
     }
 
     async connectedCallback() {
         this.basePath = this.getAttribute("base-path") || "";
+        const ventaIdAttr = this.getAttribute("venta-id");
+
+        if (ventaIdAttr) {
+            this._modo = "editar";
+            this._ventaId = Number(ventaIdAttr);
+        }
+
         this.render();
-        
+        await this.cargarDatosIniciales();
         this.renderSelectorCliente();
         this.setupListeners();
-        await this.cargarDatosIniciales();
+
+        if (this._modo === "editar") {
+            await this.cargarVentaExistente();
+        }
     }
 
     async cargarDatosIniciales() {
@@ -128,7 +141,11 @@ class NuevaVenta extends HTMLElement {
         });
 
         this.shadowRoot.querySelector("#btnConfirmarVenta").addEventListener("click", () => {
-            this.abrirConfirmacion();
+            if (this._modo === "editar") {
+                this.registrarVenta(false);
+            } else {
+                this.abrirConfirmacion();
+            }
         });
     }
 
@@ -583,11 +600,75 @@ class NuevaVenta extends HTMLElement {
         modal.appendChild(confirmacion);
         document.body.appendChild(modal);
     }
+    
+    async cargarVentaExistente() {
+        try {
+            const v = await fetch(`${this.basePath}/ventas/productos/${this._ventaId}`).then(r => r.json());
+            const c = v.cliente;
+            const esEmpresa = !!c.razonSocial;
+
+            this._clienteSeleccionado = {
+                id: c.id,
+                nombreCompleto: esEmpresa ? c.razonSocial : `${c.nombre} ${c.apellido}`,
+                tipo: esEmpresa ? "Empresa" : "Particular",
+                email: c.email,
+                cuitCuil: esEmpresa ? c.cuit : c.cuil
+            };
+            this.renderClienteSeleccionado();
+
+            this._carrito = v.detallesVenta.map(d => {
+                this._detalleIdPorProducto.set(d.producto.id, d.id);
+                return {
+                    productoId: d.producto.id,
+                    nombre: d.producto.nombre,
+                    marca: d.producto.marcaProducto?.nombre || "",
+                    categoria: d.producto.categoriaProducto?.nombre || "",
+                    contenido: d.producto.contenido,
+                    unidadAbrev: d.producto.unidadMedida?.abreviatura || "",
+                    precioUnitario: Number(d.precioUnitario),
+                    cantidad: d.cantidad
+                };
+            });
+            this.renderAreaProductos();
+
+            this._descuentoGlobal = v.descuentoGlobal;
+            this.shadowRoot.querySelector("#descuentoGlobal").value = v.descuentoGlobal;
+
+            this._observaciones = v.observacion || "";
+            this.shadowRoot.querySelector("#observaciones").value = this._observaciones;
+
+            const metodoNombre = v.metodoPago.nombre.toLowerCase();
+            this.shadowRoot.querySelectorAll('input[name="metodoPago"]').forEach(radio => {
+                if (radio.value.toLowerCase() === metodoNombre) radio.checked = true;
+            });
+            this._metodoPago = v.metodoPago.nombre;
+
+            const selectEstado = this.shadowRoot.querySelector("#estadoVenta");
+            if (selectEstado) selectEstado.value = v.estadoVenta.nombre.toLowerCase();
+            this._estadoVenta = v.estadoVenta.nombre.toLowerCase();
+
+            this.shadowRoot.querySelector("#btnConfirmarVenta").textContent = "✓ Guardar cambios";
+
+            this.actualizarResumen();
+
+        } catch (error) {
+            console.error("Error al cargar la venta a editar:", error);
+            document.dispatchEvent(new CustomEvent("mostrar-notificacion", {
+                detail: { mensaje: "No se pudo cargar la venta a editar", tipo: "error" }
+            }));
+        }
+    }
 
     async registrarVenta(generarFactura) {
         try {
             const estadoElegido = this._estadosVenta.find(e => e.nombre.toLowerCase() === this._estadoVenta.toLowerCase());
             const metodoElegido = this._metodosPago.find(m => m.nombre.toLowerCase() === this._metodoPago.toLowerCase());
+
+            const detallesVenta = this._carrito.map(item => ({
+                id: this._detalleIdPorProducto.get(item.productoId) || null,
+                productoId: item.productoId,
+                cantidad: item.cantidad
+            }));
 
             const body = {
                 clienteId: this._clienteSeleccionado.id,
@@ -595,26 +676,23 @@ class NuevaVenta extends HTMLElement {
                 metodoPagoId: metodoElegido.id,
                 descuentoGlobal: this._descuentoGlobal,
                 observacion: this._observaciones,
-                detallesVenta: this._carrito.map(item => ({
-                    productoId: item.productoId,
-                    cantidad: item.cantidad
-                }))
+                detallesVenta
             };
 
+            const esEdicion = this._modo === "editar";
+            if (esEdicion) body.id = this._ventaId;
+
             const response = await fetch(`${this.basePath}/ventas/productos`, {
-                method: "POST",
+                method: esEdicion ? "PUT" : "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify(body)
             });
 
             const data = await response.json();
-
-            if (!response.ok) {
-                throw new Error(data.error || "Error al registrar la venta");
-            }
+            if (!response.ok) throw new Error(data.error || "Error al guardar la venta");
 
             document.dispatchEvent(new CustomEvent("mostrar-notificacion", {
-                detail: { mensaje: "Venta registrada correctamente", tipo: "exito" }
+                detail: { mensaje: esEdicion ? "Venta actualizada correctamente" : "Venta registrada correctamente", tipo: "exito" }
             }));
 
             document.dispatchEvent(new CustomEvent("venta-guardada", { bubbles: true, composed: true }));
