@@ -30,6 +30,7 @@ class DashboardSection extends HTMLElement {
                 modal.setAttribute("titulo", "COMPLETE LOS DATOS");
             
                 const productForm = document.createElement("formulario-producto");
+                productForm.setAttribute("base-path", this.basePath);
 
                 modal.appendChild(productForm);
                 document.body.appendChild(modal);

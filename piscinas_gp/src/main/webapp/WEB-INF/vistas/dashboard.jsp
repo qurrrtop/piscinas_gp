@@ -9,6 +9,7 @@
         <script src="${pageContext.request.contextPath}/assets/js/wc/dashboard/DashboardHeader.js" type="module" defer></script>
         <script src="${pageContext.request.contextPath}/assets/js/wc/dashboard/ModalComponent.js" type="module" defer></script>
         <script src="${pageContext.request.contextPath}/assets/js/wc/productos/FormularioProducto.js" type="module" defer></script>
+        <script src="${pageContext.request.contextPath}/assets/js/wc/productos/ImportarProductos.js" type="module" defer></script>
         <script src="${pageContext.request.contextPath}/assets/js/wc/TablaGenerica.js" type="module" defer></script>
         <script src="${pageContext.request.contextPath}/assets/js/wc/productos/ListadoProductos.js" type="module" defer></script>
         <script src="${pageContext.request.contextPath}/assets/js/wc/TarjetasResumen.js" type="module" defer></script>

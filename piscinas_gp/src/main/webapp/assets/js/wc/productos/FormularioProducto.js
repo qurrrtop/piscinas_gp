@@ -6,6 +6,8 @@ class FormularioProducto extends HTMLElement {
     constructor() {
         super();
         this.attachShadow({mode: "open"});
+        this.basePath = "";
+        
         this._modo = 'crear'; // 'crear' o 'editar'
         this._productoId = null;
         this._productoData = null;
@@ -67,6 +69,11 @@ class FormularioProducto extends HTMLElement {
     }
 
     async connectedCallback() {
+        console.log("FORMULARIO - atributo:", this.getAttribute("base-path"));
+
+        this.basePath = this.getAttribute("base-path") || "";
+
+        console.log("FORMULARIO - basePath:", this.basePath);
         console.log("hola entré");
         this.render();
         console.log("hola pasó render");
@@ -85,6 +92,7 @@ class FormularioProducto extends HTMLElement {
     setupListeners() {
         const form = this.shadowRoot.querySelector("form");
         const btnVolver = this.shadowRoot.querySelector(".btn-volver");
+        const btnImportar = this.shadowRoot.querySelector(".btn-importar");
         
         const fields = [
             { input: "#nombreProducto", rule: Rules.provisions.NOMBRE_PRODUCTO },
@@ -146,6 +154,15 @@ class FormularioProducto extends HTMLElement {
                 bubbles: true,
                 composed: true
             }));
+        });
+        
+        btnImportar.addEventListener("click", () => {
+            this.dispatchEvent(new CustomEvent("cerrar-modal", {
+                bubbles: true,
+                composed: true
+            }));
+            
+            this.abrirImportarProductos();
         });
     }
     
@@ -342,6 +359,19 @@ class FormularioProducto extends HTMLElement {
         };
         
         return producto;
+    }
+    
+    async abrirImportarProductos() {
+        const modal = document.createElement("modal-component");
+        
+        modal.setAttribute("titulo", "SELECCIONE O INSERTE EL ARCHIVO");
+        modal.setAttribute("subTitulo", "IMPORTAR PRODUCTOS");
+
+        const importarProductos = document.createElement("importar-productos");
+        importarProductos.setAttribute("base-path", this.basePath);
+
+        modal.appendChild(importarProductos);
+        document.body.appendChild(modal);
     }
 
     render() {
@@ -543,7 +573,7 @@ class FormularioProducto extends HTMLElement {
                     
                     <div class="form-group full-width">
                         <label>NOMBRE DEL PRODUCTO <span class="required">*</span></label>
-                        <input type="text" id="nombreProducto" name="nombreProducto" required placeholder="Ej: cloro granulado 1kg">
+                        <input type="text" id="nombreProducto" name="nombreProducto" required placeholder="Ej: cloro granulado">
                         <small class="error-message"></small>
                     </div>
         
@@ -574,7 +604,7 @@ class FormularioProducto extends HTMLElement {
         
                     <div class="form-group">
                         <label>CONTENIDO (UNI. MEDIDA) <span class="required">*</span></label>
-                        <input type="number" id="contenido" name="contenido" required placeholder="Ej: 5kg, 1lt, 12w" required>
+                        <input type="number" id="contenido" name="contenido" required placeholder="Ej: 500g, 5kg, 1lt, 1un" required>
                         <small class="error-message"></small>
                     </div>
         

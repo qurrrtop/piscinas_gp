@@ -55,7 +55,7 @@ class ModalComponent extends HTMLElement {
                 }
 
                 .modal {
-                    width: 650px;
+                    width: 700px;
                     display: flex;
                     flex-direction: column;
                     max-height: 80vh;

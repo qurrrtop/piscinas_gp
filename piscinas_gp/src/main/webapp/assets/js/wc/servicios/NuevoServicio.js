@@ -483,6 +483,13 @@ class NuevoServicio extends HTMLElement {
                     grid-template-columns: 1fr 1fr;
                     gap: 1rem;
                 }
+        
+                .fila-servicio {
+                    display: grid;
+                    grid-template-columns: repeat(3, 1fr);
+                    gap: 1rem;
+                    align-items: start;
+                }
 
                 .buscador-cliente {
                     position: relative;
@@ -582,6 +589,36 @@ class NuevoServicio extends HTMLElement {
                 .btn-cobro.seleccionado[data-cobro="cobrado"] {
                     border-color: #4ADE80;
                     background: rgba(74, 222, 128, .2);
+                }
+        
+                .bloque-descripcion {
+                    margin-top: 1.2rem;
+                    padding: 1rem;
+                    border: 1px solid rgba(55, 164, 255, .35);
+                    border-radius: 10px;
+                    background: rgba(1, 49, 104, .25);
+                }
+
+                .bloque-descripcion label {
+                    margin-top: 0;
+                }
+        
+                .bloques-secundarios {
+                    display: grid;
+                    grid-template-columns: 1fr 1fr;
+                    gap: 1rem;
+                    margin-top: 1rem;
+                }
+
+                .bloque-secundario {
+                    padding: 1rem;
+                    border: 1px solid rgba(255, 255, 255, .2);
+                    border-radius: 10px;
+                    background: rgba(1, 49, 104, .25);
+                }
+
+                .bloque-secundario label {
+                    margin-top: 0;
                 }
 
                 .archivo-box {
@@ -784,7 +821,7 @@ class NuevoServicio extends HTMLElement {
                     DATOS DEL SERVICIO TÉCNICO
                 </div>
                 <div class="card-body">
-                    <div class="fila-2">
+                    <div class="fila-servicio">
                         <div>
                             <label>SUBRUBRO</label>
                             <select id="subrubro">
@@ -794,43 +831,62 @@ class NuevoServicio extends HTMLElement {
                                 <option>Otro</option>
                             </select>
                         </div>
+
                         <div>
                             <label>ESTADO</label>
                             <select id="estadoServicio">
-                                ${this._estadosVenta.map(e =>`<option value="${e.id}">${e.nombre}</option>`).join("")}
+                                ${this._estadosVenta.map(e =>
+                                    `<option value="${e.id}">${e.nombre}</option>`
+                                ).join("")}
                             </select>
                         </div>
-                    </div>
-                    <div class="fila-2">
-                        <div>
-                            <label>MANO DE OBRA</label>
-                            <input type="number" id="manoObra" value="0" min="0">
-                        </div>
+
                         <div>
                             <label>FECHA INICIO</label>
                             <input type="date" id="fechaInicio">
                         </div>
-                    </div>
-                    <div class="campo-si-completado">
-                        <label>FECHA CIERRE</label>
-                        <input type="date" id="fechaCierre">
-                    </div>
-                    <label>DESCRIPCIÓN DEL PROBLEMA<span class="required">*</span>
-                    </label>
-                    <textarea id="descripcionProblema" rows="2" placeholder="Describí el problema..."></textarea>
 
-                    <div class="campo-si-completado">
-                        <label>RECOMENDACIÓN BRINDADA</label>
-                        <textareaid="recomendacion" rows="2" placeholder="¿Qué se encontró y cómo se resolvió?"></textarea>
                     </div>
-       
-                    <label>EVIDENCIA (OPCIONAL)</label>
-                    <div class="archivo-box">
-                        <label for="archivoEvidencia">
-                            📎 Elegir imagen
-                        </label>
-                        <input type="file" id="archivoEvidencia" accept="image/*">
-                        <span id="nombreArchivo">Ningún archivo seleccionado</span>
+
+                    <div class="fila-2">
+
+                        <div>
+                            <label>MANO DE OBRA</label>
+                            <input type="number" id="manoObra" value="0" min="0">
+                        </div>
+
+                        <div class="campo-si-completado">
+                            <label>FECHA CIERRE</label>
+                            <input type="date" id="fechaCierre">
+                        </div>
+
+                    </div>
+                    </div>
+        
+                    <div class="bloque-descripcion">
+                        <label>DESCRIPCIÓN DEL PROBLEMA<span class="required">*</span></label>
+
+                        <textarea id="descripcionProblema" rows="3" placeholder="Describí el problema..."></textarea>
+                    </div>
+
+                    <div class="bloques-secundarios">
+
+                        <div class="bloque-secundario campo-si-completado">
+                            <label>RECOMENDACIÓN BRINDADA</label>
+
+                            <textarea id="recomendacion" rows="4" placeholder="¿Qué se encontró y cómo se resolvió?"></textarea>
+                        </div>
+
+                        <div class="bloque-secundario">
+
+                            <label>EVIDENCIA (OPCIONAL)</label>
+
+                            <div class="archivo-box">
+                                <label for="archivoEvidencia">📎 Elegir imagen</label>
+                                <input type="file" id="archivoEvidencia" accept="image/*">
+                                <span id="nombreArchivo">Ningún archivo seleccionado</span>
+                            </div>
+                        </div>
                     </div>
 
                     <label>
