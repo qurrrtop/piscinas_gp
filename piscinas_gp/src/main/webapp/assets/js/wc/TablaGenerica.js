@@ -71,6 +71,7 @@ class TablaGenerica extends HTMLElement {
             <style>
                 table {
                     width: 100%;
+                    table-layout: fixed;
                     border-collapse: separate;
                     border-spacing: 0;
                     border-radius: 10px;
@@ -78,6 +79,14 @@ class TablaGenerica extends HTMLElement {
                     color: black;
                     font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
                     font-size: .9rem;
+                }
+                
+                tbody td {
+                    padding: .65rem .5rem;
+                    border-bottom: 1px solid rgba(196, 196, 196, .2);
+                    white-space: normal;
+                    overflow-wrap: break-word;
+                    word-break: normal;
                 }
         
                 thead { 
@@ -93,14 +102,44 @@ class TablaGenerica extends HTMLElement {
                     padding: .75rem .5rem;
                     border-bottom: 1px solid rgba(196, 196, 196, .5);
                 }
+                
+                thead th:nth-child(1),
+                tbody td:nth-child(1) {
+                    width: 35%;
+                }
+
+                thead th:nth-child(2),
+                tbody td:nth-child(2) {
+                    width: 20%;
+                }
+
+                thead th:nth-child(3),
+                tbody td:nth-child(3) {
+                    width: 10%;
+                }
+
+                thead th:nth-child(4),
+                tbody td:nth-child(4) {
+                    width: 10%;
+                }
+
+                thead th:nth-child(5),
+                tbody td:nth-child(5) {
+                    width: 12%;
+                }
+
+                thead th:nth-child(6),
+                tbody td:nth-child(6) {
+                    width: 5%;
+                }
+
+                thead th:nth-child(7),
+                tbody td:nth-child(7) {
+                    width: 8%;
+                }
         
                 tbody {
                     background-color: rgba(188,188,188,0.9);
-                }
-
-                tbody td {
-                    padding: .65rem .5rem;
-                    border-bottom: 1px solid rgba(196, 196, 196, .2);
                 }
 
                 tbody tr {

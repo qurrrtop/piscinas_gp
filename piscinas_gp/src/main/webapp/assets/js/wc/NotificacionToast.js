@@ -62,7 +62,7 @@ class NotificacionToast extends HTMLElement {
             }
         
             .toast-advertencia {
-                background: #635656;
+                background: #A69111;
             }
 
             .toast.saliendo {

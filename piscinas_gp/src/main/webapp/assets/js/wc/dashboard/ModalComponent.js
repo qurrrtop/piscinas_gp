@@ -38,6 +38,8 @@ class ModalComponent extends HTMLElement {
         this.shadowRoot.innerHTML = `
             <style>
                 :host {
+                    scrollbar-color: #3CACFA rgba(255,255,255, 0.20); /* color del deslizador y de la pista */
+                    scrollbar-width: thin; /* barra delgada */
                     position: fixed;
                     inset: 0;
                     z-index: 9999;
@@ -72,7 +74,7 @@ class ModalComponent extends HTMLElement {
                     justify-content: space-between;
                     align-items: center;
 
-                    margin-bottom: 1.5rem;
+                    margin-bottom: 1.3rem;
                 }
         
                 .header-text {

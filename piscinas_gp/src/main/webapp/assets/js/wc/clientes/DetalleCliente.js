@@ -128,7 +128,7 @@ class DetalleCliente extends HTMLElement {
                     display: flex;
                     align-items: center;
                     gap: .4rem;
-                    border: none;
+                    border: solid 1px rgba(255,255,255,.25);
                     border-radius: 8px;
                     cursor: pointer;
                     transition: .2s;
