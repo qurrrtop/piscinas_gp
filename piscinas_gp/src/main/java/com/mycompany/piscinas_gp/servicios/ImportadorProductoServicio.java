@@ -80,6 +80,7 @@ public class ImportadorProductoServicio {
 
             try {
                 Producto producto = new Producto();
+                producto.setCodigoProveedor(dto.getCodigoProveedor());
                 producto.setNombre(dto.getNombre());
 
                 if (dto.getDescripcion() != null && dto.getDescripcion().trim().length() >= 3) {

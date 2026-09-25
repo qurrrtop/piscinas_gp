@@ -243,6 +243,7 @@ public class DetalleVentaDAO extends GenericoDAO<DetalleVenta> {
 
             Producto producto = new Producto(
                     rs.getLong("producto_id"),
+                    rs.getString("codigo_proveedor"),
                     rs.getString("producto_nombre"),
                     rs.getString("producto_descripcion"),
                     rs.getInt("stock"),
@@ -328,6 +329,7 @@ public class DetalleVentaDAO extends GenericoDAO<DetalleVenta> {
         try {
             Producto producto = new Producto(
                     rs.getLong("producto_id"),
+                    rs.getString("codigo_proveedor"),
                     null,
                     null,
                     0,

@@ -9,6 +9,8 @@ import java.math.BigDecimal;
 public class Producto implements Identifiable {
     
     private Long idProducto;
+    // este "codigoProveedor" sirve como identificado que traen los excel.
+    private String codigoProveedor;
     private String nombre;
     private String descripcion;
     private int stock;
@@ -24,7 +26,8 @@ public class Producto implements Identifiable {
     public Producto() {
     }
 
-    public Producto(String nombre, String descripcion, int stock, int umbralStock, BigDecimal precioActual, UnidadMedida unidadMedida, BigDecimal contenido, MarcaProducto marcaProducto, CategoriaProducto categoriaProducto, boolean activo) {
+    public Producto(String codigoProveedor,String nombre, String descripcion, int stock, int umbralStock, BigDecimal precioActual, UnidadMedida unidadMedida, BigDecimal contenido, MarcaProducto marcaProducto, CategoriaProducto categoriaProducto, boolean activo) {
+        setCodigoProveedor(codigoProveedor);
         setNombre(nombre);
         setDescripcion(descripcion);
         setStock(stock);
@@ -37,7 +40,8 @@ public class Producto implements Identifiable {
         setActivo(activo);
     }
 
-    public Producto(Long idProducto, String nombre, String descripcion, int stock, int umbralStock, BigDecimal precioActual, UnidadMedida unidadMedida, BigDecimal contenido, MarcaProducto marcaProducto, CategoriaProducto categoriaProducto, boolean activo) {
+    public Producto(Long idProducto, String codigoProveedor, String nombre, String descripcion, int stock, int umbralStock, BigDecimal precioActual, UnidadMedida unidadMedida, BigDecimal contenido, MarcaProducto marcaProducto, CategoriaProducto categoriaProducto, boolean activo) {
+        this.codigoProveedor = codigoProveedor;
         this.idProducto = idProducto;
         this.nombre = nombre;
         this.descripcion = descripcion;
@@ -54,6 +58,7 @@ public class Producto implements Identifiable {
     
 @Override
     public Long getId() { return idProducto; }
+    public String getCodigoProveedor() { return codigoProveedor; }
     public String getNombre() { return nombre; }
     public String getDescripcion() { return descripcion; }
     public int getStock() { return stock; }
@@ -75,6 +80,15 @@ public class Producto implements Identifiable {
             throw new IllegalArgumentException ("el id no puede ser nulo / valor negativo");
         }
         this.idProducto = id;
+    }
+    
+    public void setCodigoProveedor(String codigoProveedor) {
+        if (codigoProveedor != null && !codigoProveedor.isBlank()) {
+            SetValidator.validar(codigoProveedor, StringFieldType.CODIGO_PROVEEDOR);
+            this.codigoProveedor = codigoProveedor;
+        } else {
+            this.codigoProveedor = null;
+        }
     }
 
     public void setNombre(String nombre) {

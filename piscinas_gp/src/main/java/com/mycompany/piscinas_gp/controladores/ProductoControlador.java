@@ -83,6 +83,7 @@ public class ProductoControlador extends HttpServlet {
         try {
             ProductoDTO dto = mapper.readValue(request.getReader(), ProductoDTO.class);
             Producto producto = new Producto();
+            producto.setCodigoProveedor(dto.getCodigoProveedor());
             producto.setNombre(dto.getNombre());
             if (dto.getDescripcion() != null && !dto.getDescripcion().isBlank()) {
                 producto.setDescripcion(dto.getDescripcion());
@@ -151,6 +152,7 @@ public class ProductoControlador extends HttpServlet {
             Producto producto = new Producto();
 
             producto.setId(dto.getId());
+            producto.setCodigoProveedor(dto.getCodigoProveedor());
             producto.setNombre(dto.getNombre());
 
             if (dto.getDescripcion() != null && !dto.getDescripcion().isBlank()) {

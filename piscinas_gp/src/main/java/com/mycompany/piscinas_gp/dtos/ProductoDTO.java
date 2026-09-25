@@ -4,6 +4,7 @@ import java.math.BigDecimal;
 
 public class ProductoDTO {
     private Long id;
+    private String codigoProveedor;
     private String nombre;
     private String descripcion;
     private int stock;
@@ -27,6 +28,14 @@ public class ProductoDTO {
     
     public void setId(Long id) {
         this.id = id;
+    }
+    
+    public String getCodigoProveedor() {
+        return codigoProveedor;
+    }
+    
+    public void setCodigoProveedor(String codigoProveedor) {
+        this.codigoProveedor = codigoProveedor;
     }
 
     public void setNombre(String nombre) {

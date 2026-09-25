@@ -20,6 +20,7 @@ public class ProductoDAO extends GenericoDAO<Producto> {
     private static final String TABLE_NAME = "productos";
     private static final String PRIMARY_KEY = "id";
     private static final String[] COLUMNS_FOR_INSERT = {
+        "codigo_proveedor",
         "nombre",
         "descripcion",
         "stock",
@@ -41,10 +42,12 @@ public class ProductoDAO extends GenericoDAO<Producto> {
         "?",
         "?",
         "?",
+        "?",
         "?"
     };
     private static final String[] COLUMNS_FOR_SELECT = {
         "id",
+        "codigo_proveedor",
         "nombre",
         "descripcion",
         "stock",
@@ -57,6 +60,7 @@ public class ProductoDAO extends GenericoDAO<Producto> {
         "activo"
     };
     private static final String[] COLUMNS_FOR_UPDATE = {
+        "codigo_proveedor = ?",
         "nombre = ?",
         "descripcion = ?",
         "stock = ?",
@@ -90,7 +94,7 @@ public class ProductoDAO extends GenericoDAO<Producto> {
     }
 
     public List<Producto> buscarTodos() throws PersistenceException {
-        String sql = "SELECT p.id, p.nombre, p.descripcion, p.stock, p.umbral_stock, p.precio_actual, p.contenido, p.activo, "
+        String sql = "SELECT p.id, p.codigo_proveedor, p.nombre, p.descripcion, p.stock, p.umbral_stock, p.precio_actual, p.contenido, p.activo, "
                 + "p.marca_producto_id, mp.nombre AS marca_nombre, "
                 + "p.categoria_producto_id, cp.nombre AS categoria_nombre, "
                 + "p.unidad_medida_id, um.nombre AS unidad_nombre, um.abreviatura AS unidad_abreviatura "
@@ -136,6 +140,7 @@ public class ProductoDAO extends GenericoDAO<Producto> {
 
             return new Producto(
                     rs.getLong("id"),
+                    rs.getString("codigo_proveedor"),
                     rs.getString("nombre"),
                     rs.getString("descripcion"),
                     rs.getInt("stock"),
@@ -314,6 +319,7 @@ public class ProductoDAO extends GenericoDAO<Producto> {
 
             return new Producto(
                     rs.getLong("id"),
+                    rs.getString("codigo_proveedor"),
                     rs.getString("nombre"),
                     rs.getString("descripcion"),
                     rs.getInt("stock"),
@@ -334,33 +340,34 @@ public class ProductoDAO extends GenericoDAO<Producto> {
         validarRelaciones(producto); // ← COMENTAR o ELIMINAR esta línea
     
         try {
-            pstmt.setString(1, producto.getNombre());
-            pstmt.setString(2, producto.getDescripcion());
-            pstmt.setInt(3, producto.getStock());
-            pstmt.setInt(4, producto.getUmbralStock());
-            pstmt.setBigDecimal(5, producto.getPrecioActual());
-            pstmt.setBigDecimal(6, producto.getContenido());
+            pstmt.setString(1, producto.getCodigoProveedor());
+            pstmt.setString(2, producto.getNombre());
+            pstmt.setString(3, producto.getDescripcion());
+            pstmt.setInt(4, producto.getStock());
+            pstmt.setInt(5, producto.getUmbralStock());
+            pstmt.setBigDecimal(6, producto.getPrecioActual());
+            pstmt.setBigDecimal(7, producto.getContenido());
         
             // Manejar valores nulos para las relaciones
             if (producto.getUnidadMedida() != null) {
-                pstmt.setLong(7, producto.getUnidadMedida().getId());
-            } else {
-                pstmt.setNull(7, java.sql.Types.BIGINT);
-            }
-        
-            if (producto.getMarcaProducto() != null) {
-                pstmt.setLong(8, producto.getMarcaProducto().getId());
+                pstmt.setLong(8, producto.getUnidadMedida().getId());
             } else {
                 pstmt.setNull(8, java.sql.Types.BIGINT);
             }
         
-            if (producto.getCategoriaProducto() != null) {
-                pstmt.setLong(9, producto.getCategoriaProducto().getId());
+            if (producto.getMarcaProducto() != null) {
+                pstmt.setLong(9, producto.getMarcaProducto().getId());
             } else {
                 pstmt.setNull(9, java.sql.Types.BIGINT);
             }
+        
+            if (producto.getCategoriaProducto() != null) {
+                pstmt.setLong(10, producto.getCategoriaProducto().getId());
+            } else {
+                pstmt.setNull(10, java.sql.Types.BIGINT);
+            }
             
-            pstmt.setBoolean(10, producto.isActivo());
+            pstmt.setBoolean(11, producto.isActivo());
 
         
         } catch (SQLException e) {
@@ -379,6 +386,23 @@ public class ProductoDAO extends GenericoDAO<Producto> {
 
         if (producto.getUnidadMedida() == null || producto.getUnidadMedida().getId() == null) {
             throw new PersistenceException("El producto debe tener una unidad de medida con ID asignada");
+        }
+    }
+    
+    public Producto buscarPorCodigoProveedorYMarca(String codigoProveedor, Long marcaId) throws PersistenceException {
+        String sql = "SELECT " + String.join(", ", COLUMNS_FOR_SELECT)
+                + " FROM productos WHERE codigo_proveedor = ? AND marca_producto_id = ?";
+
+        try (Connection conn = dbConn.getConnection();
+                PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            pstmt.setString(1, codigoProveedor);
+            pstmt.setLong(2, marcaId);
+
+            try (ResultSet rs = pstmt.executeQuery()) {
+                return rs.next() ? mapResultSet(rs) : null;
+            }
+        } catch (SQLException e) {
+            throw new PersistenceException("Error al buscar producto por codigo de proveedor", e);
         }
     }
 }
