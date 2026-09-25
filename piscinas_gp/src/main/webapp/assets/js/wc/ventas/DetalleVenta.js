@@ -69,10 +69,10 @@ class DetalleVenta extends HTMLElement {
             }
         });
 
-        this.shadowRoot.querySelector("#btnVerFactura")?.addEventListener("click", () => {
-            document.dispatchEvent(new CustomEvent("mostrar-notificacion", {
-                detail: { mensaje: "La generación de facturas no está disponible todavía", tipo: "error" }
-            }));
+        this.shadowRoot.querySelector("#btnVerComprobante")?.addEventListener("click", () => {
+            const comprobante = document.createElement("comprobante-venta");
+            comprobante.venta = this._venta;
+            document.body.appendChild(comprobante);
         });
 
         this.shadowRoot.querySelector("#btnEditarVenta")?.addEventListener("click", () => {
@@ -383,7 +383,7 @@ class DetalleVenta extends HTMLElement {
 
                 <div class="acciones">
                     <button type="button" id="btnCancelarVenta" ${estaCancelada ? "disabled" : ""}>✕ Cancelar venta</button>
-                    <button type="button" id="btnVerFactura">📄 Ver factura</button>
+                    <button type="button" id="btnVerComprobante">📄 Ver Comprobante</button>
                     <button type="button" id="btnEditarVenta" ${estaCancelada ? "disabled" : ""}>✎ Editar</button>
                 </div>
             </div>

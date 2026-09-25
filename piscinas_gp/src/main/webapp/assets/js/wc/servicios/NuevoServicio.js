@@ -156,7 +156,7 @@ class NuevoServicio extends HTMLElement {
             resultados.innerHTML = coincidencias.map(c => `
                 <div class="resultado-cliente" data-id="${c.id}">
                     <span class="avatar avatar-${c.tipo === 'Empresa' ? 'empresa' : 'particular'}">${this.obtenerIniciales(c.nombreCompleto)}</span>
-                    <div><strong>${c.nombreCompleto}</strong><small>${c.email || "Sin email"} - CUIL/CUIT: ${c.cuitCuil}</small></div>
+                    <div><strong>${c.nombreCompleto} </strong><small>- ${c.email || "Sin email"} - CUIL/CUIT: ${c.cuitCuil}</small></div>
                 </div>
             `).join("") || `<p class="sin-resultados">Sin coincidencias</p>`;
 
