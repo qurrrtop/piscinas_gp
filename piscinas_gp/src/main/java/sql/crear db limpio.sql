@@ -33,6 +33,7 @@ CREATE TABLE localidades (
 
 CREATE TABLE productos (
     id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    codigo_proveedor VARCHAR(30) NULL,
     nombre VARCHAR(100) NOT NULL,
     unidad_medida_id INT UNSIGNED NOT NULL,
     stock INT UNSIGNED NOT NULL DEFAULT 0,
@@ -43,6 +44,9 @@ CREATE TABLE productos (
     marca_producto_id INT UNSIGNED NOT NULL,
     categoria_producto_id INT UNSIGNED NOT NULL,
     activo BOOLEAN NOT NULL DEFAULT TRUE,
+
+   CONSTRAINT uq_producto_marca_codigo
+        UNIQUE (marca_producto_id, codigo_proveedor),
 
     CONSTRAINT fk_productos_unidad_medida
         FOREIGN KEY (unidad_medida_id)
