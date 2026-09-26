@@ -6,6 +6,7 @@ import com.mycompany.piscinas_gp.validadores.SetValidator;
 import com.mycompany.piscinas_gp.validadores.StringFieldType;
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -21,7 +22,7 @@ public class VentaServTecnico extends Venta {
         super();
     }
 
-    public VentaServTecnico(String problema, String diagnostico, BigDecimal manoObra, LocalDate fechaEntrega, List<DetalleVenta> detallesVenta, Cliente cliente, EstadoVenta estadoVenta, LocalDate fecha, MetodoPago metodoPago, String observacion, BigDecimal total, LocalDate fechaInicio, LocalDate fechaCierre) {
+    public VentaServTecnico(String problema, String diagnostico, BigDecimal manoObra, LocalDate fechaEntrega, List<DetalleVenta> detallesVenta, Cliente cliente, EstadoVenta estadoVenta, LocalDateTime fecha, MetodoPago metodoPago, String observacion, BigDecimal total, LocalDateTime fechaInicio, LocalDate fechaCierre) {
         super(cliente, estadoVenta, fecha, metodoPago, observacion, total, fechaInicio, fechaCierre);
         setProblema(problema);
         setDiagnostico(diagnostico);
@@ -30,7 +31,7 @@ public class VentaServTecnico extends Venta {
         setDetallesVenta(detallesVenta);
     }
 
-    public VentaServTecnico(String problema, String diagnostico, BigDecimal manoObra, LocalDate fechaEntrega, List<DetalleVenta> detallesVenta, Long idVenta, Cliente cliente, EstadoVenta estadoVenta, LocalDate fecha, MetodoPago metodoPago, String observacion, BigDecimal total, LocalDate fechaInicio, LocalDate fechaCierre) {
+    public VentaServTecnico(String problema, String diagnostico, BigDecimal manoObra, LocalDate fechaEntrega, List<DetalleVenta> detallesVenta, Long idVenta, Cliente cliente, EstadoVenta estadoVenta, LocalDateTime fecha, MetodoPago metodoPago, String observacion, BigDecimal total, LocalDateTime fechaInicio, LocalDate fechaCierre) {
         super(idVenta, cliente, estadoVenta, fecha, metodoPago, observacion, total, fechaInicio, fechaCierre);
         this.problema = problema;
         this.diagnostico = diagnostico;

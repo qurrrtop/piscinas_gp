@@ -4,6 +4,7 @@ import com.mycompany.piscinas_gp.validadores.NumericFieldType;
 import com.mycompany.piscinas_gp.validadores.SetValidator;
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -15,13 +16,13 @@ public class VentaProducto extends Venta {
     public VentaProducto() {
     }
 
-    public VentaProducto(int descuentoGlobal, List<DetalleVenta> detallesVenta, Cliente cliente, EstadoVenta estadoVenta, LocalDate fecha, MetodoPago metodoPago, String observacion, BigDecimal total, LocalDate fechaInicio, LocalDate fechaCierre) {
+    public VentaProducto(int descuentoGlobal, List<DetalleVenta> detallesVenta, Cliente cliente, EstadoVenta estadoVenta, LocalDateTime fecha, MetodoPago metodoPago, String observacion, BigDecimal total, LocalDateTime fechaInicio, LocalDate fechaCierre) {
         super(cliente, estadoVenta, fecha, metodoPago, observacion, total, fechaInicio, fechaCierre);
         setDescuentoGlobal(descuentoGlobal);
         setDetallesVenta(detallesVenta);
     }
 
-    public VentaProducto(int descuentoGlobal, List<DetalleVenta> detallesVenta, Long idVenta, Cliente cliente, EstadoVenta estadoVenta, LocalDate fecha, MetodoPago metodoPago, String observacion, BigDecimal total, LocalDate fechaInicio, LocalDate fechaCierre) {
+    public VentaProducto(int descuentoGlobal, List<DetalleVenta> detallesVenta, Long idVenta, Cliente cliente, EstadoVenta estadoVenta, LocalDateTime fecha, MetodoPago metodoPago, String observacion, BigDecimal total, LocalDateTime fechaInicio, LocalDate fechaCierre) {
         super(idVenta, cliente, estadoVenta, fecha, metodoPago, observacion, total, fechaInicio, fechaCierre);
         this.descuentoGlobal = descuentoGlobal;
         this.detallesVenta = detallesVenta;
@@ -60,4 +61,3 @@ public class VentaProducto extends Venta {
     }
  
 }
-

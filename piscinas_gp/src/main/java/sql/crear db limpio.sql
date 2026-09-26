@@ -127,7 +127,7 @@ CREATE TABLE clientes_empresas (
 
 CREATE TABLE ventas (
     id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-    fecha_inicio DATE NOT NULL,
+    fecha_inicio DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     observacion TEXT NULL,
     fecha_cierre DATE NULL,
 

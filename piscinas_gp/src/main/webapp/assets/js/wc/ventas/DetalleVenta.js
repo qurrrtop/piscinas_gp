@@ -323,7 +323,7 @@ class DetalleVenta extends HTMLElement {
             <div class="detalle">
 
                 <div class="grid-info">
-                    <div><label>Fecha</label><div class="valor">${new Date(v.fecha).toLocaleDateString("es-AR")}</div></div>
+                    <div><label>Fecha</label><div class="valor">${new Date(v.fecha).toLocaleDateString("es-AR")} · ${new Date(v.fecha).toLocaleTimeString("es-AR", { hour: "2-digit", minute: "2-digit" })}</div></div>
                     <div><label>Método de pago</label><div class="valor">${this.capitalizar(v.metodoPago.nombre)}</div></div>
                     <div><label>Estado</label><span class="badge-estado">${this.capitalizar(v.estadoVenta.nombre)}</span></div>
                 </div>

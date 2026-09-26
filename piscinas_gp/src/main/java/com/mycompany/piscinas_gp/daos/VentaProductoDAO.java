@@ -16,6 +16,8 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.sql.Timestamp;
+import java.time.LocalDateTime;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -181,12 +183,12 @@ public class VentaProductoDAO extends GenericoDAO<VentaProducto> {
 
         if (fechaDesde != null) {
             sql.append(" AND v.fecha_inicio >= ?");
-            parametros.add(Date.valueOf(fechaDesde));
+            parametros.add(Timestamp.valueOf(fechaDesde.atStartOfDay()));
         }
 
         if (fechaHasta != null) {
-            sql.append(" AND v.fecha_inicio <= ?");
-            parametros.add(Date.valueOf(fechaHasta));
+            sql.append(" AND v.fecha_inicio < ?");
+            parametros.add(Timestamp.valueOf(fechaHasta.plusDays(1).atStartOfDay()));
         }
 
         sql.append(" ORDER BY v.fecha_inicio DESC, v.id DESC");
@@ -260,7 +262,7 @@ public class VentaProductoDAO extends GenericoDAO<VentaProducto> {
             MetodoPago metodoPago = new MetodoPago(
                     rs.getLong("metodo_pago_id"), rs.getString("metodo_pago_nombre"));
 
-            LocalDate fechaInicio = rs.getDate("fecha_inicio").toLocalDate();
+            LocalDateTime fechaInicio = rs.getTimestamp("fecha_inicio").toLocalDateTime();
             Date fechaCierreSql = rs.getDate("fecha_cierre");
             LocalDate fechaCierre = fechaCierreSql == null ? null : fechaCierreSql.toLocalDate();
 
@@ -308,7 +310,7 @@ public class VentaProductoDAO extends GenericoDAO<VentaProducto> {
     protected void setInsertParams(PreparedStatement pstmt, VentaProducto venta)
             throws PersistenceException {
         try {
-            pstmt.setDate(1, Date.valueOf(venta.getFechaInicio()));
+            pstmt.setTimestamp(1, Timestamp.valueOf(venta.getFechaInicio()));
             pstmt.setString(2, venta.getObservacion());
             setFechaOpcional(pstmt, 3, venta.getFechaCierre());
             pstmt.setNull(4, java.sql.Types.VARCHAR);
@@ -329,7 +331,7 @@ public class VentaProductoDAO extends GenericoDAO<VentaProducto> {
     protected void setUpdateParams(PreparedStatement pstmt, VentaProducto venta)
             throws PersistenceException {
         try {
-            pstmt.setDate(1, Date.valueOf(venta.getFechaInicio()));
+            pstmt.setTimestamp(1, Timestamp.valueOf(venta.getFechaInicio()));
             pstmt.setString(2, venta.getObservacion());
             setFechaOpcional(pstmt, 3, venta.getFechaCierre());
             pstmt.setBigDecimal(4, venta.getTotal());
@@ -362,7 +364,7 @@ public class VentaProductoDAO extends GenericoDAO<VentaProducto> {
             MetodoPago metodoPago = new MetodoPago(
                     rs.getLong("metodo_pago_id"), "sin especificar");
 
-            LocalDate fechaInicio = rs.getDate("fecha_inicio").toLocalDate();
+            LocalDateTime fechaInicio = rs.getTimestamp("fecha_inicio").toLocalDateTime();
             Date fechaCierreSql = rs.getDate("fecha_cierre");
             LocalDate fechaCierre = fechaCierreSql == null ? null : fechaCierreSql.toLocalDate();
 

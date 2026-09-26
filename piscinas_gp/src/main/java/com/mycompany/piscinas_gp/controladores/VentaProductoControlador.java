@@ -29,6 +29,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -333,9 +334,9 @@ public class VentaProductoControlador extends HttpServlet {
     private VentaProducto crearVentaDesdeDTO(VentaDTO dto) {
         VentaProducto venta = new VentaProducto();
 
-        LocalDate fechaInicio = dto.getFechaInicio() != null
+        LocalDateTime fechaInicio = dto.getFechaInicio() != null
                 ? dto.getFechaInicio()
-                : LocalDate.now();
+                : LocalDateTime.now();
 
         venta.setFecha(
                 dto.getFecha() != null

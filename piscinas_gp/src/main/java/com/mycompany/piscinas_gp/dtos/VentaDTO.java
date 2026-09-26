@@ -2,6 +2,7 @@
 package com.mycompany.piscinas_gp.dtos;
 import java.time.LocalDate;
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 import java.util.List;
 
 public class VentaDTO {
@@ -11,11 +12,11 @@ public class VentaDTO {
     
     private Long clienteId ;
     private Long estadoVentaId;
-    private LocalDate fecha;
+    private LocalDateTime fecha;
     private Long metodoPagoId;
     private String observacion;
     private BigDecimal total;
-    private LocalDate fechaInicio;
+    private LocalDateTime fechaInicio;
     private LocalDate fechaCierre;
 
     //atributos de ventaproducto
@@ -47,7 +48,7 @@ public class VentaDTO {
     public Long getEstadoVentaId() {
         return estadoVentaId;
     }
-    public LocalDate getFecha() {
+    public LocalDateTime getFecha() {
         return fecha;
     }
     public Long getMetodoPagoId() {
@@ -59,7 +60,7 @@ public class VentaDTO {
     public BigDecimal getTotal() {
         return total;
     }
-    public LocalDate getFechaInicio() {
+    public LocalDateTime getFechaInicio() {
         return fechaInicio;
     }
     public LocalDate getFechaCierre() {
@@ -102,7 +103,7 @@ public class VentaDTO {
     public void setEstadoVentaId(Long estadoVentaId) {
         this.estadoVentaId = estadoVentaId;
     }
-    public void setFecha(LocalDate fecha) {
+    public void setFecha(LocalDateTime fecha) {
         this.fecha = fecha;
     }
     public void setMetodoPagoId(Long metodoPagoId) {
@@ -114,7 +115,7 @@ public class VentaDTO {
     public void setTotal(BigDecimal total) {
         this.total = total;
     }
-    public void setFechaInicio(LocalDate fechaInicio) {
+    public void setFechaInicio(LocalDateTime fechaInicio) {
         this.fechaInicio = fechaInicio;
     }
     public void setFechaCierre(LocalDate fechaCierre) {

@@ -64,6 +64,7 @@ class DetalleCliente extends HTMLElement {
                     height: 22px;
                     border-radius:50%;
                     background: ${colorEstado};
+                    border: 1px solid rgba(255,255,255,.15);
                 }
 
                 .fila-stats {

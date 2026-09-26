@@ -5,6 +5,7 @@ import com.mycompany.piscinas_gp.validadores.SetValidator;
 import com.mycompany.piscinas_gp.validadores.StringFieldType;
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 
 public class VentaAsesoramiento extends Venta {
     
@@ -17,7 +18,7 @@ public class VentaAsesoramiento extends Venta {
         super();
     }
 
-    public VentaAsesoramiento(String problema, String diagnostico, boolean cobrado, BigDecimal monto, Cliente cliente, EstadoVenta estadoVenta, LocalDate fecha, MetodoPago metodoPago, String observacion, BigDecimal total, LocalDate fechaInicio, LocalDate fechaCierre) {
+    public VentaAsesoramiento(String problema, String diagnostico, boolean cobrado, BigDecimal monto, Cliente cliente, EstadoVenta estadoVenta, LocalDateTime fecha, MetodoPago metodoPago, String observacion, BigDecimal total, LocalDateTime fechaInicio, LocalDate fechaCierre) {
         super(cliente, estadoVenta, fecha, metodoPago, observacion, total, fechaInicio, fechaCierre);
         setProblema(problema);
         setDiagnostico(diagnostico);
@@ -25,7 +26,7 @@ public class VentaAsesoramiento extends Venta {
         setMonto(monto);
     }
 
-    public VentaAsesoramiento(String problema, String diagnostico, boolean cobrado, BigDecimal monto, Long idVenta, Cliente cliente, EstadoVenta estadoVenta, LocalDate fecha, MetodoPago metodoPago, String observacion, BigDecimal total, LocalDate fechaInicio, LocalDate fechaCierre) {
+    public VentaAsesoramiento(String problema, String diagnostico, boolean cobrado, BigDecimal monto, Long idVenta, Cliente cliente, EstadoVenta estadoVenta, LocalDateTime fecha, MetodoPago metodoPago, String observacion, BigDecimal total, LocalDateTime fechaInicio, LocalDate fechaCierre) {
         super(idVenta, cliente, estadoVenta, fecha, metodoPago, observacion, total, fechaInicio, fechaCierre);
         this.problema = problema;
         this.diagnostico = diagnostico;

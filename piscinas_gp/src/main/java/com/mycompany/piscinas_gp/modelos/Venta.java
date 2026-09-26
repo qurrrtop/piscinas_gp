@@ -2,28 +2,30 @@ package com.mycompany.piscinas_gp.modelos;
 
 import com.mycompany.piscinas_gp.utils.Identifiable;
 import com.mycompany.piscinas_gp.validadores.LocalDateFieldType;
+import com.mycompany.piscinas_gp.validadores.LocalDateTimeFieldType;
 import com.mycompany.piscinas_gp.validadores.NumericFieldType;
 import com.mycompany.piscinas_gp.validadores.SetValidator;
 import com.mycompany.piscinas_gp.validadores.StringFieldType;
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 
 public class Venta implements Identifiable {
     
     private Long idVenta;
     private Cliente cliente;
     private EstadoVenta estadoVenta; 
-    private LocalDate fecha;
+    private LocalDateTime fecha;
     private MetodoPago metodoPago; 
     private String observacion;
     private BigDecimal total;
-    private LocalDate fechaInicio;
+    private LocalDateTime fechaInicio;
     private LocalDate fechaCierre;
 
     public Venta() {
     }
 
-    public Venta(Cliente cliente, EstadoVenta estadoVenta, LocalDate fecha, MetodoPago metodoPago, String observacion, BigDecimal total, LocalDate fechaInicio, LocalDate fechaCierre) {
+    public Venta(Cliente cliente, EstadoVenta estadoVenta, LocalDateTime fecha, MetodoPago metodoPago, String observacion, BigDecimal total, LocalDateTime fechaInicio, LocalDate fechaCierre) {
         setCliente(cliente);
         setEstadoVenta(estadoVenta);
         setFecha(fecha);
@@ -34,7 +36,7 @@ public class Venta implements Identifiable {
         setFechaCierre(fechaCierre);
     }
 
-    public Venta(Long idVenta, Cliente cliente, EstadoVenta estadoVenta, LocalDate fecha, MetodoPago metodoPago, String observacion, BigDecimal total, LocalDate fechaInicio, LocalDate fechaCierre) {
+    public Venta(Long idVenta, Cliente cliente, EstadoVenta estadoVenta, LocalDateTime fecha, MetodoPago metodoPago, String observacion, BigDecimal total, LocalDateTime fechaInicio, LocalDate fechaCierre) {
         this.idVenta = idVenta;
         this.cliente = cliente;
         this.estadoVenta = estadoVenta;
@@ -51,11 +53,11 @@ public class Venta implements Identifiable {
     public Long getId() { return idVenta; }
     public Cliente getCliente() { return cliente; }
     public EstadoVenta getEstadoVenta() { return estadoVenta; }
-    public LocalDate getFecha() { return fecha; }
+    public LocalDateTime getFecha() { return fecha; }
     public MetodoPago getMetodoPago() { return metodoPago; }
     public String getObservacion() { return observacion; }
     public BigDecimal getTotal() { return total; }
-    public LocalDate getFechaInicio() { return fechaInicio; }
+    public LocalDateTime getFechaInicio() { return fechaInicio; }
     public LocalDate getFechaCierre() { return fechaCierre; }
 
     
@@ -85,8 +87,8 @@ public class Venta implements Identifiable {
         this.estadoVenta = estadoVenta;
     }
 
-    public void setFecha(LocalDate fecha) {
-        SetValidator.validar(fecha, LocalDateFieldType.FECHA);
+    public void setFecha(LocalDateTime fecha) {
+        SetValidator.validar(fecha, LocalDateTimeFieldType.FECHA);
         
         this.fecha = fecha;
     }
@@ -111,8 +113,8 @@ public class Venta implements Identifiable {
         this.total = total;
     }
 
-    public void setFechaInicio(LocalDate fechaInicio) {
-        SetValidator.validar(fechaInicio, LocalDateFieldType.FECHA_INICIO);
+    public void setFechaInicio(LocalDateTime fechaInicio) {
+        SetValidator.validar(fechaInicio, LocalDateTimeFieldType.FECHA_INICIO);
         
         this.fechaInicio = fechaInicio;
     }
@@ -134,4 +136,3 @@ public class Venta implements Identifiable {
     }
     
 }
-
