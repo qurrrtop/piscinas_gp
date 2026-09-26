@@ -102,41 +102,6 @@ class TablaGenerica extends HTMLElement {
                     padding: .75rem .5rem;
                     border-bottom: 1px solid rgba(196, 196, 196, .5);
                 }
-                
-                thead th:nth-child(1),
-                tbody td:nth-child(1) {
-                    width: 35%;
-                }
-
-                thead th:nth-child(2),
-                tbody td:nth-child(2) {
-                    width: 20%;
-                }
-
-                thead th:nth-child(3),
-                tbody td:nth-child(3) {
-                    width: 10%;
-                }
-
-                thead th:nth-child(4),
-                tbody td:nth-child(4) {
-                    width: 10%;
-                }
-
-                thead th:nth-child(5),
-                tbody td:nth-child(5) {
-                    width: 12%;
-                }
-
-                thead th:nth-child(6),
-                tbody td:nth-child(6) {
-                    width: 5%;
-                }
-
-                thead th:nth-child(7),
-                tbody td:nth-child(7) {
-                    width: 8%;
-                }
         
                 tbody {
                     background-color: rgba(188,188,188,0.9);
@@ -193,17 +158,32 @@ class TablaGenerica extends HTMLElement {
             <table>
                 <thead>
                     <tr>
-                        ${this._columnas.map(col => `<th>${col.titulo}</th>`).join("")}
+                        ${this._columnas.map(col => `
+                            <th style="width: ${col.ancho || "auto"}">
+                                ${col.titulo}
+                            </th>
+                        `).join("")}
                     </tr>
                 </thead>
+
                 <tbody>
                     ${hayDatos
                         ? datosPagina.map((fila, index) => `
                             <tr data-index="${index}">
-                                ${this._columnas.map(col => `<td>${this.formatearCelda(fila, col)}</td>`).join("")}
+                                ${this._columnas.map(col => `
+                                    <td style="width: ${col.ancho || "auto"}">
+                                        ${this.formatearCelda(fila, col)}
+                                    </td>
+                                `).join("")}
                             </tr>
                         `).join("")
-                        : `<tr><td colspan="${this._columnas.length}" class="sin-datos">No hay datos para mostrar</td></tr>`
+                        : `
+                            <tr>
+                                <td colspan="${this._columnas.length}" class="sin-datos">
+                                    No hay datos para mostrar
+                                </td>
+                            </tr>
+                        `
                     }
                 </tbody>
             </table>

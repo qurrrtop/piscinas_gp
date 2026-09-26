@@ -85,31 +85,34 @@ class ListadoClientes extends HTMLElement {
         };
 
         tabla.columnas = [
-            { clave: "nombreCompleto", titulo: "Cliente" },
+            { clave: "nombreCompleto", titulo: "Cliente", ancho: "41%" },
             {
                 clave: "tipo",
                 titulo: "Tipo",
+                ancho: "15%",
                 formato: (valor) => {
                     const color = coloresTipo[valor] || "#888888";
                     return `<span style="background:${color}22; color:${color}; padding:.25rem .7rem; border-radius:20px; font-size:.9rem; font-weight:600">${valor}</span>`;
                 }
             },
-            { clave: "cuitCuil", titulo: "Cuit / Cuil" },
+            { clave: "cuitCuil", titulo: "Cuit / Cuil", ancho: "15%" },
             {
                 clave: "telefono",
                 titulo: "Teléfono",
+                ancho: "15%",
                 formato: (valor) =>  valor || "No registrado." 
             },
             {
                 clave: "activo",
                 titulo: "Estado",
+                ancho: "7%",
                 formato: (valor) => {
                     const color = valor ? "rgba(35,143,16,.6)" : "rgba(199,22,22,.6)";
                     const etiqueta = valor ? "Activo" : "Inactivo";
                     return `<span title="${etiqueta}" style="display:inline-block; width:17px; height:17px; border-radius:50%; background:${color}"></span>`;
                 }
             },
-            { clave: "cantidadVentas", titulo: "Ventas" }
+            { clave: "cantidadVentas", titulo: "Ventas", ancho: "7%" }
         ];
 
         tabla.datos = this.obtenerClientesFiltrados();

@@ -139,23 +139,32 @@ class ListadoProductos extends HTMLElement {
 
         tabla.columnas = [
             {
+              clave: "codigoProveedor",
+              titulo: "Código",
+              ancho: "10%",
+              formato: valor => String(valor ?? "").toUpperCase() || "-"
+            },
+            {
                 clave: "nombre",
                 titulo: "Producto",
+                ancho: "30%",
                 formato: (valor, fila) =>
                     `${valor} - ${fila.contenido} ${fila.unidadMedida.abreviatura}`
             },
             {
                 clave: "categoriaProducto.nombre",
                 titulo: "Categoría",
+                ancho: "20%",
                 formato: (valor) => {
                     const color = coloresCategoria[valor] || "#888888";
                     return `<span style="background:${color}22; color:${color}; padding:.25rem .7rem; border-radius:20px; font-size:.9rem; font-weight:600">${valor}</span>`;
                 }
             },
-            { clave: "marcaProducto.nombre", titulo: "Marca" },
+            { clave: "marcaProducto.nombre", titulo: "Marca", ancho: "13%" },
             {
                 clave: "stock",
                 titulo: "Stock",
+                ancho: "10%",
                 formato: (valor, fila) => {
                     const estado = this.estadoStockDe(fila);
                     const color = coloresEstado[estado];
@@ -174,22 +183,9 @@ class ListadoProductos extends HTMLElement {
                 }
             },
             {
-                clave: "stock",
-                titulo: "Estado stock",
-                formato: (valor, fila) => {
-                    const estado = this.estadoStockDe(fila);
-                    const color = coloresEstado[estado];
-                    const etiquetas = {
-                        disponible: "Disponible",
-                        stock_bajo: "Stock bajo",
-                        sin_stock: "Sin stock"
-                    };
-                    return `<span style="color:${color} font-weight:bold;">${etiquetas[estado]}</span>`;
-                }
-            },
-            {
                 clave: "activo",
                 titulo: "Estado",
+                ancho: "7%",
                 formato: (valor) => {
                     const color = valor ? "rgba(15,110,22,.5)" : "rgba(173,17,17,.5)";
                     const etiqueta = valor ? "Activo" : "Inactivo";
@@ -199,6 +195,7 @@ class ListadoProductos extends HTMLElement {
             {
                 clave: "precioActual",
                 titulo: "Precio",
+                ancho: "10%",
                 formato: valor => `$${Number(valor).toLocaleString("es-AR")}`
             }
         ];

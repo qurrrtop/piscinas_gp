@@ -193,7 +193,8 @@ public class DetalleVentaDAO extends GenericoDAO<DetalleVenta> {
                 dv.observacion,
                 dv.venta_id,
                 dv.producto_id,
-
+               
+                p.codigo_proveedor,
                 p.nombre AS producto_nombre,
                 p.descripcion AS producto_descripcion,
                 p.stock,
@@ -322,14 +323,14 @@ public class DetalleVentaDAO extends GenericoDAO<DetalleVenta> {
         }
     }
 
-    @Override
+        @Override
     protected DetalleVenta mapResultSet(ResultSet rs)
             throws PersistenceException {
 
         try {
             Producto producto = new Producto(
                     rs.getLong("producto_id"),
-                    rs.getString("codigo_proveedor"),
+                    null,   // codigoProveedor: no disponible en este SELECT (sin JOIN a productos)
                     null,
                     null,
                     0,
@@ -353,6 +354,6 @@ public class DetalleVentaDAO extends GenericoDAO<DetalleVenta> {
             throw new PersistenceException(
                     "Error al mapear el detalle desde la base de datos", e);
         }
-    }    
+    }
 
 }
