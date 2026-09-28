@@ -18,6 +18,8 @@
         <script src="${pageContext.request.contextPath}/assets/js/wc/clientes/ListadoClientes.js" type="module" defer></script>
         <script src="${pageContext.request.contextPath}/assets/js/wc/clientes/DetalleCliente.js" type="module" defer></script>
         <script src="${pageContext.request.contextPath}/assets/js/wc/clientes/FormularioCliente.js" type="module" defer></script>
+        <script src="${pageContext.request.contextPath}/assets/js/wc/marcas/ListadoMarcas.js" type="module" defer></script>
+        <script src="${pageContext.request.contextPath}/assets/js/wc/marcas/FormularioMarca.js" type="module" defer></script>
         <script src="${pageContext.request.contextPath}/assets/js/wc/ventas/HistorialVentas.js" type="module" defer></script>
         <script src="${pageContext.request.contextPath}/assets/js/wc/ventas/DetalleVenta.js" type="module" defer></script>
         <script src="${pageContext.request.contextPath}/assets/js/wc/ventas/NuevaVenta.js" type="module" defer></script>

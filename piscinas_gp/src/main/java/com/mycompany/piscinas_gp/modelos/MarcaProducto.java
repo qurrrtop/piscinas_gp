@@ -8,23 +8,33 @@ public class MarcaProducto implements Identifiable {
     
     private Long idMarcaProducto;
     private String nombre;
+    private Boolean activo = true;
 
     public MarcaProducto() {
     }
-
-    public MarcaProducto(String nombre) {
-        setNombre(nombre);
-    }
-
+    
     public MarcaProducto(Long idMarcaProducto, String nombre) {
         this.idMarcaProducto = idMarcaProducto;
         this.nombre = nombre;
+        this.activo = true;
+    }
+
+    public MarcaProducto(String nombre, Boolean activo) {
+        setNombre(nombre);
+        setActivo(activo);
+    }
+
+    public MarcaProducto(Long idMarcaProducto, String nombre, Boolean activo) {
+        this.idMarcaProducto = idMarcaProducto;
+        this.nombre = nombre;
+        this.activo = activo;
     }
     
     
 @Override
     public Long getId() { return idMarcaProducto; }
     public String getNombre() { return nombre; }
+    public Boolean getActivo() { return activo; }
     
     
 @Override
@@ -42,6 +52,10 @@ public class MarcaProducto implements Identifiable {
         SetValidator.validar(nombre, StringFieldType.NOMBRE);
         
         this.nombre = nombre;
+    }
+    
+    public void setActivo(boolean activo) {
+        this.activo = activo;
     }
     
 }

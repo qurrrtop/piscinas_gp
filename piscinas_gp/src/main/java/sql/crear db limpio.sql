@@ -6,7 +6,8 @@ USE piscinas_gp;
 
 CREATE TABLE marca_productos (
     id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-    nombre VARCHAR(40) NOT NULL UNIQUE
+    nombre VARCHAR(40) NOT NULL UNIQUE,
+    activo BOOLEAN NOT NULL DEFAULT TRUE
 );
 
 CREATE TABLE unidades_medida (

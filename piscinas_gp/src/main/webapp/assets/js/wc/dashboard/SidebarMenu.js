@@ -84,9 +84,9 @@ class SidebarMenu extends HTMLElement {
                         display: block;
                         height: 100vh;
                     }
-        
+
                     /* --- SIDEBAR --- */
-                    
+
                     .sidebar {
                         background-color: rgba(1, 49, 104, 1);
                         height: 100vh;
@@ -94,25 +94,25 @@ class SidebarMenu extends HTMLElement {
                         display: flex;
                         flex-direction: column;
                         font-family: 'Segoe UI', Arial, sans-serif;
-                        box-shadow:4px 0 12px rgba(0,0,0,.18);
+                        box-shadow: 4px 0 12px rgba(0,0,0,.18);
                     }
-                    
+
                     .logo-header {
-                        max-width: 120px;
+                        max-width: 105px;
                         filter: drop-shadow(5px 5px 5px rgba(0, 0, 0, 0.5));
                         user-select: none;
                     }
-                    
+
                     /* --- HEADER SIDEBAR --- */
-                    
+
                     .sidebar-header {
                         display: flex;
                         justify-content: space-between;
                         align-items: center;
-                        padding: 22px 20px;
+                        padding: 16px 18px;
                         border-bottom: 1px solid rgba(255,255,255,.12);
                     }
-        
+
                     .sidebar-header button {
                         background: none;
                         border: none;
@@ -122,127 +122,136 @@ class SidebarMenu extends HTMLElement {
                         align-items: center;
                         justify-content: center;
                     }
-                    
+
                     .sidebar-header button:hover {
                         opacity: .8;
-                        transition: .3;
+                        transition: .3s;
                     }
-                    
+
                     /* --- MENU ITEMS --- */
-                    
+
                     .menu-items {
                         flex: 1;
+                        min-height: 0;          /* necesario para que overflow funcione dentro de un flex */
+                        overflow-y: auto;
                         display: flex;
                         flex-direction: column;
                         padding: 5px 3px;
                     }
-        
+
                     .menu-link,
                     .menu-button {
                         display: flex;
                         justify-content: space-between;
                         align-items: center;
-                        padding: 12px 16px;
+                        padding: 9px 14px;
                         border: none;
                         background: none;
                         color: white;
                         cursor: pointer;
                         text-decoration: none;
-                        transition: .25;
+                        transition: .25s ease;
                     }
-        
+
                     .menu-button {
                         width: 100%;
                     }
-        
+
                     .menu-link,
                     .menu-group {
                         border-radius: 3px;
                     }
-        
+
                     .menu-link:hover,
                     .menu-group:hover {
                         background-color: rgba(11, 79, 157, 1);
                     }
 
-                    
                     ${
                     //.menu-link.active,
                     //.menu-button.active {
                         //border-right: 3px solid #0CE0F5;
                     //}
                     ''}
-        
+
                     .menu-left, .submenu-left {
                         display: flex;
                         align-items: center;
-                        gap: 14px;
+                        gap: 12px;
                     }
-        
+
                     .menu-left img {
-                        width: 22px;
-                        height: 22px;
+                        width: 19px;
+                        height: 19px;
                     }
-        
+
                     .menu-left span {
-                        font-size: 15px;
+                        font-size: 13.5px;
                         font-weight: bold;
                     }
-        
-                    .submenu-left img {
-                        width: 18px;
-                        height: 18px;
+
+                    .submenu-left {
+                        gap: 10px;
                     }
-        
+
+                    .submenu-left img {
+                        width: 15px;
+                        height: 15px;
+                    }
+
                     .submenu-left span {
-                        font-size: 14px;
+                        font-size: 12.5px;
                         font-weight: 600;
                     }
-        
+
                     .arrow {
                         display: flex;
                         align-items: center;
                         transition: transform .25s ease;
                     }
-        
+
+                    .arrow img {
+                        width: 16px;
+                        height: 16px;
+                    }
+
                     .submenu {
                         display: none;
                         flex-direction: column;
-                        margin-top: 6px;
-                        margin-left: 27px;
-                        gap: 5px;
+                        margin-top: 4px;
+                        margin-left: 24px;
+                        gap: 3px;
                         border-left: 2px solid rgba(255,255,255,1);
                     }
-        
+
                     .submenu-link {
                         color: white;
                         text-decoration: none;
-                        padding: 10px 18px;
+                        padding: 7px 14px;
                         border-radius: 8px;
-                        font-size: 14px;
-                        transition: .25;
+                        font-size: 12.5px;
+                        transition: .25s ease;
                     }
-        
+
                     .submenu-link:hover {
                         background: rgba(255,255,255,.08);
                     }
-                    
+
                     .menu-group.open .submenu {
-                        
-                        display:flex;
+                        display: flex;
                         flex-direction: column;
                         transition: transform .25s ease;
                     }
 
-                    .menu-group.open .arrow{
-                        transform:rotate(90deg);
+                    .menu-group.open .arrow {
+                        transform: rotate(90deg);
                     }
 
                     /* ---------- FOOTER ---------- */
 
-                    .sidebar-footer{
+                    .sidebar-footer {
                         padding: 5px 3px;
-                        border-top:1px solid rgba(255,255,255,.12);
+                        border-top: 1px solid rgba(255,255,255,.12);
                     }
                 </style>
                 

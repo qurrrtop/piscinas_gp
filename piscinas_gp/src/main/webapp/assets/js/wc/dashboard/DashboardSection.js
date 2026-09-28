@@ -50,6 +50,18 @@ class DashboardSection extends HTMLElement {
                 modal.appendChild(clienteForm);
                 document.body.appendChild(modal);
             }
+            
+            if (event.detail.action === "nueva-marca") {
+                const modal = document.createElement("modal-component");
+                modal.setAttribute("subTitulo", "NUEVA MARCA");
+                modal.setAttribute("titulo", "COMPLETE LOS DATOS");
+
+                const marcaForm = document.createElement("formulario-marca");
+                marcaForm.setAttribute("base-path", this.basePath);
+
+                modal.appendChild(marcaForm);
+                document.body.appendChild(modal);
+            }
 
         });
         
