@@ -27,6 +27,11 @@ CREATE TABLE categoria_productos (
         ON DELETE SET NULL
 );
 
+CREATE TABLE subrubros_servicio_tecnico (
+    id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    nombre VARCHAR(40) NOT NULL UNIQUE
+);
+
 CREATE TABLE localidades (
     id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
     nombre VARCHAR(60) NOT NULL UNIQUE
@@ -135,11 +140,12 @@ CREATE TABLE ventas (
     problema TEXT NULL,
     diagnostico TEXT NULL,
     mano_obra DECIMAL(12, 2) NULL,
+    cobrado BOOLEAN NULL,
     monto DECIMAL(12, 2) NOT NULL DEFAULT 0,
     descuento_global DECIMAL(5, 3) NOT NULL DEFAULT 0,
     fecha_entrega DATE NULL,
 
-    metodo_pago_id INT UNSIGNED NOT NULL,
+    metodo_pago_id INT UNSIGNED NULL,
     estado_venta_id INT UNSIGNED NOT NULL,
     tipo_venta_id INT UNSIGNED NOT NULL,
     cliente_id INT UNSIGNED NOT NULL,

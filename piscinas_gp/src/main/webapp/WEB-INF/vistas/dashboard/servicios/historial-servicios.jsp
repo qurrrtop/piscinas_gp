@@ -14,7 +14,8 @@
             accion="nav:/dashboard/servicios/nuevo"
         ></dashboard-header>
 
-        <historial-servicios></historial-servicios>
+        <listado-servicios></listado-servicios>
+        <br><br><br><br><br><br>
     </div>
 </div>
             

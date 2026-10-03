@@ -26,6 +26,8 @@
         <script src="${pageContext.request.contextPath}/assets/js/wc/ventas/ConfirmacionVenta.js" type="module" defer></script>
         <script src="${pageContext.request.contextPath}/assets/js/wc/ventas/ComprobanteVenta.js" type="module" defer></script>
         <script src="${pageContext.request.contextPath}/assets/js/wc/servicios/NuevoServicio.js" type="module" defer></script>
+        <script src="${pageContext.request.contextPath}/assets/js/libs/html2pdf.bundle.min.js"></script>
+        <script src="${pageContext.request.contextPath}/assets/js/wc/servicios/ListadoServicios.js" type="module" defer></script>
 
         
         <title>PiscinasGP</title>

@@ -44,10 +44,8 @@ public enum LocalDateFieldType implements FieldType<LocalDate> {
     
     FECHA_ENTREGA("fecha de entrega") {
         @Override
-        protected String validateSpecificRules( LocalDate date ) {
-            return date.isAfter(LocalDate.now())
-                    ? String.format("La %s no puede ser futura", getDisplayName())
-                    : null;
+        protected String validateSpecificRules(LocalDate date) {
+            return null; // es una estimacion a futuro, no corresponde rechazar fechas posteriores a hoy
         }
     };
     

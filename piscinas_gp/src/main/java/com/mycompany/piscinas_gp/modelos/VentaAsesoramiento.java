@@ -49,7 +49,9 @@ public class VentaAsesoramiento extends Venta {
     }
 
     public void setDiagnostico(String diagnostico) {
-        SetValidator.validar(diagnostico, StringFieldType.DIAGNOSTICO);
+        if (diagnostico != null) {
+            SetValidator.validar(diagnostico, StringFieldType.DIAGNOSTICO);
+        }
         
         this.diagnostico = diagnostico;
     }
@@ -59,7 +61,9 @@ public class VentaAsesoramiento extends Venta {
     }
 
     public void setMonto(BigDecimal monto) {
-        SetValidator.validar(monto, NumericFieldType.MONTO);
+        if (monto != null) {
+            SetValidator.validar(monto, NumericFieldType.MONTO);
+        }
         
         this.monto = monto;
     }

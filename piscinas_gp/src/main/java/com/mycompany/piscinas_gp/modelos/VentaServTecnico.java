@@ -16,27 +16,33 @@ public class VentaServTecnico extends Venta {
     private String diagnostico;
     private BigDecimal manoObra;
     private LocalDate fechaEntrega;
+    private SubrubroServicioTecnico subrubroServicio;
+    private int descuentoGlobal;
     private List<DetalleVenta> detallesVenta;
 
     public VentaServTecnico() {
         super();
     }
 
-    public VentaServTecnico(String problema, String diagnostico, BigDecimal manoObra, LocalDate fechaEntrega, List<DetalleVenta> detallesVenta, Cliente cliente, EstadoVenta estadoVenta, LocalDateTime fecha, MetodoPago metodoPago, String observacion, BigDecimal total, LocalDateTime fechaInicio, LocalDate fechaCierre) {
+    public VentaServTecnico(String problema, String diagnostico, BigDecimal manoObra, LocalDate fechaEntrega, SubrubroServicioTecnico subrubroServicio, int descuentoGlobal, List<DetalleVenta> detallesVenta, Cliente cliente, EstadoVenta estadoVenta, LocalDateTime fecha, MetodoPago metodoPago, String observacion, BigDecimal total, LocalDateTime fechaInicio, LocalDate fechaCierre) {
         super(cliente, estadoVenta, fecha, metodoPago, observacion, total, fechaInicio, fechaCierre);
         setProblema(problema);
         setDiagnostico(diagnostico);
         setManoObra(manoObra);
         setFechaEntrega(fechaEntrega);
+        setSubrubroServicio(subrubroServicio);
+        setDescuentoGlobal(descuentoGlobal);
         setDetallesVenta(detallesVenta);
     }
 
-    public VentaServTecnico(String problema, String diagnostico, BigDecimal manoObra, LocalDate fechaEntrega, List<DetalleVenta> detallesVenta, Long idVenta, Cliente cliente, EstadoVenta estadoVenta, LocalDateTime fecha, MetodoPago metodoPago, String observacion, BigDecimal total, LocalDateTime fechaInicio, LocalDate fechaCierre) {
+    public VentaServTecnico(String problema, String diagnostico, BigDecimal manoObra, LocalDate fechaEntrega, SubrubroServicioTecnico subrubroServicio, int descuentoGlobal, List<DetalleVenta> detallesVenta, Long idVenta, Cliente cliente, EstadoVenta estadoVenta, LocalDateTime fecha, MetodoPago metodoPago, String observacion, BigDecimal total, LocalDateTime fechaInicio, LocalDate fechaCierre) {
         super(idVenta, cliente, estadoVenta, fecha, metodoPago, observacion, total, fechaInicio, fechaCierre);
         this.problema = problema;
         this.diagnostico = diagnostico;
         this.manoObra = manoObra;
         this.fechaEntrega = fechaEntrega;
+        this.subrubroServicio = subrubroServicio;
+        this.descuentoGlobal = descuentoGlobal;
         this.detallesVenta = detallesVenta;
     }
 
@@ -46,6 +52,8 @@ public class VentaServTecnico extends Venta {
     public String getDiagnostico() { return diagnostico; }
     public BigDecimal getManoObra() { return manoObra; }
     public LocalDate getFechaEntrega() { return fechaEntrega; }
+    public SubrubroServicioTecnico getSubrubroServicio() { return subrubroServicio; }
+    public int getDescuentoGlobal() { return descuentoGlobal; }
     public List<DetalleVenta> getDetallesVenta() { return detallesVenta; }
 
     
@@ -57,7 +65,9 @@ public class VentaServTecnico extends Venta {
     }
 
     public void setDiagnostico(String diagnostico) {
-        SetValidator.validar(diagnostico, StringFieldType.DIAGNOSTICO);
+        if (diagnostico != null) {
+            SetValidator.validar(diagnostico, StringFieldType.DIAGNOSTICO);
+        }
         
         this.diagnostico = diagnostico;
     }
@@ -69,10 +79,27 @@ public class VentaServTecnico extends Venta {
     }
 
     public void setFechaEntrega(LocalDate fechaEntrega) {
-        SetValidator.validar(fechaEntrega, LocalDateFieldType.FECHA_ENTREGA);
+        if (fechaEntrega != null) {
+            SetValidator.validar(fechaEntrega, LocalDateFieldType.FECHA_ENTREGA);
+        }
         
         this.fechaEntrega = fechaEntrega;
     }
+
+    public void setSubrubroServicio(SubrubroServicioTecnico subrubroServicio) {
+        if (subrubroServicio == null) {
+            throw new IllegalArgumentException("El subrubro del servicio tecnico no puede ser nulo");
+        }
+        
+        this.subrubroServicio = subrubroServicio;
+    }
+
+    public void setDescuentoGlobal(int descuentoGlobal) {
+        SetValidator.validar(descuentoGlobal, NumericFieldType.DESCUENTO_GLOBAL);
+        
+        this.descuentoGlobal = descuentoGlobal;
+    }
+
     //explique en venta producto 
     public void setDetallesVenta(List<DetalleVenta> detallesVenta) {
         if (detallesVenta == null) {

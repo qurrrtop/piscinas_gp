@@ -94,10 +94,6 @@ public class Venta implements Identifiable {
     }
 
     public void setMetodoPago(MetodoPago metodoPago) {
-        if (metodoPago == null) {
-        throw new IllegalArgumentException("El método de pago no puede ser nulo");
-    }
-
         this.metodoPago = metodoPago;
     }
 

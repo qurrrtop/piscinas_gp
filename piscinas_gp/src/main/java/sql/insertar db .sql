@@ -43,6 +43,11 @@ VALUES
 ('Goya'),
 ('Corrientes Capital');
 
+INSERT INTO subrubros_servicio_tecnico (nombre) VALUES
+('Bomba'),
+('Piscina'),
+('Reparación');
+
 -- Tipos de venta disponibles. Se usan para identificar qué módulo
 -- creó cada registro de la tabla ventas.
 insert into tipo_ventas (nombre)

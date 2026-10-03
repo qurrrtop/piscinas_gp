@@ -32,6 +32,7 @@ public class VentaDTO {
     //atributos de venta serv.tecnico
     private BigDecimal manoObra;
     private LocalDate fechaEntrega;
+    private Long subrubroServicioId;
 
     public VentaDTO() {
     }
@@ -90,6 +91,10 @@ public class VentaDTO {
     public LocalDate getFechaEntrega() {
         return fechaEntrega;
     }
+    
+    public Long getSubrubroServicioId() {
+        return subrubroServicioId;
+    }
 
     public void setId(Long id) {
         this.id = id;
@@ -146,6 +151,7 @@ public class VentaDTO {
         this.fechaEntrega = fechaEntrega;
     }
     
-    
-    
+    public void setSubrubroServicioId(Long subrubroServicioId) {
+        this.subrubroServicioId = subrubroServicioId;
+    }
 }

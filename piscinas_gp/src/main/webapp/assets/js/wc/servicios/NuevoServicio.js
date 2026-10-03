@@ -7,45 +7,55 @@ class NuevoServicio extends HTMLElement {
         this._tipo = "tecnico";
         this._clientes = [];
         this._clienteSeleccionado = null;
-        this._estadosVenta = [];
+        this._subrubros = [];
+        this._estadosDisponibles = [];
+        this._metodosPago = [];
+        this._metodoPago = "efectivo";
         this._marcas = [];
         this._categorias = [];
         this._unidades = [];
         this._productos = [];
-        this._estadosVenta = [];
-        this._estadoVenta = "cerrada";
         this._carrito = [];
+        this._manoObra = 0;
+        this._descuentoGlobalTecnico = 0;
+        this._cobradoAsesoramiento = false;
+        this._montoAsesoramiento = 0;
         this._mostrandoFormProducto = false;
         this._archivoSeleccionado = null;
     }
 
     async connectedCallback() {
         this.basePath = this.getAttribute("base-path") || "";
-        this.render();
         await this.cargarDatosIniciales();
+        this.render();
         this.renderSelectorCliente();
+        this.cargarMetodosPago();
         this.setupListeners();
+        this.actualizarResumenTecnico();
+        this.actualizarResumenAsesoramiento();
+        this.actualizarVisibilidadMetodoPago();
     }
 
     async cargarDatosIniciales() {
         try {
-            const [clientes, estadosVenta, marcas, categorias, unidades, productos] = await Promise.all([
+            const [clientes, subrubros, marcas, categorias, unidades, productos, estados, metodosPago] = await Promise.all([
                 fetch(`${this.basePath}/clientes`).then(r => r.json()),
-                fetch(`${this.basePath}/estados-venta`).then(r => r.json()),
+                fetch(`${this.basePath}/subrubros-servicio-tecnico`).then(r => r.json()),
                 fetch(`${this.basePath}/marcas`).then(r => r.json()),
                 fetch(`${this.basePath}/categorias`).then(r => r.json()),
                 fetch(`${this.basePath}/unidades-medida`).then(r => r.json()),
                 fetch(`${this.basePath}/productos`).then(r => r.json()),
-                fetch(`${this.basePath}/estados-venta`).then(r => r.json())
+                fetch(`${this.basePath}/estados-venta`).then(r => r.json()),
+                fetch(`${this.basePath}/metodos-pago`).then(r => r.json())
             ]);
             this._clientes = clientes.filter(c => c.activo);
-            this._estadosVenta = estadosVenta;
+            this._subrubros = subrubros;
             this._marcas = marcas;
             this._categorias = categorias;
             this._unidades = unidades;
             this._productos = productos.filter(p => p.activo);
-            
-            this.cargarEstadosVenta();
+            this._estadosDisponibles = estados.filter(e => e.nombre.toLowerCase() !== "cancelada");
+            this._metodosPago = metodosPago;
         } catch (error) {
             console.error("Error al cargar datos iniciales:", error);
         }
@@ -55,21 +65,55 @@ class NuevoServicio extends HTMLElement {
         const partes = nombre.trim().split(" ");
         return ((partes[0]?.[0] || "") + (partes[1]?.[0] || "")).toUpperCase();
     }
-    
-        cargarEstadosVenta() {
-            const select = this.shadowRoot.querySelector("#estadoVenta");
-
-            select.innerHTML = this._estadosVenta.map(estado => `
-                <option value="${estado.nombre}" ${estado.nombre === this._estadoVenta ? "selected" : ""}>
-                    ${estado.nombre.charAt(0).toUpperCase() + estado.nombre.slice(1)}
-                </option>
-            `).join("");
-        }
 
     colorCategoria(nombre) {
         const colores = { "Químico": "#4ADE80", "Repuesto": "#FB923C", "Accesorios de Instalación": "#A855F7" };
         return colores[nombre] || "#888888";
     }
+
+    // ---------- cálculos ----------
+
+    get subtotalRepuestos() {
+        return this._carrito.reduce((acc, item) => acc + item.precioUnitario * item.cantidad, 0);
+    }
+
+    get subtotalServicioTecnico() {
+        return this.subtotalRepuestos + this._manoObra;
+    }
+
+    get montoDescuentoTecnico() {
+        return this.subtotalServicioTecnico * (this._descuentoGlobalTecnico / 100);
+    }
+
+    get totalServicioTecnico() {
+        return this.subtotalServicioTecnico - this.montoDescuentoTecnico;
+    }
+
+    actualizarResumenTecnico() {
+        this.shadowRoot.querySelector("#resumenRepuestos").textContent = `$${this.subtotalRepuestos.toLocaleString("es-AR")}`;
+        this.shadowRoot.querySelector("#resumenManoObra").textContent = `$${this._manoObra.toLocaleString("es-AR")}`;
+        this.shadowRoot.querySelector("#resumenSubtotalTecnico").textContent = `$${this.subtotalServicioTecnico.toLocaleString("es-AR")}`;
+        this.shadowRoot.querySelector("#resumenDescuentoTecnico").textContent = `-$${this.montoDescuentoTecnico.toLocaleString("es-AR")}`;
+        this.shadowRoot.querySelector("#resumenTotalTecnico").textContent = `$${this.totalServicioTecnico.toLocaleString("es-AR")}`;
+    }
+
+    actualizarResumenAsesoramiento() {
+        const card = this.shadowRoot.querySelector("#resumenAsesoramiento");
+        if (!this._cobradoAsesoramiento) {
+            card.style.display = "none";
+            return;
+        }
+        card.style.display = "block";
+        this.shadowRoot.querySelector("#resumenMontoAsesoramiento").textContent = `$${this._montoAsesoramiento.toLocaleString("es-AR")}`;
+    }
+
+    // la card de "Método de pago" solo tiene sentido si hay un cobro real
+    actualizarVisibilidadMetodoPago() {
+        const requiereMetodo = this._tipo === "tecnico" || this._cobradoAsesoramiento;
+        this.shadowRoot.querySelector("#tarjetaMetodoPago").style.display = requiereMetodo ? "block" : "none";
+    }
+
+    // ---------- listeners ----------
 
     setupListeners() {
         this.shadowRoot.querySelectorAll(".tarjeta-tipo").forEach(tarjeta => {
@@ -82,7 +126,21 @@ class NuevoServicio extends HTMLElement {
         });
 
         this.shadowRoot.querySelector("#estadoServicio").addEventListener("change", (e) => {
-            this.toggleCamposSegunEstado(e.target.value);
+            this.toggleCamposSegunEstado(e.target, ".seccion-tecnico");
+        });
+
+        this.shadowRoot.querySelector("#estadoAsesoramiento").addEventListener("change", (e) => {
+            this.toggleCamposSegunEstado(e.target, ".seccion-asesoramiento");
+        });
+
+        this.shadowRoot.querySelector("#manoObra").addEventListener("input", (e) => {
+            this._manoObra = Number(e.target.value) || 0;
+            this.actualizarResumenTecnico();
+        });
+
+        this.shadowRoot.querySelector("#descuentoGlobalTecnico").addEventListener("input", (e) => {
+            this._descuentoGlobalTecnico = Number(e.target.value) || 0;
+            this.actualizarResumenTecnico();
         });
 
         const btnCobro = this.shadowRoot.querySelectorAll(".btn-cobro");
@@ -90,9 +148,17 @@ class NuevoServicio extends HTMLElement {
             btn.addEventListener("click", () => {
                 btnCobro.forEach(b => b.classList.remove("seleccionado"));
                 btn.classList.add("seleccionado");
+                this._cobradoAsesoramiento = btn.dataset.cobro === "cobrado";
                 this.shadowRoot.querySelector("#seccionMonto").style.display =
-                    btn.dataset.cobro === "cobrado" ? "block" : "none";
+                    this._cobradoAsesoramiento ? "block" : "none";
+                this.actualizarResumenAsesoramiento();
+                this.actualizarVisibilidadMetodoPago();
             });
+        });
+
+        this.shadowRoot.querySelector("#montoCobrado").addEventListener("input", (e) => {
+            this._montoAsesoramiento = Number(e.target.value) || 0;
+            this.actualizarResumenAsesoramiento();
         });
 
         this.shadowRoot.querySelector("#archivoEvidencia").addEventListener("change", (e) => {
@@ -110,28 +176,70 @@ class NuevoServicio extends HTMLElement {
             this.registrarServicio();
         });
 
-        this.shadowRoot.querySelector("#btnVolver").addEventListener("click", () => {
+        this.shadowRoot.querySelector("#btnVolver")?.addEventListener("click", () => {
             document.dispatchEvent(new CustomEvent("navigateTo", {
                 bubbles: true, composed: true,
                 detail: { path: `${this.basePath}/dashboard/servicios/historial` }
             }));
         });
 
-        this.toggleCamposSegunEstado(this.shadowRoot.querySelector("#estadoServicio").value);
+        // estado inicial al cargar (por si algun select ya viene en "Cerrada" por defecto)
+        this.toggleCamposSegunEstado(this.shadowRoot.querySelector("#estadoServicio"), ".seccion-tecnico");
+        this.toggleCamposSegunEstado(this.shadowRoot.querySelector("#estadoAsesoramiento"), ".seccion-asesoramiento");
     }
 
     toggleSeccionesPorTipo() {
         const esTecnico = this._tipo === "tecnico";
         this.shadowRoot.querySelector(".seccion-tecnico").style.display = esTecnico ? "block" : "none";
         this.shadowRoot.querySelector(".seccion-asesoramiento").style.display = esTecnico ? "none" : "block";
+        this.shadowRoot.querySelector("#tarjetaResumenTecnico").style.display = esTecnico ? "block" : "none";
+        this.shadowRoot.querySelector("#tarjetaResumenAsesoramiento").style.display = esTecnico ? "none" : "block";
+        if (!esTecnico) this.actualizarResumenAsesoramiento();
+        this.actualizarVisibilidadMetodoPago();
     }
 
-    toggleCamposSegunEstado(estadoNombre) {
-        const esCompletado = estadoNombre?.toLowerCase() === "cerrada" || estadoNombre?.toLowerCase() === "completado";
-        this.shadowRoot.querySelectorAll(".campo-si-completado").forEach(el => {
-            el.style.display = esCompletado ? "block" : "none";
+    toggleCamposSegunEstado(select, selectorSeccion) {
+        const estado = this._estadosDisponibles.find(e => e.id == select.value);
+        const esCerrada = estado?.nombre.toLowerCase() === "cerrada";
+
+        this.shadowRoot.querySelectorAll(`${selectorSeccion} .campo-si-cerrada`).forEach(el => {
+            el.style.display = esCerrada ? "block" : "none";
+        });
+        this.shadowRoot.querySelectorAll(`${selectorSeccion} .campo-si-pendiente`).forEach(el => {
+            el.style.display = esCerrada ? "none" : "block";
         });
     }
+
+    cargarMetodosPago() {
+        const contenedor = this.shadowRoot.querySelector("#metodosPago");
+
+        contenedor.innerHTML = [...this._metodosPago]
+            .sort((a, b) => {
+                if (a.nombre === "efectivo") return -1;
+                if (b.nombre === "efectivo") return 1;
+                return 0;
+            })
+            .map(metodo => `
+                <label class="radio-metodo">
+                    <input
+                        type="radio"
+                        name="metodoPagoServicio"
+                        value="${metodo.nombre}"
+                        ${metodo.nombre === this._metodoPago.toLowerCase() ? "checked" : ""}
+                    >
+                    ${metodo.nombre.charAt(0).toUpperCase() + metodo.nombre.slice(1)}
+                </label>
+            `)
+            .join("");
+
+        contenedor.querySelectorAll('input[name="metodoPagoServicio"]').forEach(radio => {
+            radio.addEventListener("change", (e) => {
+                this._metodoPago = e.target.value;
+            });
+        });
+    }
+
+    // ---------- cliente ----------
 
     renderSelectorCliente() {
         const contenedor = this.shadowRoot.querySelector("#seccionCliente");
@@ -187,6 +295,8 @@ class NuevoServicio extends HTMLElement {
             this.renderSelectorCliente();
         });
     }
+
+    // ---------- productos / repuestos ----------
 
     renderFormProducto() {
         const contenedor = this.shadowRoot.querySelector("#areaProductos");
@@ -270,6 +380,7 @@ class NuevoServicio extends HTMLElement {
         });
         this._mostrandoFormProducto = false;
         this.renderAreaProductos();
+        this.actualizarResumenTecnico();
     }
 
     renderAreaProductos() {
@@ -301,6 +412,7 @@ class NuevoServicio extends HTMLElement {
                 btn.addEventListener("click", () => {
                     this._carrito.splice(Number(btn.dataset.index), 1);
                     this.renderAreaProductos();
+                    this.actualizarResumenTecnico();
                 });
             });
         }
@@ -310,13 +422,24 @@ class NuevoServicio extends HTMLElement {
         });
     }
 
+    // ---------- envío ----------
+
     async registrarServicio() {
         if (!this._clienteSeleccionado) {
             document.dispatchEvent(new CustomEvent("mostrar-notificacion", { detail: { mensaje: "Seleccioná un cliente", tipo: "error" } }));
             return;
         }
 
-        const estadoId = Number(this.shadowRoot.querySelector("#estadoServicio").value);
+        // metodo de pago solo es obligatorio si hay un cobro real
+        const requiereMetodoPago = this._tipo === "tecnico" || this._cobradoAsesoramiento;
+        const metodoElegido = requiereMetodoPago
+                ? this._metodosPago.find(m => m.nombre.toLowerCase() === this._metodoPago.toLowerCase())
+                : null;
+
+        if (requiereMetodoPago && !metodoElegido) {
+            document.dispatchEvent(new CustomEvent("mostrar-notificacion", { detail: { mensaje: "Seleccioná un método de pago", tipo: "error" } }));
+            return;
+        }
 
         try {
             let body, url;
@@ -324,28 +447,30 @@ class NuevoServicio extends HTMLElement {
             if (this._tipo === "tecnico") {
                 body = {
                     clienteId: this._clienteSeleccionado.id,
-                    estadoVentaId: estadoId,
-                    subrubro: this.shadowRoot.querySelector("#subrubro").value,
-                    manoObra: Number(this.shadowRoot.querySelector("#manoObra").value) || 0,
-                    fechaInicio: this.shadowRoot.querySelector("#fechaInicio").value,
+                    estadoVentaId: Number(this.shadowRoot.querySelector("#estadoServicio").value),
+                    metodoPagoId: metodoElegido.id,
+                    subrubroServicioId: Number(this.shadowRoot.querySelector("#subrubro").value),
+                    manoObra: this._manoObra,
+                    descuentoGlobal: this._descuentoGlobalTecnico,
                     fechaCierre: this.shadowRoot.querySelector("#fechaCierre").value || null,
+                    fechaEntrega: this.shadowRoot.querySelector("#fechaEntrega").value || null,
                     problema: this.shadowRoot.querySelector("#descripcionProblema").value,
                     diagnostico: this.shadowRoot.querySelector("#recomendacion").value || null,
                     detallesVenta: this._carrito.map(i => ({ productoId: i.productoId, cantidad: i.cantidad }))
                 };
-                url = `${this.basePath}/ventas/servicio-tecnico`;
+                url = `${this.basePath}/servicios/tecnicos`;
             } else {
-                const cobrado = this.shadowRoot.querySelector(".btn-cobro.seleccionado")?.dataset.cobro === "cobrado";
                 body = {
                     clienteId: this._clienteSeleccionado.id,
-                    estadoVentaId: estadoId,
-                    fecha: this.shadowRoot.querySelector("#fechaAsesoramiento").value,
-                    cobrado,
-                    monto: cobrado ? Number(this.shadowRoot.querySelector("#montoCobrado").value) || 0 : 0,
+                    estadoVentaId: Number(this.shadowRoot.querySelector("#estadoAsesoramiento").value),
+                    metodoPagoId: metodoElegido?.id ?? null,
+                    fechaCierre: this.shadowRoot.querySelector("#fechaCierreAsesoramiento").value || null,
+                    cobrado: this._cobradoAsesoramiento,
+                    monto: this._cobradoAsesoramiento ? this._montoAsesoramiento : 0,
                     problema: this.shadowRoot.querySelector("#consultaMotivo").value,
                     diagnostico: this.shadowRoot.querySelector("#recomendacionAsesoramiento").value || null
                 };
-                url = `${this.basePath}/ventas/asesoramiento`;
+                url = `${this.basePath}/servicios/asesoramientos`;
             }
 
             const response = await fetch(url, {
@@ -374,6 +499,13 @@ class NuevoServicio extends HTMLElement {
                     margin-top: 20px;
                     color: white;
                     font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+                }
+
+                .layout {
+                    display: grid;
+                    grid-template-columns: 2fr 1fr;
+                    gap: 1.2rem;
+                    align-items: start;
                 }
 
                 .card {
@@ -483,7 +615,7 @@ class NuevoServicio extends HTMLElement {
                     grid-template-columns: 1fr 1fr;
                     gap: 1rem;
                 }
-        
+
                 .fila-servicio {
                     display: grid;
                     grid-template-columns: repeat(3, 1fr);
@@ -590,7 +722,7 @@ class NuevoServicio extends HTMLElement {
                     border-color: #4ADE80;
                     background: rgba(74, 222, 128, .2);
                 }
-        
+
                 .bloque-descripcion {
                     margin-top: 1.2rem;
                     padding: 1rem;
@@ -602,7 +734,7 @@ class NuevoServicio extends HTMLElement {
                 .bloque-descripcion label {
                     margin-top: 0;
                 }
-        
+
                 .bloques-secundarios {
                     display: grid;
                     grid-template-columns: 1fr 1fr;
@@ -755,281 +887,263 @@ class NuevoServicio extends HTMLElement {
                     font-weight: 700;
                 }
 
-                .acciones-finales {
+                .resumen-fila {
                     display: flex;
-                    gap: 1rem;
-                    justify-content: flex-end;
+                    justify-content: space-between;
+                    padding: .5rem 0;
+                    font-size: .95rem;
                 }
 
-                .acciones-finales button {
-                    padding: .7rem 1.6rem;
-                    border-radius: 8px;
-                    cursor: pointer;
+                .resumen-total {
                     font-weight: 700;
+                    font-size: 1.15rem;
+                    border-top: 1px solid rgba(255, 255, 255, .3);
+                    padding-top: .6rem;
+                    margin-top: .3rem;
                 }
 
-                #btnVolver {
+                .radio-metodo {
+                    display: flex;
+                    align-items: center;
+                    gap: .8rem;
+                    background: rgba(1, 49, 104, 0.9);
+                    padding: .8rem 1rem;
+                    border-radius: 8px;
+                    margin-bottom: .7rem;
+                    cursor: pointer;
+                    font-weight: 500;
+                }
+
+                .radio-metodo:last-of-type { margin-bottom: 0; }
+
+                .radio-metodo input[type="radio"] {
+                    appearance: none;
+                    -webkit-appearance: none;
+                    flex: 0 0 18px;
+                    width: 18px;
+                    height: 18px;
+                    min-width: 18px;
+                    min-height: 18px;
+                    margin: 0;
+                    padding: 0;
+                    border: 2px solid rgba(255, 255, 255, 0.7);
+                    border-radius: 50%;
                     background: transparent;
-                    color: white;
-                    border: 1px solid rgba(255, 255, 255, .3);
+                    display: grid;
+                    place-items: center;
+                    box-sizing: border-box;
                 }
 
-                #btnRegistrarServicio {
+                .radio-metodo input[type="radio"]::before {
+                    content: "";
+                    width: 8px;
+                    height: 8px;
+                    border-radius: 50%;
+                    background: white;
+                    transform: scale(0);
+                    transition: transform 0.15s ease;
+                }
+
+                .radio-metodo input[type="radio"]:checked::before {
+                    transform: scale(1);
+                }
+
+                .btn-confirmar {
+                    width: 100%;
                     background: #37A4FF;
                     color: white;
                     border: none;
+                    padding: .85rem;
+                    border-radius: 8px;
+                    font-weight: 700;
+                    font-size: 1rem;
+                    cursor: pointer;
+                    margin-top: .1rem;
                 }
             </style>
 
             <div class="card">
-                <div class="card-header">
-                    TIPO DE SERVICIO
-                </div>
-
+                <div class="card-header">TIPO DE SERVICIO</div>
                 <div class="card-body">
                     <div class="selector-tipo">
-
                         <div class="tarjeta-tipo seleccionada" data-tipo="tecnico">
                             <img src="${this.basePath}/assets/img/iconos/hammer.svg">
                             <strong>Servicio Técnico</strong>
                             <small>Reparación, instalación, revisión</small>
                         </div>
-
                         <div class="tarjeta-tipo" data-tipo="asesoramiento">
                             <img src="${this.basePath}/assets/img/iconos/messages-square.svg">
                             <strong>Asesoramiento</strong>
                             <small>Consulta, orientación, presupuesto</small>
                         </div>
-
                     </div>
                 </div>
             </div>
 
-            <!-- CLIENTE -->
-            <div class="card">
-                <div class="card-header">
-                    CLIENTE <span class="required">*</span>
-                </div>
-                <div class="card-body">
-                    <div id="seccionCliente"></div>
-                </div>
-            </div>
+            <div class="layout">
+                <div class="columna-izquierda">
 
-            <!-- DATOS DEL SERVICIO TÉCNICO -->
-            <div class="card seccion-tecnico">
-                <div class="card-header">
-                    DATOS DEL SERVICIO TÉCNICO
-                </div>
-                <div class="card-body">
-                    <div class="fila-servicio">
-                        <div>
-                            <label>SUBRUBRO</label>
-                            <select id="subrubro">
-                                <option>Bomba</option>
-                                <option>Piscina</option>
-                                <option>Reparación</option>
-                                <option>Otro</option>
-                            </select>
+                    <div class="card">
+                        <div class="card-header">
+                            <img src="${this.basePath}/assets/img/iconos/users.svg"> CLIENTE <span class="required">*</span>
                         </div>
-
-                        <div>
-                            <label>ESTADO</label>
-                            <select id="estadoServicio">
-                                ${this._estadosVenta.map(e =>
-                                    `<option value="${e.id}">${e.nombre}</option>`
-                                ).join("")}
-                            </select>
-                        </div>
-
-                        <div>
-                            <label>FECHA INICIO</label>
-                            <input type="date" id="fechaInicio">
-                        </div>
-
+                        <div class="card-body" id="seccionCliente"></div>
                     </div>
 
-                    <div class="fila-2">
+                    <!-- DATOS DEL SERVICIO TÉCNICO -->
+                    <div class="card seccion-tecnico">
+                        <div class="card-header">DATOS DEL SERVICIO TÉCNICO</div>
+                        <div class="card-body">
+                            <div class="fila-servicio">
+                                <div>
+                                    <label>SUBRUBRO <span class="required">*</span></label>
+                                    <select id="subrubro">
+                                        ${this._subrubros.map(s => `<option value="${s.id}">${s.nombre}</option>`).join("")}
+                                    </select>
+                                </div>
 
-                        <div>
-                            <label>MANO DE OBRA</label>
-                            <input type="number" id="manoObra" value="0" min="0">
-                        </div>
+                                <div>
+                                    <label>ESTADO</label>
+                                    <select id="estadoServicio">
+                                        ${this._estadosDisponibles.map(e =>
+                                            `<option value="${e.id}">${e.nombre.charAt(0).toUpperCase() + e.nombre.slice(1)}</option>`
+                                        ).join("")}
+                                    </select>
+                                </div>
 
-                        <div class="campo-si-completado">
-                            <label>FECHA CIERRE</label>
-                            <input type="date" id="fechaCierre">
-                        </div>
+                                <div>
+                                    <label>MANO DE OBRA</label>
+                                    <input type="number" id="manoObra" value="0" min="0">
+                                </div>
+                            </div>
 
-                    </div>
-                    </div>
-        
-                    <div class="bloque-descripcion">
-                        <label>DESCRIPCIÓN DEL PROBLEMA<span class="required">*</span></label>
+                            <div class="fila-2">
+                                <div>
+                                    <label>DESCUENTO GLOBAL (%)</label>
+                                    <input type="number" id="descuentoGlobalTecnico" value="0" min="0" max="100">
+                                </div>
+                                <div class="campo-si-cerrada">
+                                    <label>FECHA DE CIERRE</label>
+                                    <input type="date" id="fechaCierre">
+                                </div>
+                                <div class="campo-si-pendiente">
+                                    <label>FECHA DE ENTREGA ESTIMADA</label>
+                                    <input type="date" id="fechaEntrega">
+                                </div>
+                            </div>
 
-                        <textarea id="descripcionProblema" rows="3" placeholder="Describí el problema..."></textarea>
-                    </div>
+                            <div class="bloque-descripcion">
+                                <label>DESCRIPCIÓN DEL PROBLEMA<span class="required">*</span></label>
+                                <textarea id="descripcionProblema" rows="3" placeholder="Describí el problema..."></textarea>
+                            </div>
 
-                    <div class="bloques-secundarios">
+                            <div class="bloques-secundarios">
+                                <div class="bloque-secundario campo-si-cerrada">
+                                    <label>RECOMENDACIÓN BRINDADA</label>
+                                    <textarea id="recomendacion" rows="4" placeholder="¿Qué se encontró y cómo se resolvió?"></textarea>
+                                </div>
 
-                        <div class="bloque-secundario campo-si-completado">
-                            <label>RECOMENDACIÓN BRINDADA</label>
+                                <div class="bloque-secundario">
+                                    <label>EVIDENCIA (OPCIONAL)</label>
+                                    <div class="archivo-box">
+                                        <label for="archivoEvidencia">📎 Elegir imagen</label>
+                                        <input type="file" id="archivoEvidencia" accept="image/*">
+                                        <span id="nombreArchivo">Ningún archivo seleccionado</span>
+                                    </div>
+                                </div>
+                            </div>
 
-                            <textarea id="recomendacion" rows="4" placeholder="¿Qué se encontró y cómo se resolvió?"></textarea>
-                        </div>
+                            <label>
+                                PRODUCTOS / REPUESTOS UTILIZADOS
+                                <small style="text-transform:none;color:rgba(255,255,255,.5)">(Opcional)</small>
+                            </label>
 
-                        <div class="bloque-secundario">
-
-                            <label>EVIDENCIA (OPCIONAL)</label>
-
-                            <div class="archivo-box">
-                                <label for="archivoEvidencia">📎 Elegir imagen</label>
-                                <input type="file" id="archivoEvidencia" accept="image/*">
-                                <span id="nombreArchivo">Ningún archivo seleccionado</span>
+                            <div id="areaProductos">
+                                <div class="carrito-vacio"><p>Sin productos agregados.</p></div>
+                                <button type="button" id="btnAgregarProductos" class="btn-agregar-productos">+ Agregar producto</button>
                             </div>
                         </div>
                     </div>
 
-                    <label>
-                        PRODUCTOS / REPUESTOS UTILIZADOS
+                    <!-- DATOS DEL ASESORAMIENTO -->
+                    <div class="card seccion-asesoramiento" style="display:none">
+                        <div class="card-header">DATOS DEL ASESORAMIENTO</div>
+                        <div class="card-body">
+                            <div class="fila-2">
+                                <div>
+                                    <label>ESTADO</label>
+                                    <select id="estadoAsesoramiento">
+                                        ${this._estadosDisponibles.map(e =>
+                                            `<option value="${e.id}">${e.nombre.charAt(0).toUpperCase() + e.nombre.slice(1)}</option>`
+                                        ).join("")}
+                                    </select>
+                                </div>
+                                <div class="campo-si-cerrada">
+                                    <label>FECHA DE CIERRE</label>
+                                    <input type="date" id="fechaCierreAsesoramiento">
+                                </div>
+                            </div>
 
-                        <small style="text-transform:none;color:rgba(255,255,255,.5)">
-                            (Opcional)
-                        </small>
-                    </label>
+                            <label>¿SE COBRA?</label>
+                            <div class="botones-toggle">
+                                <button type="button" class="btn-cobro seleccionado" data-cobro="sin_cobro">Sin cobro</button>
+                                <button type="button" class="btn-cobro" data-cobro="cobrado">Cobrado</button>
+                            </div>
 
+                            <div id="seccionMonto" style="display:none">
+                                <label>MONTO COBRADO ($)</label>
+                                <input type="number" id="montoCobrado" value="0" min="0">
+                            </div>
 
-                    <div id="areaProductos">
+                            <label>CONSULTA / MOTIVO <span class="required">*</span></label>
+                            <textarea id="consultaMotivo" rows="2" placeholder="¿Qué consultó el cliente?"></textarea>
 
-                        <div class="carrito-vacio">
-                            <p>Sin productos agregados.</p>
+                            <div class="campo-si-cerrada">
+                                <label>RECOMENDACIÓN BRINDADA <span class="required">*</span></label>
+                                <textarea id="recomendacionAsesoramiento" rows="2" placeholder="¿Qué se le recomendó o indicó?"></textarea>
+                            </div>
                         </div>
-
-                        <button
-                            type="button"
-                            id="btnAgregarProductos"
-                            class="btn-agregar-productos">
-
-                            + Agregar producto
-
-                        </button>
-
                     </div>
 
                 </div>
 
-            </div>
+                <div class="columna-derecha">
 
-
-            <!-- DATOS DEL ASESORAMIENTO -->
-            <div
-                class="card seccion-asesoramiento"
-                style="display:none">
-
-                <div class="card-header">
-                    DATOS DEL ASESORAMIENTO
-                </div>
-
-                <div class="card-body">
-
-                    <div class="fila-2">
-
-                        <div>
-
-                            <label>FECHA</label>
-
-                            <input
-                                type="date"
-                                id="fechaAsesoramiento">
-
+                    <div class="card" id="tarjetaResumenTecnico">
+                        <div class="card-header">
+                            <img src="${this.basePath}/assets/img/iconos/clipboard-list.svg"> RESUMEN
                         </div>
-
-
-                        <div>
-
-                            <label>ESTADO</label>
-
-                            <select id="estadoServicioAsesoramiento">
-
-                                ${this._estadosVenta.map(e =>
-                                    `<option value="${e.id}">${e.nombre}</option>`
-                                ).join("")}
-
-                            </select>
-
+                        <div class="card-body">
+                            <div class="resumen-fila"><span>Repuestos</span><span id="resumenRepuestos">$0</span></div>
+                            <div class="resumen-fila"><span>Mano de obra</span><span id="resumenManoObra">$0</span></div>
+                            <div class="resumen-fila"><span>Subtotal</span><span id="resumenSubtotalTecnico">$0</span></div>
+                            <div class="resumen-fila"><span>Descuento global</span><span id="resumenDescuentoTecnico">-$0</span></div>
+                            <div class="resumen-fila resumen-total"><span>Total</span><span id="resumenTotalTecnico">$0</span></div>
                         </div>
-
                     </div>
 
-
-                    <label>¿SE COBRA?</label>
-
-                    <div class="botones-toggle">
-
-                        <button
-                            type="button"
-                            class="btn-cobro seleccionado"
-                            data-cobro="sin_cobro">
-
-                            Sin cobro
-
-                        </button>
-
-
-                        <button
-                            type="button"
-                            class="btn-cobro"
-                            data-cobro="cobrado">
-
-                            Cobrado
-
-                        </button>
-
+                    <div class="card" id="tarjetaResumenAsesoramiento" style="display:none">
+                        <div class="card-header">
+                            <img src="${this.basePath}/assets/img/iconos/clipboard-list.svg"> RESUMEN
+                        </div>
+                        <div class="card-body">
+                            <div class="card" id="resumenAsesoramiento" style="display:none;margin-bottom:0;border:none;background:none">
+                                <div class="resumen-fila resumen-total"><span>Monto a cobrar</span><span id="resumenMontoAsesoramiento">$0</span></div>
+                            </div>
+                        </div>
                     </div>
 
-
-                    <div
-                        id="seccionMonto"
-                        style="display:none">
-
-                        <label>MONTO COBRADO ($)</label>
-
-                        <input
-                            type="number"
-                            id="montoCobrado"
-                            value="0"
-                            min="0">
-
+                    <div class="card" id="tarjetaMetodoPago">
+                        <div class="card-header">
+                            <img src="${this.basePath}/assets/img/iconos/credit-card.svg"> MÉTODO DE PAGO
+                        </div>
+                        <div class="card-body">
+                            <div id="metodosPago"></div>
+                        </div>
                     </div>
 
-
-                    <label>
-                        CONSULTA / MOTIVO
-                        <span class="required">*</span>
-                    </label>
-
-                    <textarea
-                        id="consultaMotivo"
-                        rows="2"
-                        placeholder="¿Qué consultó el cliente?"></textarea>
-
-
-                    <div class="campo-si-completado">
-
-                        <label>RECOMENDACIÓN BRINDADA</label>
-
-                        <textarea
-                            id="recomendacionAsesoramiento"
-                            rows="2"
-                            placeholder="¿Qué se le recomendó o indicó?"></textarea>
-
-                    </div>
-
+                    <button type="button" id="btnRegistrarServicio" class="btn-confirmar">✓ Registrar servicio</button>
                 </div>
-
-            </div>
-
-            <div class="acciones-finales">
-                <button type="button" id="btnRegistrarServicio">Registrar servicio</button>
             </div>
         `;
     }

@@ -71,7 +71,10 @@ class DetalleVenta extends HTMLElement {
 
         this.shadowRoot.querySelector("#btnVerComprobante")?.addEventListener("click", () => {
             const comprobante = document.createElement("comprobante-venta");
+            comprobante.setAttribute("base-path", this.basePath);
+
             comprobante.venta = this._venta;
+
             document.body.appendChild(comprobante);
         });
 
