@@ -26,6 +26,8 @@ public class VentaDTO {
     //atributos de ventaasesoramento
     private String problema;
     private String diagnostico;
+    private String imagenEvidencia;
+    
     private boolean cobrado;
     private BigDecimal monto;
 
@@ -78,6 +80,9 @@ public class VentaDTO {
     }
     public String getDiagnostico() {
         return diagnostico;
+    }
+    public String getImagenEvidencia() {
+        return imagenEvidencia;
     }
     public boolean isCobrado() {
         return cobrado;
@@ -137,6 +142,9 @@ public class VentaDTO {
     }
     public void setDiagnostico(String diagnostico) {
         this.diagnostico = diagnostico;
+    }
+    public void setImagenEvidencia(String imagenEvidencia) {
+        this.imagenEvidencia = imagenEvidencia;
     }
     public void setCobrado(boolean cobrado) {
         this.cobrado = cobrado;

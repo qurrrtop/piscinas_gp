@@ -32,26 +32,26 @@ public class VentaServTecnicoDAO extends GenericoDAO<VentaServTecnico> {
     private static final String[] COLUMNS_FOR_INSERT = {
         "fecha_inicio", "observacion", "fecha_cierre", "problema",
         "diagnostico", "mano_obra", "monto", "descuento_global",
-        "fecha_entrega", "subrubro_servicio_id", "metodo_pago_id",
+        "fecha_entrega", "imagen_evidencia", "subrubro_servicio_id", "metodo_pago_id",
         "estado_venta_id", "tipo_venta_id", "cliente_id"
     };
 
     private static final String[] PLACEHOLDER_VALUES = {
-        "?", "?", "?", "?", "?", "?", "?", "?", "?", "?", "?", "?",
-        "(SELECT id FROM tipo_ventas WHERE nombre = 'servicio_tecnico')", // TODO: confirmar valor real
+        "?", "?", "?", "?", "?", "?", "?", "?", "?", "?", "?", "?", "?",
+        "(SELECT id FROM tipo_ventas WHERE nombre = 'servicio_tecnico')",
         "?"
     };
 
     private static final String[] COLUMNS_FOR_SELECT = {
         "id", "fecha_inicio", "observacion", "fecha_cierre", "problema",
         "diagnostico", "mano_obra", "fecha_entrega", "subrubro_servicio_id",
-        "descuento_global", "monto", "metodo_pago_id", "estado_venta_id", "cliente_id"
+        "descuento_global", "imagen_evidencia", "monto", "metodo_pago_id", "estado_venta_id", "cliente_id"
     };
 
     private static final String[] COLUMNS_FOR_UPDATE = {
         "fecha_inicio = ?", "observacion = ?", "fecha_cierre = ?",
         "problema = ?", "diagnostico = ?", "mano_obra = ?", "monto = ?",
-        "fecha_entrega = ?", "subrubro_servicio_id = ?",
+        "fecha_entrega = ?", "imagen_evidencia = ?", "subrubro_servicio_id = ?",
         "metodo_pago_id = ?", "estado_venta_id = ?", "cliente_id = ?"
     };
 
@@ -148,7 +148,7 @@ public class VentaServTecnicoDAO extends GenericoDAO<VentaServTecnico> {
 
         private String getSqlVentasConRelaciones() {
         return "SELECT v.id AS venta_id, v.fecha_inicio, v.observacion, v.fecha_cierre, "
-                + "v.problema, v.diagnostico, v.mano_obra, v.fecha_entrega, v.descuento_global, "
+                + "v.problema, v.diagnostico, v.mano_obra, v.fecha_entrega, v.descuento_global, v.imagen_evidencia, "
                 + "v.monto, "
                 + "st.id AS subrubro_id, st.nombre AS subrubro_nombre, "
                 + "ev.id AS estado_id, ev.nombre AS estado_nombre, "
@@ -207,11 +207,13 @@ public class VentaServTecnicoDAO extends GenericoDAO<VentaServTecnico> {
 
             Date fechaEntregaSql = rs.getDate("fecha_entrega");
             LocalDate fechaEntrega = fechaEntregaSql == null ? null : fechaEntregaSql.toLocalDate();
+            String imagenEvidencia = rs.getString("imagen_evidencia");
 
             return new VentaServTecnico(
                     rs.getString("problema"), rs.getString("diagnostico"),
                     rs.getBigDecimal("mano_obra"), fechaEntrega, subrubro,
                     rs.getInt("descuento_global"),
+                    imagenEvidencia,
                     Collections.emptyList(),
                     rs.getLong("venta_id"), cliente, estadoVenta, fechaInicio,
                     metodoPago, rs.getString("observacion"), rs.getBigDecimal("monto"),
@@ -262,12 +264,19 @@ public class VentaServTecnicoDAO extends GenericoDAO<VentaServTecnico> {
             pstmt.setString(5, venta.getDiagnostico());
             pstmt.setBigDecimal(6, venta.getManoObra());
             pstmt.setBigDecimal(7, venta.getTotal());
-            pstmt.setInt(8, 0); // descuento_global no aplica a servicio tecnico
+            pstmt.setInt(8, venta.getDescuentoGlobal());
             setFechaOpcional(pstmt, 9, venta.getFechaEntrega());
-            pstmt.setLong(10, venta.getSubrubroServicio().getId());
-            pstmt.setLong(11, venta.getMetodoPago().getId());
-            pstmt.setLong(12, venta.getEstadoVenta().getId());
-            pstmt.setLong(13, venta.getCliente().getId());
+
+            if (venta.getImagenEvidencia() != null) {
+                pstmt.setString(10, venta.getImagenEvidencia());
+            } else {
+                pstmt.setNull(10, java.sql.Types.VARCHAR);
+            }
+
+            pstmt.setLong(11, venta.getSubrubroServicio().getId());
+            pstmt.setLong(12, venta.getMetodoPago().getId());
+            pstmt.setLong(13, venta.getEstadoVenta().getId());
+            pstmt.setLong(14, venta.getCliente().getId());
         } catch (SQLException e) {
             throw new PersistenceException("Error al asignar los parametros de la venta de servicio tecnico", e);
         }
@@ -284,10 +293,17 @@ public class VentaServTecnicoDAO extends GenericoDAO<VentaServTecnico> {
             pstmt.setBigDecimal(6, venta.getManoObra());
             pstmt.setBigDecimal(7, venta.getTotal());
             setFechaOpcional(pstmt, 8, venta.getFechaEntrega());
-            pstmt.setLong(9, venta.getSubrubroServicio().getId());
-            pstmt.setLong(10, venta.getMetodoPago().getId());
-            pstmt.setLong(11, venta.getEstadoVenta().getId());
-            pstmt.setLong(12, venta.getCliente().getId());
+
+            if (venta.getImagenEvidencia() != null) {
+                pstmt.setString(9, venta.getImagenEvidencia());
+            } else {
+                pstmt.setNull(9, java.sql.Types.VARCHAR);
+            }
+
+            pstmt.setLong(10, venta.getSubrubroServicio().getId());
+            pstmt.setLong(11, venta.getMetodoPago().getId());
+            pstmt.setLong(12, venta.getEstadoVenta().getId());
+            pstmt.setLong(13, venta.getCliente().getId());
         } catch (SQLException e) {
             throw new PersistenceException("Error al asignar los parametros para actualizar el servicio tecnico", e);
         }
@@ -319,11 +335,13 @@ public class VentaServTecnicoDAO extends GenericoDAO<VentaServTecnico> {
             LocalDate fechaCierre = fechaCierreSql == null ? null : fechaCierreSql.toLocalDate();
             Date fechaEntregaSql = rs.getDate("fecha_entrega");
             LocalDate fechaEntrega = fechaEntregaSql == null ? null : fechaEntregaSql.toLocalDate();
+            String imagenEvidencia = rs.getString("imagen_evidencia");
 
             return new VentaServTecnico(
                     rs.getString("problema"), rs.getString("diagnostico"),
                     rs.getBigDecimal("mano_obra"), fechaEntrega, subrubro,
                     rs.getInt("descuento_global"),
+                    imagenEvidencia,
                     Collections.emptyList(),
                     rs.getLong("venta_id"), cliente, estadoVenta, fechaInicio,
                     metodoPago, rs.getString("observacion"), rs.getBigDecimal("monto"),

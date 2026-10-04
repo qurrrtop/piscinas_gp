@@ -226,6 +226,7 @@ public class VentaServTecnicoControlador extends HttpServlet {
 
         servicio.setProblema(dto.getProblema());
         servicio.setDiagnostico(dto.getDiagnostico());
+        servicio.setImagenEvidencia(dto.getImagenEvidencia());
         servicio.setManoObra(dto.getManoObra() != null ? dto.getManoObra() : java.math.BigDecimal.ZERO);
         servicio.setDescuentoGlobal(dto.getDescuentoGlobal());
 

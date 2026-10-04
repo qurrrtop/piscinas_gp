@@ -18,13 +18,14 @@ public class VentaServTecnico extends Venta {
     private LocalDate fechaEntrega;
     private SubrubroServicioTecnico subrubroServicio;
     private int descuentoGlobal;
+    private String imagenEvidencia;
     private List<DetalleVenta> detallesVenta;
 
     public VentaServTecnico() {
         super();
     }
 
-    public VentaServTecnico(String problema, String diagnostico, BigDecimal manoObra, LocalDate fechaEntrega, SubrubroServicioTecnico subrubroServicio, int descuentoGlobal, List<DetalleVenta> detallesVenta, Cliente cliente, EstadoVenta estadoVenta, LocalDateTime fecha, MetodoPago metodoPago, String observacion, BigDecimal total, LocalDateTime fechaInicio, LocalDate fechaCierre) {
+    public VentaServTecnico(String problema, String diagnostico, BigDecimal manoObra, LocalDate fechaEntrega, SubrubroServicioTecnico subrubroServicio, int descuentoGlobal, String imagenEvidencia, List<DetalleVenta> detallesVenta, Cliente cliente, EstadoVenta estadoVenta, LocalDateTime fecha, MetodoPago metodoPago, String observacion, BigDecimal total, LocalDateTime fechaInicio, LocalDate fechaCierre) {
         super(cliente, estadoVenta, fecha, metodoPago, observacion, total, fechaInicio, fechaCierre);
         setProblema(problema);
         setDiagnostico(diagnostico);
@@ -32,10 +33,11 @@ public class VentaServTecnico extends Venta {
         setFechaEntrega(fechaEntrega);
         setSubrubroServicio(subrubroServicio);
         setDescuentoGlobal(descuentoGlobal);
+        setImagenEvidencia(imagenEvidencia);
         setDetallesVenta(detallesVenta);
     }
 
-    public VentaServTecnico(String problema, String diagnostico, BigDecimal manoObra, LocalDate fechaEntrega, SubrubroServicioTecnico subrubroServicio, int descuentoGlobal, List<DetalleVenta> detallesVenta, Long idVenta, Cliente cliente, EstadoVenta estadoVenta, LocalDateTime fecha, MetodoPago metodoPago, String observacion, BigDecimal total, LocalDateTime fechaInicio, LocalDate fechaCierre) {
+    public VentaServTecnico(String problema, String diagnostico, BigDecimal manoObra, LocalDate fechaEntrega, SubrubroServicioTecnico subrubroServicio, int descuentoGlobal, String imagenEvidencia, List<DetalleVenta> detallesVenta, Long idVenta, Cliente cliente, EstadoVenta estadoVenta, LocalDateTime fecha, MetodoPago metodoPago, String observacion, BigDecimal total, LocalDateTime fechaInicio, LocalDate fechaCierre) {
         super(idVenta, cliente, estadoVenta, fecha, metodoPago, observacion, total, fechaInicio, fechaCierre);
         this.problema = problema;
         this.diagnostico = diagnostico;
@@ -43,6 +45,7 @@ public class VentaServTecnico extends Venta {
         this.fechaEntrega = fechaEntrega;
         this.subrubroServicio = subrubroServicio;
         this.descuentoGlobal = descuentoGlobal;
+        this.imagenEvidencia = imagenEvidencia;
         this.detallesVenta = detallesVenta;
     }
 
@@ -54,6 +57,7 @@ public class VentaServTecnico extends Venta {
     public LocalDate getFechaEntrega() { return fechaEntrega; }
     public SubrubroServicioTecnico getSubrubroServicio() { return subrubroServicio; }
     public int getDescuentoGlobal() { return descuentoGlobal; }
+    public String getImagenEvidencia() { return imagenEvidencia; }
     public List<DetalleVenta> getDetallesVenta() { return detallesVenta; }
 
     
@@ -98,6 +102,11 @@ public class VentaServTecnico extends Venta {
         SetValidator.validar(descuentoGlobal, NumericFieldType.DESCUENTO_GLOBAL);
         
         this.descuentoGlobal = descuentoGlobal;
+    }
+
+    // es solo el nombre del archivo guardado en disco; nula si no se adjunto ninguna imagen
+    public void setImagenEvidencia(String imagenEvidencia) {
+        this.imagenEvidencia = imagenEvidencia;
     }
 
     //explique en venta producto 

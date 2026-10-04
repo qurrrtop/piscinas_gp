@@ -139,6 +139,8 @@ CREATE TABLE ventas (
 
     problema TEXT NULL,
     diagnostico TEXT NULL,
+    imagen_evidencia VARCHAR(255) NULL,
+
     mano_obra DECIMAL(12, 2) NULL,
     cobrado BOOLEAN NULL,
     monto DECIMAL(12, 2) NOT NULL DEFAULT 0,

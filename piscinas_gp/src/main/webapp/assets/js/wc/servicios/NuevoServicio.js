@@ -582,6 +582,29 @@ class NuevoServicio extends HTMLElement {
 
         try {
             let body, url;
+            
+            let nombreImagen = null;
+            
+            if (this._tipo === "tecnico" && this._archivoSeleccionado) {
+                try {
+                    const formData = new FormData();
+                    formData.append("archivo", this._archivoSeleccionado);
+
+                    const resImagen = await fetch(`${this.basePath}/imagenes/servicios`, {
+                        method: "POST",
+                        body: formData
+                    });
+
+                    const dataImagen = await resImagen.json();
+                    if (!resImagen.ok) throw new Error(dataImagen.error || "No se pudo subir la imagen");
+
+                    nombreImagen = dataImagen.archivo;
+
+                } catch (error) {
+                    document.dispatchEvent(new CustomEvent("mostrar-notificacion", { detail: { mensaje: error.message, tipo: "error" } }));
+                    return;
+                }
+            }
 
             if (this._tipo === "tecnico") {
                 body = {
@@ -595,6 +618,7 @@ class NuevoServicio extends HTMLElement {
                     fechaEntrega: this.shadowRoot.querySelector("#fechaEntrega").value || null,
                     problema: this.shadowRoot.querySelector("#descripcionProblema").value,
                     diagnostico: this.shadowRoot.querySelector("#recomendacion").value || null,
+                    imagenEvidencia: nombreImagen,
                     detallesVenta: this._carrito.map(i => ({ productoId: i.productoId, cantidad: i.cantidad }))
                 };
                 url = `${this.basePath}/servicios/tecnicos`;
