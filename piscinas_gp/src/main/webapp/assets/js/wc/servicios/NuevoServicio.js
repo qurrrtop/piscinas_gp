@@ -67,8 +67,18 @@ class NuevoServicio extends HTMLElement {
     }
 
     colorCategoria(nombre) {
-        const colores = { "Químico": "#4ADE80", "Repuesto": "#FB923C", "Accesorios de Instalación": "#A855F7" };
+        const colores = {
+            "Químico": "rgba(23, 153, 32,.60)",
+            "Repuesto": "rgba(186, 85, 26,.60)",
+            "Accesorios de Instalación": "rgba(161, 29, 136,.60)"
+        };
         return colores[nombre] || "#888888";
+    }
+    
+    estadoStockDe(producto) {
+        if (producto.stock === 0) return "sin_stock";
+        if (producto.stock <= producto.umbralStock) return "stock_bajo";
+        return "disponible";
     }
 
     // ---------- cálculos ----------
@@ -240,7 +250,6 @@ class NuevoServicio extends HTMLElement {
     }
 
     // ---------- cliente ----------
-
     renderSelectorCliente() {
         const contenedor = this.shadowRoot.querySelector("#seccionCliente");
         contenedor.innerHTML = `
@@ -297,9 +306,15 @@ class NuevoServicio extends HTMLElement {
     }
 
     // ---------- productos / repuestos ----------
-
     renderFormProducto() {
         const contenedor = this.shadowRoot.querySelector("#areaProductos");
+
+        const coloresEstado = {
+            disponible: "rgba(15, 209, 73,.80)",
+            stock_bajo: "rgba(226, 140, 21,.80)",
+            sin_stock: "#FF1500"
+        };
+
         contenedor.innerHTML = `
             <div class="form-producto">
                 <label>CATEGORÍA</label>
@@ -307,33 +322,50 @@ class NuevoServicio extends HTMLElement {
                     <button type="button" class="tab-cat-mini activo" data-id="">Todas</button>
                     ${this._categorias.map(cat => `<button type="button" class="tab-cat-mini" data-id="${cat.id}" style="--color-cat:${this.colorCategoria(cat.nombre)}">${cat.nombre}</button>`).join("")}
                 </div>
+
                 <div class="fila-selects">
-                    <div><label>MARCA</label>
-                        <select id="selectMarca"><option value="">Seleccioná una marca</option>${this._marcas.map(m => `<option value="${m.id}">${m.nombre}</option>`).join("")}</select>
+                    <div>
+                        <label>MARCA</label>
+                        <select id="selectMarca">
+                            <option value="">Seleccioná una marca</option>
+                            ${this._marcas.map(m => `<option value="${m.id}">${m.nombre}</option>`).join("")}
+                        </select>
                     </div>
-                    <div><label>UNIDAD DE MEDIDA</label>
-                        <select id="selectUnidad"><option value="">Seleccioná una unidad</option>${this._unidades.map(u => `<option value="${u.id}">${u.nombre}</option>`).join("")}</select>
+                    <div>
+                        <label>UNIDAD DE MEDIDA</label>
+                        <select id="selectUnidad">
+                            <option value="">Seleccioná una unidad</option>
+                            ${this._unidades.map(u => `<option value="${u.id}">${u.nombre}</option>`).join("")}
+                        </select>
                     </div>
                 </div>
+
                 <label>BUSCAR PRODUCTO</label>
                 <input type="text" id="buscarProducto" placeholder="Escribí el nombre del producto...">
+
                 <div class="lista-productos-filtrados" id="listaProductosFiltrados">
                     <p class="sin-resultados">Elegí al menos una categoría, marca o unidad para ver productos</p>
                 </div>
-                <div class="acciones-form-producto"><button type="button" id="btnCancelarProducto">Cancelar</button></div>
+
+                <div class="acciones-form-producto">
+                    <button type="button" id="btnCancelarProducto">Cancelar</button>
+                </div>
             </div>
         `;
 
         let categoriaId = "";
         const listaEl = this.shadowRoot.querySelector("#listaProductosFiltrados");
+
         const renderLista = () => {
             const marcaId = this.shadowRoot.querySelector("#selectMarca").value;
             const unidadId = this.shadowRoot.querySelector("#selectUnidad").value;
             const texto = this.shadowRoot.querySelector("#buscarProducto").value.trim().toLowerCase();
+
             if (!categoriaId && !marcaId && !unidadId && !texto) {
                 listaEl.innerHTML = `<p class="sin-resultados">Elegí al menos una categoría, marca o unidad para ver productos</p>`;
                 return;
             }
+
             const disponibles = this._productos.filter(p =>
                 (!categoriaId || p.categoriaProducto.id == categoriaId) &&
                 (!marcaId || p.marcaProducto.id == marcaId) &&
@@ -341,15 +373,41 @@ class NuevoServicio extends HTMLElement {
                 (!texto || p.nombre.toLowerCase().includes(texto))
             ).slice(0, 25);
 
-            listaEl.innerHTML = disponibles.length ? disponibles.map(p => `
-                <div class="item-producto-lista" data-id="${p.id}">
-                    <div><strong>${p.nombre}</strong><small>${p.marcaProducto.nombre} · ${p.contenido} ${p.unidadMedida.abreviatura}</small></div>
-                    <span>$${Number(p.precioActual).toLocaleString("es-AR")}</span>
-                </div>
-            `).join("") : `<p class="sin-resultados">No se encontraron productos</p>`;
+            listaEl.innerHTML = disponibles.length
+            ? disponibles.map(p => {
+
+                const estado = this.estadoStockDe(p);
+                const color = coloresEstado[estado];
+
+                const referencia = p.umbralStock > 0
+                    ? p.umbralStock * 4
+                    : 50;
+
+                const porcentaje = Math.min(100, Math.round((p.stock / referencia) * 100));
+
+                return `
+                    <div class="item-producto-lista" data-id="${p.id}">
+                        <div class="info-producto">
+                            <span>${p.nombre} - ${p.contenido} ${p.unidadMedida.abreviatura}</span>
+                            <small>${p.marcaProducto.nombre}</small>
+                            <div class="stock-producto">
+                                <span style="color:white;">Stock: ${p.stock} / min ${p.umbralStock}</span>
+                                <div class="barra-stock">
+                                    <div class="barra-stock-progreso" style="background:${color}; width:${porcentaje}%"></div>
+                                </div>
+                            </div>
+                        </div>
+                        <span>$${Number(p.precioActual).toLocaleString("es-AR")}</span>
+                    </div>
+                `;
+            }).join("")
+            : `<p class="sin-resultados">No se encontraron productos</p>`;
 
             listaEl.querySelectorAll(".item-producto-lista").forEach(el => {
-                el.addEventListener("click", () => this.agregarAlCarrito(this._productos.find(p => p.id == el.dataset.id)));
+                el.addEventListener("click", () => {
+                    const producto = this._productos.find(p => p.id == el.dataset.id);
+                    this.agregarAlCarrito(producto);
+                });
             });
         };
 
@@ -361,9 +419,11 @@ class NuevoServicio extends HTMLElement {
                 renderLista();
             });
         });
+
         this.shadowRoot.querySelector("#selectMarca").addEventListener("change", renderLista);
         this.shadowRoot.querySelector("#selectUnidad").addEventListener("change", renderLista);
         this.shadowRoot.querySelector("#buscarProducto").addEventListener("input", renderLista);
+
         this.shadowRoot.querySelector("#btnCancelarProducto").addEventListener("click", () => {
             this._mostrandoFormProducto = false;
             this.renderAreaProductos();
@@ -371,51 +431,130 @@ class NuevoServicio extends HTMLElement {
     }
 
     agregarAlCarrito(producto) {
-        const existente = this._carrito.find(i => i.productoId === producto.id);
-        if (existente) existente.cantidad++;
-        else this._carrito.push({
-            productoId: producto.id, nombre: producto.nombre, marca: producto.marcaProducto.nombre,
-            categoria: producto.categoriaProducto.nombre, contenido: producto.contenido,
-            unidadAbrev: producto.unidadMedida.abreviatura, precioUnitario: Number(producto.precioActual), cantidad: 1
-        });
+        const existente = this._carrito.find(item => item.productoId === producto.id);
+
+        if (existente) {
+            if (existente.cantidad < existente.stock) {
+                existente.cantidad++;
+            } else {
+                document.dispatchEvent(new CustomEvent("mostrar-notificacion", {
+                    detail: { mensaje: `No hay más stock disponible de ${producto.nombre}`, tipo: "advertencia" }
+                }));
+                return;
+            }
+        } else {
+            this._carrito.push({
+                productoId: producto.id,
+                nombre: producto.nombre,
+                marca: producto.marcaProducto.nombre,
+                categoria: producto.categoriaProducto.nombre,
+                contenido: producto.contenido,
+                unidadAbrev: producto.unidadMedida.abreviatura,
+                precioUnitario: Number(producto.precioActual),
+                stock: Number(producto.stock),
+                cantidad: 1
+            });
+        }
+
         this._mostrandoFormProducto = false;
         this.renderAreaProductos();
         this.actualizarResumenTecnico();
+
+        document.dispatchEvent(new CustomEvent("mostrar-notificacion", {
+            detail: { mensaje: `${producto.nombre} agregado al carrito`, tipo: "exito" }
+        }));
     }
 
     renderAreaProductos() {
         const contenedor = this.shadowRoot.querySelector("#areaProductos");
-        if (this._mostrandoFormProducto) { this.renderFormProducto(); return; }
+
+        if (this._mostrandoFormProducto) {
+            this.renderFormProducto();
+            return;
+        }
 
         if (this._carrito.length === 0) {
             contenedor.innerHTML = `
-                <div class="carrito-vacio"><p>Sin productos agregados.</p></div>
+                <div class="carrito-vacio">
+                    <img src="${this.basePath}/assets/img/iconos/shopping-cart.svg">
+                    <p>Sin productos agregados.</p>
+                </div>
                 <button type="button" id="btnAgregarProductos" class="btn-agregar-productos">+ Agregar producto</button>
             `;
         } else {
             contenedor.innerHTML = `
-                ${this._carrito.map((item, i) => `
-                    <div class="fila-carrito-simple">
-                        <div><strong>${item.nombre}</strong><div class="badges-producto">
-                            <span class="badge-mini" style="background:${this.colorCategoria(item.categoria)}22;color:${this.colorCategoria(item.categoria)}">${item.categoria}</span>
-                            <span class="badge-mini" style="background:rgba(255,255,255,.1)">${item.marca}</span>
-                        </div></div>
-                        <span>$${item.precioUnitario.toLocaleString("es-AR")}</span>
-                        <span>x${item.cantidad}</span>
-                        <span>$${(item.precioUnitario * item.cantidad).toLocaleString("es-AR")}</span>
-                        <button type="button" class="btn-quitar-fila" data-index="${i}">&times;</button>
-                    </div>
-                `).join("")}
+                <table class="tabla-carrito">
+                    <thead>
+                        <tr>
+                            <th>Producto</th>
+                            <th class="col-centro">Cant.</th>
+                            <th class="col-derecha">Subtotal</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${this._carrito.map((item, index) => `
+                            <tr>
+                                <td>
+                                    <div class="info-producto-seleccionado">
+                                        <div class="nombre-producto">${item.nombre}</div>
+                                        <div class="detalle-producto">${item.contenido || ""} ${item.unidadAbrev || ""}</div>
+                                    </div>
+                                    <div class="badges-producto">
+                                         <span class="badge-mini" style="background:rgba(255,255,255,.1); color:rgba(255,255,255,.8)">${item.categoria}</span>
+                                        <span class="badge-mini" style="background:rgba(255,255,255,.1)">${item.marca}</span>
+                                    </div>
+                                </td>
+                                <td>
+                                    <div class="item-cantidad">
+                                        <button type="button" class="btn-restar" data-index="${index}">-</button>
+                                        <span>${item.cantidad}</span>
+                                        <button type="button" class="btn-sumar" data-index="${index}">+</button>
+                                    </div>
+                                </td>
+                                <td class="item-subtotal">$${(item.precioUnitario * item.cantidad).toLocaleString("es-AR")}</td>
+                                <td><button type="button" class="btn-quitar-fila" data-index="${index}">&times;</button></td>
+                            </tr>
+                        `).join("")}
+                    </tbody>
+                </table>
                 <button type="button" id="btnAgregarProductos" class="btn-agregar-productos">+ Agregar producto</button>
             `;
+
+            this.shadowRoot.querySelectorAll(".btn-restar").forEach(btn => {
+                btn.addEventListener("click", () => {
+                    const i = Number(btn.dataset.index);
+                    if (this._carrito[i].cantidad > 1) this._carrito[i].cantidad--;
+                    this.renderAreaProductos();
+                    this.actualizarResumenTecnico();
+                });
+            });
+            this.shadowRoot.querySelectorAll(".btn-sumar").forEach(btn => {
+                btn.addEventListener("click", () => {
+                    const i = Number(btn.dataset.index);
+                    const item = this._carrito[i];
+
+                    if (item.cantidad < item.stock) {
+                        item.cantidad++;
+                        this.renderAreaProductos();
+                        this.actualizarResumenTecnico();
+                    } else {
+                        document.dispatchEvent(new CustomEvent("mostrar-notificacion", {
+                            detail: { mensaje: `No hay más stock disponible de ${item.nombre}`, tipo: "advertencia" }
+                        }));
+                    }
+                });
+            });
             this.shadowRoot.querySelectorAll(".btn-quitar-fila").forEach(btn => {
                 btn.addEventListener("click", () => {
-                    this._carrito.splice(Number(btn.dataset.index), 1);
+                    const i = Number(btn.dataset.index);
+                    this._carrito.splice(i, 1);
                     this.renderAreaProductos();
                     this.actualizarResumenTecnico();
                 });
             });
         }
+
         this.shadowRoot.querySelector("#btnAgregarProductos").addEventListener("click", () => {
             this._mostrandoFormProducto = true;
             this.renderAreaProductos();
@@ -614,6 +753,7 @@ class NuevoServicio extends HTMLElement {
                     display: grid;
                     grid-template-columns: 1fr 1fr;
                     gap: 1rem;
+                    margin-top: 1rem;
                 }
 
                 .fila-servicio {
@@ -734,12 +874,36 @@ class NuevoServicio extends HTMLElement {
                 .bloque-descripcion label {
                     margin-top: 0;
                 }
+        
+                .bloque-recomendacion {
+                    margin-top: 1.2rem;
+                    padding: 1rem;
+                    border: 1px solid rgba(55, 164, 255, .35);
+                    border-radius: 10px;
+                    background: rgba(1, 49, 104, .25);
+                }
+
+                .bloque-recomendacion label {
+                    margin-top: 0;
+                }
+        
+                .bloque-evidencia {
+                    margin-top: 1.2rem;
+                    padding: 1rem;
+                    border: 1px solid rgba(55, 164, 255, .35);
+                    border-radius: 10px;
+                    background: rgba(1, 49, 104, .25);
+                }
+
+                .bloque-evidencia label {
+                    margin-top: 0;
+                }
 
                 .bloques-secundarios {
                     display: grid;
                     grid-template-columns: 1fr 1fr;
                     gap: 1rem;
-                    margin-top: 1rem;
+                    margin: 1rem 0;
                 }
 
                 .bloque-secundario {
@@ -819,15 +983,64 @@ class NuevoServicio extends HTMLElement {
                 }
 
                 .item-producto-lista {
-                    display: flex;
-                    justify-content: space-between;
-                    padding: .6rem 1rem;
+                    display: grid;
+                    grid-template-columns: 2fr 1fr 1.5fr auto;
+                    align-items: center;
+                    gap: 1.5rem;
+                    padding: .7rem 1rem;
                     cursor: pointer;
-                    border-bottom: 1px solid rgba(255, 255, 255, .1);
+                    border-bottom: 1px solid rgba(255,255,255,.1);
+                    background: rgba(1, 49, 104, 0.9);
                 }
 
                 .item-producto-lista:hover {
-                    background: rgba(255, 255, 255, .06);
+                    background: rgba(1, 49, 104, 0.8);
+                }
+        
+                .item-producto-lista > span:last-child {
+                    text-align: right;
+                    white-space: nowrap;
+                }
+        
+                .info-producto {
+                    display: contents;
+                }
+        
+                .info-producto > span:first-of-type {
+                    font-size: .8rem;
+                    font-weight: 600;
+                }
+        
+                .item-producto-lista small {
+                    color: rgba(255,255,255,.6);
+                    font-size: .78rem;
+                    min-width: 180px;
+                }
+        
+                .stock-producto {
+                    display: flex;
+                    flex-direction: column;
+                    gap: .3rem;
+                    min-width: 0;
+                }
+
+                .stock-producto span {
+                    font-size: .9rem;
+                    font-weight: 500;
+                }
+        
+                .barra-stock {
+                    width: 100%;
+                    height: 6px;
+                    background: rgba(255,255,255,.35);
+                    border-radius: 10px;
+                    overflow: hidden;
+                }
+
+                .barra-stock-progreso {
+                    height: 100%;
+                    border-radius: 10px;
+                    transition: width .2s ease;
                 }
 
                 .sin-resultados {
@@ -843,6 +1056,89 @@ class NuevoServicio extends HTMLElement {
                     color: rgba(255, 255, 255, .6);
                     border: 2px dashed rgba(255, 255, 255, .3);
                     border-radius: 8px;
+                }
+        
+                .carrito-vacio img {
+                    width: 40px;
+                    filter: brightness(0) invert(1);
+                }
+        
+                .carrito-vacio p {
+                    margin: .5rem 0;
+                }
+
+                .tabla-carrito {
+                    width: 100%;
+                    border-collapse: collapse;
+                }
+        
+                .tabla-carrito thead th {
+                    text-align: left;
+                    font-size: .75rem;
+                    text-transform: uppercase;
+                    letter-spacing: .04em;
+                    color: #B8D7FF;
+                    padding: 0 0 .6rem 0;
+                    border-bottom: 1px solid rgba(255,255,255,.25);
+                }
+        
+                .tabla-carrito thead th.col-centro { text-align: center; }
+                .tabla-carrito thead th.col-derecha { text-align: right; }
+
+                .tabla-carrito tbody td {
+                    padding: .8rem 0;
+                    border-bottom: 1px solid rgba(255,255,255,.12);
+                    vertical-align: middle;
+                }
+        
+                .info-producto-seleccionado {
+                    display: flex;
+                    align-items: center;
+                    gap: .5rem;
+                }
+
+                .nombre-producto {
+                    font-weight: 700;
+                    font-size: .95rem;
+                }
+        
+                .detalle-producto {
+                    font-size: .8rem;
+                    color: rgba(255,255,255,.65);
+                }
+
+                .item-cantidad {
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    gap: .6rem;
+                }
+        
+                .item-cantidad button {
+                    width: 1.7rem;
+                    height: 1.7rem;
+                    border-radius: 5px;
+                    border: 1px solid rgba(255,255,255,.3);
+                    background: rgba(255,255,255,.08);
+                    color: white;
+                    cursor: pointer;
+                    font-size: .9rem;
+                }
+
+                .item-cantidad button:hover {
+                    background: rgba(255,255,255,.18);
+                }
+        
+                .item-cantidad span {
+                    min-width: 1.2rem;
+                    text-align: center;
+                    font-weight: 600;
+                }
+
+                .item-subtotal {
+                    text-align: right;
+                    font-weight: 700;
+                    white-space: nowrap;
                 }
 
                 .fila-carrito-simple {
@@ -885,6 +1181,26 @@ class NuevoServicio extends HTMLElement {
                     border-radius: 8px;
                     cursor: pointer;
                     font-weight: 700;
+                }
+        
+                .acciones-form-producto {
+                    display: flex;
+                    justify-content: end;
+                }
+        
+                #btnCancelarProducto {
+                    border-radius: 8px;
+                    background: rgba(1, 49, 104, .9);
+                    outline: none;
+                    border: 1px solid rgba(255, 255, 255, .3);
+                    padding: .6rem 1.5rem;
+                    color: white;
+                    margin-top: .5rem;
+                    cursor: pointer;
+                }
+        
+                #btnCancelarProducto:hover {
+                    background: rgba(1, 49, 104, 0.8);
                 }
 
                 .resumen-fila {
@@ -985,14 +1301,14 @@ class NuevoServicio extends HTMLElement {
 
                     <div class="card">
                         <div class="card-header">
-                            <img src="${this.basePath}/assets/img/iconos/users.svg"> CLIENTE <span class="required">*</span>
+                            <img src="${this.basePath}/assets/img/iconos/users.svg"> CLIENTE
                         </div>
                         <div class="card-body" id="seccionCliente"></div>
                     </div>
 
                     <!-- DATOS DEL SERVICIO TÉCNICO -->
                     <div class="card seccion-tecnico">
-                        <div class="card-header">DATOS DEL SERVICIO TÉCNICO</div>
+                        <div class="card-header"><img src="${this.basePath}/assets/img/iconos/hammer.svg"> DATOS DEL SERVICIO TÉCNICO</div>
                         <div class="card-body">
                             <div class="fila-servicio">
                                 <div>
@@ -1036,32 +1352,33 @@ class NuevoServicio extends HTMLElement {
                                 <label>DESCRIPCIÓN DEL PROBLEMA<span class="required">*</span></label>
                                 <textarea id="descripcionProblema" rows="3" placeholder="Describí el problema..."></textarea>
                             </div>
-
-                            <div class="bloques-secundarios">
-                                <div class="bloque-secundario campo-si-cerrada">
+        
+                            <div class="bloque-recomendacion campo-si-cerrada">
                                     <label>RECOMENDACIÓN BRINDADA</label>
                                     <textarea id="recomendacion" rows="4" placeholder="¿Qué se encontró y cómo se resolvió?"></textarea>
-                                </div>
-
-                                <div class="bloque-secundario">
-                                    <label>EVIDENCIA (OPCIONAL)</label>
-                                    <div class="archivo-box">
-                                        <label for="archivoEvidencia">📎 Elegir imagen</label>
-                                        <input type="file" id="archivoEvidencia" accept="image/*">
-                                        <span id="nombreArchivo">Ningún archivo seleccionado</span>
-                                    </div>
-                                </div>
                             </div>
 
-                            <label>
-                                PRODUCTOS / REPUESTOS UTILIZADOS
-                                <small style="text-transform:none;color:rgba(255,255,255,.5)">(Opcional)</small>
-                            </label>
-
-                            <div id="areaProductos">
-                                <div class="carrito-vacio"><p>Sin productos agregados.</p></div>
-                                <button type="button" id="btnAgregarProductos" class="btn-agregar-productos">+ Agregar producto</button>
+                            <div class="bloque-evidencia">
+                                <label>EVIDENCIA (OPCIONAL)</label>
+                                <div class="archivo-box">
+                                    <label for="archivoEvidencia">📎 Elegir imagen</label>
+                                    <input type="file" id="archivoEvidencia" accept="image/*">
+                                    <span id="nombreArchivo">Ningún archivo seleccionado</span>
+                                </div>
                             </div>
+                        </div>
+                    </div>
+        
+                    <div class="card">
+                        <div class="card-header">
+                            <img src="${this.basePath}/assets/img/iconos/package.svg"> Productos
+                        </div>
+                        <div class="card-body" id="areaProductos">
+                            <div class="carrito-vacio">
+                                <img src="${this.basePath}/assets/img/iconos/shopping-cart.svg">
+                                <p>Aún no hay productos en esta venta.<br>Agrégalos abajo.</p>
+                            </div>
+                            <button type="button" id="btnAgregarProductos" class="btn-agregar-productos">+ Agregar productos</button>
                         </div>
                     </div>
 
