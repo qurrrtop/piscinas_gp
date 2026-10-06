@@ -200,7 +200,9 @@ class NuevoServicio extends HTMLElement {
 
     toggleSeccionesPorTipo() {
         const esTecnico = this._tipo === "tecnico";
-        this.shadowRoot.querySelector(".seccion-tecnico").style.display = esTecnico ? "block" : "none";
+        this.shadowRoot.querySelectorAll(".seccion-tecnico").forEach(seccion => {
+            seccion.style.display = esTecnico ? "block" : "none";
+        });
         this.shadowRoot.querySelector(".seccion-asesoramiento").style.display = esTecnico ? "none" : "block";
         this.shadowRoot.querySelector("#tarjetaResumenTecnico").style.display = esTecnico ? "block" : "none";
         this.shadowRoot.querySelector("#tarjetaResumenAsesoramiento").style.display = esTecnico ? "none" : "block";
@@ -1379,7 +1381,7 @@ class NuevoServicio extends HTMLElement {
         
                             <div class="bloque-recomendacion campo-si-cerrada">
                                     <label>RECOMENDACIÓN BRINDADA</label>
-                                    <textarea id="recomendacion" rows="4" placeholder="¿Qué se encontró y cómo se resolvió?"></textarea>
+                                    <textarea id="recomendacion" rows="3" placeholder="¿Qué se encontró y cómo se resolvió?"></textarea>
                             </div>
 
                             <div class="bloque-evidencia">
@@ -1393,7 +1395,7 @@ class NuevoServicio extends HTMLElement {
                         </div>
                     </div>
         
-                    <div class="card">
+                    <div class="card seccion-tecnico">
                         <div class="card-header">
                             <img src="${this.basePath}/assets/img/iconos/package.svg"> Productos
                         </div>
@@ -1437,11 +1439,11 @@ class NuevoServicio extends HTMLElement {
                             </div>
 
                             <label>CONSULTA / MOTIVO <span class="required">*</span></label>
-                            <textarea id="consultaMotivo" rows="2" placeholder="¿Qué consultó el cliente?"></textarea>
+                            <textarea id="consultaMotivo" rows="3" placeholder="¿Qué consultó el cliente?"></textarea>
 
                             <div class="campo-si-cerrada">
                                 <label>RECOMENDACIÓN BRINDADA <span class="required">*</span></label>
-                                <textarea id="recomendacionAsesoramiento" rows="2" placeholder="¿Qué se le recomendó o indicó?"></textarea>
+                                <textarea id="recomendacionAsesoramiento" rows="3" placeholder="¿Qué se le recomendó o indicó?"></textarea>
                             </div>
                         </div>
                     </div>

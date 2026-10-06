@@ -55,6 +55,7 @@ public class DashboardControlador extends HttpServlet {
             case "/servicios/nuevo" -> request.getRequestDispatcher("/WEB-INF/vistas/dashboard/servicios/nuevo-servicio.jsp").forward(request, response);
             case "/pendientes/historial" -> request.getRequestDispatcher("/WEB-INF/vistas/dashboard/pendientes/historial-pendientes.jsp").forward(request, response);
             case "/gestion/productos" -> request.getRequestDispatcher("/WEB-INF/vistas/dashboard/gestion/productos/productos.jsp").forward(request, response);
+            case "/gestion/actualizar-precios" -> request.getRequestDispatcher("/WEB-INF/vistas/dashboard/gestion/actualizarprecios/actualizar-precios.jsp").forward(request, response);
             case "/gestion/marcas" -> request.getRequestDispatcher("/WEB-INF/vistas/dashboard/gestion/marcas/marcas.jsp").forward(request, response);
             case "/gestion/clientes" -> request.getRequestDispatcher("/WEB-INF/vistas/dashboard/gestion/clientes/clientes.jsp").forward(request, response);
             case "/acercade" -> request.getRequestDispatcher("/WEB-INF/vistas/dashboard/acercade/acercade.jsp").forward(request, response);
@@ -84,7 +85,8 @@ public class DashboardControlador extends HttpServlet {
         List <MenuItem> hijosGestion = List.of(
                 new MenuItem("Clientes", "menu", "users.svg", "icono clientes", path + "/dashboard/gestion/clientes", List.of()),
                 new MenuItem("Productos", "menu", "package.svg", "icono productos", path + "/dashboard/gestion/productos", List.of()),
-                new MenuItem("Marcas", "menu", "tag.svg", "icono marcas", path + "/dashboard/gestion/marcas", List.of())
+                new MenuItem("Marcas", "menu", "tag.svg", "icono marcas", path + "/dashboard/gestion/marcas", List.of()),
+                new MenuItem("Actualizar precios", "menu", "trending-up.svg", "icono actualizar precios", path + "/dashboard/gestion/actualizar-precios", List.of())
         );
         
         items.add(new MenuItem("Principal", "menu", "house.svg", "icono menu princial", path + "/dashboard/principal", List.of()));
