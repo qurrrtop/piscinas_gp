@@ -92,6 +92,29 @@ public class ProductoDAO extends GenericoDAO<Producto> {
     public boolean eliminarPorId(Long id) throws PersistenceException {
         return deleteObject(PRIMARY_KEY, id);
     }
+    
+    /** Busca un producto exacto por los 4 campos que definen "mismo producto" cuando no hay codigo de proveedor. */
+    public Producto buscarPorNombreMarcaContenidoUnidad(String nombre, Long marcaId, BigDecimal contenido, Long unidadMedidaId)
+            throws PersistenceException {
+
+        String sql = "SELECT " + String.join(", ", COLUMNS_FOR_SELECT)
+                + " FROM productos WHERE nombre = ? AND marca_producto_id = ? AND contenido = ? AND unidad_medida_id = ?";
+
+        try (Connection conn = dbConn.getConnection();
+                PreparedStatement pstmt = conn.prepareStatement(sql)) {
+
+            pstmt.setString(1, nombre);
+            pstmt.setLong(2, marcaId);
+            pstmt.setBigDecimal(3, contenido);
+            pstmt.setLong(4, unidadMedidaId);
+
+            try (ResultSet rs = pstmt.executeQuery()) {
+                return rs.next() ? mapResultSet(rs) : null;
+            }
+        } catch (SQLException e) {
+            throw new PersistenceException("Error al buscar producto por nombre, marca, contenido y unidad", e);
+        }
+    }
 
     public List<Producto> buscarTodos() throws PersistenceException {
         String sql = "SELECT p.id, p.codigo_proveedor, p.nombre, p.descripcion, p.stock, p.umbral_stock, p.precio_actual, p.contenido, p.activo, "
@@ -258,6 +281,8 @@ public class ProductoDAO extends GenericoDAO<Producto> {
                     "Error al reponer stock del producto " + productoId, e);
         }
     }
+    
+    
     
     @Override
     protected String getTableName() {

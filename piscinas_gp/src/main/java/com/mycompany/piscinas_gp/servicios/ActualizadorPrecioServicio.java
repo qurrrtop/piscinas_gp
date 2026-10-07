@@ -51,13 +51,19 @@ public class ActualizadorPrecioServicio {
                 continue; // fila no parseable, no hay con que buscar
             }
 
-            String codigo = fila.getCodigoProveedor();
-            if (codigo == null || codigo.isBlank()) {
-                continue; // sin codigo no se puede identificar el producto existente
-            }
+                        String codigo = fila.getCodigoProveedor();
+            Producto producto;
 
             try {
-                Producto producto = productoDAO.buscarPorCodigoProveedorYMarca(codigo, marcaId);
+                if (codigo != null && !codigo.isBlank()) {
+                    producto = productoDAO.buscarPorCodigoProveedorYMarca(codigo, marcaId);
+                } else {
+                    // sin codigo de proveedor: se recurre al mismo criterio de 4 campos
+                    // que ya usa el sistema para detectar duplicados en el importador
+                    producto = productoDAO.buscarPorNombreMarcaContenidoUnidad(
+                            fila.getNombre(), marcaId, fila.getContenido(), fila.getUniMedidaId()
+                    );
+                }
 
                 if (producto == null) {
                     continue; // no existe todavia; eso lo resuelve el importador de altas, no esta pantalla
@@ -66,27 +72,26 @@ public class ActualizadorPrecioServicio {
                 BigDecimal precioNuevo = fila.getPrecio();
 
                 if (precioNuevo == null || precioNuevo.compareTo(BigDecimal.ZERO) <= 0) {
-                    continue; // el archivo no trae un precio valido para esta fila
+                    continue;
                 }
 
                 if (precioNuevo.compareTo(producto.getPrecioActual()) == 0) {
-                    continue; // mismo precio, no hay nada para actualizar
+                    continue;
                 }
 
                 resultado.add(new ActualizacionPrecioDTO(
                         producto.getId(),
-                        codigo,
-                        producto.getNombre(), // el nombre real guardado, no el reparseado del excel
+                        codigo, // puede ser null si se matcheo por los 4 campos; es normal
+                        producto.getNombre(),
                         producto.getPrecioActual(),
                         precioNuevo
                 ));
 
             } catch (PersistenceException e) {
-                logger.error("Error al buscar producto por codigo {} para comparar precio", codigo, e);
+                logger.error("Error al buscar producto en fila {} para comparar precio", fila.getFila(), e);
                 throw new ServiceException("Error al comparar precios", e);
             }
         }
-
         return resultado;
     }
 

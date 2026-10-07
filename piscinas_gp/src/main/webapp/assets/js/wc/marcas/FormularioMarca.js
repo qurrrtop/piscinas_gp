@@ -6,6 +6,7 @@ class FormularioMarca extends HTMLElement {
         this.basePath = "";
         this._modoEdicion = false;
         this._marcaId = null;
+        this._marca = null;
     }
 
     connectedCallback() {
@@ -16,28 +17,35 @@ class FormularioMarca extends HTMLElement {
     setModoEdicion(marca) {
         this._modoEdicion = true;
         this._marcaId = marca.id;
+        this._marca = marca;
         this.render();
 
         this.shadowRoot.querySelector("#nombre").value = marca.nombre;
-        this.shadowRoot.querySelector("#activo").checked = marca.activo;
     }
 
     render() {
         this.shadowRoot.innerHTML = `
             <style>
+                *,
+                *::before,
+                *::after {
+                    box-sizing: border-box;
+                }
+            
                 .form-marca {
                     display: flex;
                     flex-direction: column;
-                    gap: 1rem;
+                    gap: 1.2rem;
                     color: white;
                     font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+                    width: 100%;
                 }
 
                 label {
                     font-size: .85rem;
                     font-weight: 600;
                     display: block;
-                    margin-bottom: .3rem;
+                    margin-bottom: .6rem;
                 }
 
                 input[type="text"] {
@@ -48,6 +56,15 @@ class FormularioMarca extends HTMLElement {
                     background: rgba(255,255,255,.06);
                     color: white;
                     font-size: .92rem;
+                }
+        
+                input[type="text"]::placeholder {
+                    color: rgba(255,255,255,.5);
+                }
+        
+                input[type="text"]:focus {
+                    outline: none;
+                    border-color: rgba(70, 214, 242,.8);
                 }
 
                 .box-activo {
@@ -69,6 +86,27 @@ class FormularioMarca extends HTMLElement {
                     font-weight: 700;
                     border: 1px solid rgba(255,255,255,.25);
                 }
+        
+                .btn {
+                    border: 1px solid rgba(255,255,255,.25);
+                    border-radius: 8px;
+                    cursor: pointer;
+                    font-weight: 700;
+                    padding: .6rem 1.2rem;
+                }
+
+                .btn-estado {
+                    background: ${this._marca?.activo
+                        ? "rgba(222, 31, 31, .7)"
+                        : "rgba(45, 166, 36, .7)"};
+                    color: white;
+                }
+
+                .btn-estado:hover {
+                    background: ${this._marca?.activo
+                        ? "rgba(222, 31, 31, .6)"
+                        : "rgba(45, 166, 36, .6)"};
+                }
 
                 #btnCancelar { background: transparent; color: white; }
                 #btnCancelar:hover { background: rgba(255,255,255,.06); }
@@ -82,15 +120,15 @@ class FormularioMarca extends HTMLElement {
                     <input type="text" id="nombre" placeholder="Ej: Vulcano">
                 </div>
 
-                ${this._modoEdicion ? `
-                    <div class="box-activo">
-                        <input type="checkbox" id="activo">
-                        <label style="margin:0">Marca activa</label>
-                    </div>
-                ` : ""}
-
                 <div class="acciones">
                     <button type="button" id="btnCancelar">Cancelar</button>
+        
+                    ${this._modoEdicion ? `
+                        <button type="button" class="btn btn-estado">
+                            ${this._marca.activo ? "Dar de baja" : "Reactivar"}
+                        </button>
+                    ` : ""}
+        
                     <button type="button" id="btnGuardar">${this._modoEdicion ? "Guardar cambios" : "Crear marca"}</button>
                 </div>
             </div>
@@ -101,6 +139,47 @@ class FormularioMarca extends HTMLElement {
         });
 
         this.shadowRoot.querySelector("#btnGuardar").addEventListener("click", () => this.guardar());
+        
+        if (this._modoEdicion) { this.shadowRoot.querySelector(".btn-estado")?.addEventListener("click", () => this.cambiarEstado());}
+    }
+    
+    async cambiarEstado() {
+        try {
+            const url = this._marca.activo ? `marcas/${this._marca.id}` : `marcas/${this._marca.id}/reactivar`;
+
+            const method = this._marca.activo ? "DELETE" : "POST";
+
+            const response = await fetch(url, { method });
+
+            const data = await response.json();
+
+            if (!response.ok) {
+                throw new Error( data.error || "Error al cambiar el estado de la marca" );
+            }
+
+            document.dispatchEvent(new CustomEvent("mostrar-notificacion", {
+                detail: {
+                    mensaje: data.mensaje || "Operación exitosa",
+                    tipo: "exito"
+                }
+            }));
+
+            document.dispatchEvent( new CustomEvent("marca-guardada"));
+
+            const modal = this.closest("modal-component") || document.querySelector("modal-component");
+
+            if (modal) { modal.remove(); }
+
+        } catch (error) {
+            console.error("Error al cambiar estado de la marca:", error);
+            
+            document.dispatchEvent(new CustomEvent("mostrar-notificacion", {
+                detail: {
+                    mensaje: error.message,
+                    tipo: "error"
+                }
+            }));
+        }
     }
 
     async guardar() {
@@ -119,7 +198,6 @@ class FormularioMarca extends HTMLElement {
 
         if (this._modoEdicion) {
             body.id = this._marcaId;
-            body.activo = this.shadowRoot.querySelector("#activo").checked;
             metodo = "PUT";
         }
 

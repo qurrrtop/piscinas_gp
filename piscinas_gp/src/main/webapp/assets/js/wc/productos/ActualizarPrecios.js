@@ -430,7 +430,7 @@ class ActualizarPrecios extends HTMLElement {
                 --azul-oscuro: #1F4FBD;
                 --azul-suave: rgba(47, 111, 237, .12);
                 --verde: #2CA86A;
-                --rojo: #E0473C;
+                --rojo: #FA7C73;
                 --texto-claro: rgba(255,255,255,.92);
                 --texto-tenue: rgba(255,255,255,.6);
                 --borde-tenue: rgba(255,255,255,.18);
