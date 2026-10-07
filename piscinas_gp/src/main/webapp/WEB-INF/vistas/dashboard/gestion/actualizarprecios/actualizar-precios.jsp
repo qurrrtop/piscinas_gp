@@ -9,10 +9,12 @@
             base-path="${pageContext.request.contextPath}"
             titulo="Actualizar precios"
             icono="trending-up.svg"
-            descripcion="Subí el Excel del proveedor para comparar y actualizar precios de productos existentes"
+            descripcion="Subí el Excel del proveedor para comparar y actualizar precios de productos existentes.
+                         Se van a mostrar únicamente los
+                         productos que ya existen en el sistema y cuyo precio cambió respecto al que tenés cargado."
         ></dashboard-header>
 
-            <actualizar-precios base-path="${pageContext.request.contextPath}"></actualizar-precios>
+        <actualizar-precios base-path="${pageContext.request.contextPath}"></actualizar-precios>
         <br><br><br><br><br><br>
     </div>
 </div>

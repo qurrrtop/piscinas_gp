@@ -33,9 +33,6 @@ class ActualizarPrecios extends HTMLElement {
         this.shadowRoot.innerHTML = `
             <style>${this.estilosComunes()}${this.estilosVacio()}</style>
             <div class="layout-importar">
-                <p class="importar-info">Se van a mostrar únicamente los
-                    productos que ya existen en el sistema y cuyo precio cambió respecto al que tenés cargado.
-                </p>
 
                 <div class="zona-carga" id="zonaCarga">
                     <div class="zona-carga-vacia" id="zonaCargaVacia">
@@ -50,7 +47,7 @@ class ActualizarPrecios extends HTMLElement {
                     </div>
 
                     <div class="zona-carga-archivo" id="zonaCargaArchivo" hidden>
-                        <div class="icon-circulo archivo-ok">
+                        <div class="archivo-ok">
                             <img class="icon-importar" src="${this.basePath}/assets/img/iconos/file.svg">
                         </div>
                         <p class="archivo-nombre"></p>
@@ -376,11 +373,11 @@ class ActualizarPrecios extends HTMLElement {
         }
 
         const btnConfirmar = this.shadowRoot.querySelector("#btnConfirmar");
-        const textoOriginal = btnConfirmar.innerHTML;
         btnConfirmar.disabled = true;
-        btnConfirmar.textContent = "Actualizando...";
+        btnConfirmar.innerHTML = "Actualizando...";
 
-        const seleccionadosData = [...this.seleccionados].map(indice => this.cambios[indice]);
+        const indicesSeleccionados = [...this.seleccionados];
+        const seleccionadosData = indicesSeleccionados.map(indice => this.cambios[indice]);
 
         try {
             const res = await fetch(`${this.basePath}/productos/actualizar-precios/confirmar`, {
@@ -394,18 +391,31 @@ class ActualizarPrecios extends HTMLElement {
             if (!res.ok) {
                 this.notificar(data.error || "No se pudo completar la actualización", "error");
                 btnConfirmar.disabled = false;
-                btnConfirmar.innerHTML = textoOriginal;
+                btnConfirmar.innerHTML = `✓ Actualizar seleccionados (<span id="totalSeleccionadosBoton">${this.seleccionados.size}</span>)`;
                 return;
             }
 
             this.notificar(`Se actualizaron ${data.actualizados} productos correctamente`, "exito");
-            // no se reactiva el boton: los seleccionados ya se actualizaron, un segundo click los duplicaria/reprocesaria
+
+            // saco de la lista las filas que ya se actualizaron, no tiene sentido seguir mostrandolas como pendientes
+            const indicesActualizados = new Set(indicesSeleccionados);
+            this.cambios = this.cambios.filter((_, indice) => !indicesActualizados.has(indice));
+            this.seleccionados = new Set();
+
+            if (this.cambios.length === 0) {
+                this.renderResultados();
+                this.bindEventosResultados();
+            } else {
+                this.textoBusqueda = "";
+                this.renderResultados();
+                this.bindEventosResultados();
+            }
 
         } catch (error) {
             console.error("Error al confirmar actualización:", error);
             this.notificar("Ocurrió un error al actualizar los precios", "error");
             btnConfirmar.disabled = false;
-            btnConfirmar.innerHTML = textoOriginal;
+            btnConfirmar.innerHTML = `✓ Actualizar seleccionados (<span id="totalSeleccionadosBoton">${this.seleccionados.size}</span>)`;
         }
     }
 
@@ -414,6 +424,8 @@ class ActualizarPrecios extends HTMLElement {
     estilosComunes() {
         return `
             :host {
+                display: block;
+                margin-top: 1.2rem;
                 --azul: #2F6FED;
                 --azul-oscuro: #1F4FBD;
                 --azul-suave: rgba(47, 111, 237, .12);
@@ -482,13 +494,11 @@ class ActualizarPrecios extends HTMLElement {
                 font-size: .9rem; cursor: pointer; transition: border-color .15s ease;
             }
             select#marca:focus-visible { outline: none; border-color: var(--azul); }
-            select#marca option { color: #111; }
+            select#marca option { color: #111; background: white; }
             .box-marca .ayuda { color: var(--texto-tenue); font-size: .78rem; line-height: 1.4; margin: 0; }
 
             .zona-carga-archivo { display: flex; flex-direction: column; align-items: center; }
-            .zona-carga.con-archivo { border-style: solid; border-color: var(--verde); background: rgba(44,168,106,.08); }
-            .icon-circulo.archivo-ok { background: rgba(44,168,106,.18); }
-            .icon-circulo.archivo-ok img { filter: invert(48%) sepia(60%) saturate(500%) hue-rotate(90deg) brightness(90%); }
+            .zona-carga.con-archivo { border-style: solid; border-color: rgba(14, 195, 199,.5); background: rgba(5, 68, 141, .8); }
             .archivo-nombre { font-weight: 600; margin: 0 0 .2rem; word-break: break-all; }
             .archivo-tamano { color: var(--texto-tenue); font-size: .8rem; margin-bottom: .8rem; }
             #btnQuitarArchivo {
@@ -507,8 +517,14 @@ class ActualizarPrecios extends HTMLElement {
     estilosCargando() {
         return `
             .layout-cargando {
-                align-items: center; justify-content: center; text-align: center;
-                padding: 3.5rem 1.5rem; color: var(--texto-claro); gap: .4rem;
+                align-items: center;
+                justify-content: center;
+                text-align: center;
+                padding: 3.5rem 1.5rem;
+                color: var(--texto-claro);
+                gap: .4rem;
+                background-color: rgba(5, 68, 141, .8);
+                border: 2px solid var(--borde-tenue);
             }
             .spinner {
                 width: 46px; height: 46px; border-radius: 50%;
@@ -531,7 +547,7 @@ class ActualizarPrecios extends HTMLElement {
             .resumen-archivo {
                 display: flex; justify-content: space-between; align-items: center;
                 flex-wrap: wrap; gap: 1rem;
-                background: rgba(255,255,255,.03); border: 1px solid var(--borde-tenue);
+                background: rgba(5, 68, 141, .8); border: 1px solid var(--borde-tenue);
                 border-radius: 12px; padding: .9rem 1.1rem;
             }
             .archivo-info { display: flex; align-items: center; gap: .7rem; color: var(--texto-claro); }
@@ -541,7 +557,7 @@ class ActualizarPrecios extends HTMLElement {
             .contador { text-align: center; }
             .contador strong { display: block; font-size: 1.15rem; }
             .contador span { font-size: .72rem; color: var(--texto-tenue); }
-            .contador.ok strong { color: var(--azul); }
+            .contador.ok strong { color: rgba(15, 208, 212); }
             .contador.sel strong { color: var(--verde); }
 
             .sin-cambios {
@@ -551,26 +567,41 @@ class ActualizarPrecios extends HTMLElement {
 
             .barra-filtros { display: flex; justify-content: space-between; align-items: center; gap: 1rem; flex-wrap: wrap; }
             #buscador {
-                padding: .5rem .9rem; border-radius: 8px; border: 1px solid var(--borde-tenue);
-                background: rgba(255,255,255,.05); color: var(--texto-claro); font-size: .85rem; min-width: 220px;
+                padding: .5rem 1rem;
+                border-radius: 8px;
+                border: 1px solid var(--borde-tenue);
+                background: rgba(5, 68, 141, .8);
+                color: var(--texto-claro);
+                font-size: .85rem;
+                width: 50%;
             }
-            #buscador::placeholder { color: var(--texto-tenue); }
+            #buscador::placeholder {
+                color: var(--texto-tenue); 
+            }
+        
+            #buscador:focus {
+                outline: none;
+            }
             .acciones-seleccion { display: flex; gap: .5rem; }
             .acciones-seleccion button {
                 padding: .45rem .9rem; border-radius: 8px; border: 1px solid var(--borde-tenue);
-                background: transparent; color: var(--texto-tenue); font-size: .8rem; cursor: pointer;
+                background: rgba(5, 68, 141, .8); color: white; font-size: .8rem; cursor: pointer;
             }
-            .acciones-seleccion button:hover { background: rgba(255,255,255,.06); color: var(--texto-claro); }
+            .acciones-seleccion button:hover { background: rgba(5, 68, 141, .8); color: white; }
 
             .tabla-wrapper { max-height: 360px; overflow-y: auto; border: 1px solid var(--borde-tenue); border-radius: 12px; }
             table { width: 100%; border-collapse: collapse; font-size: .82rem; color: var(--texto-claro); }
             thead th {
-                position: sticky; top: 0; background: rgba(20,20,30,.9);
-                text-align: left; padding: .6rem .8rem; font-weight: 600; color: var(--texto-tenue);
+                position: sticky; top: 0; background: rgba(19, 11, 99);
+                text-align: left; padding: .6rem .8rem; font-weight: 600; color: white;
                 border-bottom: 1px solid var(--borde-tenue);
             }
             th.col-check, td.col-check { width: 36px; text-align: center; padding-left: 1rem; }
-            tbody td { padding: .55rem .8rem; border-bottom: 1px solid rgba(255,255,255,.06); }
+            tbody td {
+                padding: .55rem .8rem;
+                border-bottom: 1px solid rgba(255,255,255,.06); 
+                background: rgba(5, 68, 141, .8);
+            }
             tbody tr:last-child td { border-bottom: none; }
             .sin-resultados { text-align: center; color: var(--texto-tenue); padding: 1.5rem; }
 
