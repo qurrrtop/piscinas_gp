@@ -22,6 +22,7 @@ class NuevoServicio extends HTMLElement {
         this._montoAsesoramiento = 0;
         this._mostrandoFormProducto = false;
         this._archivoSeleccionado = null;
+        this._archivoAsesoramiento = null;
     }
 
     async connectedCallback() {
@@ -175,6 +176,12 @@ class NuevoServicio extends HTMLElement {
             this._archivoSeleccionado = e.target.files[0] || null;
             const nombreEl = this.shadowRoot.querySelector("#nombreArchivo");
             nombreEl.textContent = this._archivoSeleccionado ? this._archivoSeleccionado.name : "Ningún archivo seleccionado";
+        });
+        
+        this.shadowRoot.querySelector("#archivoEvidenciaAsesoramiento").addEventListener("change", (e) => {
+            this._archivoAsesoramiento = e.target.files[0] || null;
+            const nombreEl = this.shadowRoot.querySelector("#nombreArchivoAsesoramiento");
+            nombreEl.textContent = this._archivoAsesoramiento ? this._archivoAsesoramiento.name : "Ningún archivo seleccionado";
         });
 
         this.shadowRoot.querySelector("#btnAgregarProductos").addEventListener("click", () => {
@@ -584,13 +591,15 @@ class NuevoServicio extends HTMLElement {
 
         try {
             let body, url;
-            
             let nombreImagen = null;
             
-            if (this._tipo === "tecnico" && this._archivoSeleccionado) {
+            // sube la imagen del tipo elegido (si hay una) antes de crear el registro
+            const archivoElegido = this._tipo === "tecnico" ? this._archivoSeleccionado : this._archivoAsesoramiento;
+
+            if (archivoElegido) {
                 try {
                     const formData = new FormData();
-                    formData.append("archivo", this._archivoSeleccionado);
+                    formData.append("archivo", archivoElegido);
 
                     const resImagen = await fetch(`${this.basePath}/imagenes/servicios`, {
                         method: "POST",
@@ -633,7 +642,8 @@ class NuevoServicio extends HTMLElement {
                     cobrado: this._cobradoAsesoramiento,
                     monto: this._cobradoAsesoramiento ? this._montoAsesoramiento : 0,
                     problema: this.shadowRoot.querySelector("#consultaMotivo").value,
-                    diagnostico: this.shadowRoot.querySelector("#recomendacionAsesoramiento").value || null
+                    diagnostico: this.shadowRoot.querySelector("#recomendacionAsesoramiento").value || null,
+                    imagenEvidencia: nombreImagen
                 };
                 url = `${this.basePath}/servicios/asesoramientos`;
             }
@@ -1166,6 +1176,14 @@ class NuevoServicio extends HTMLElement {
                     font-weight: 700;
                     white-space: nowrap;
                 }
+        
+                #nombreArchivo,
+                #nombreArchivoAsesoramiento {
+                    display: block;
+                    margin-top: .5rem;
+                    font-size: .8rem;
+                    color: rgba(255, 255, 255, .7);
+                }
 
                 .fila-carrito-simple {
                     display: grid;
@@ -1444,6 +1462,15 @@ class NuevoServicio extends HTMLElement {
                             <div class="campo-si-cerrada">
                                 <label>RECOMENDACIÓN BRINDADA <span class="required">*</span></label>
                                 <textarea id="recomendacionAsesoramiento" rows="3" placeholder="¿Qué se le recomendó o indicó?"></textarea>
+                            </div>
+        
+                            <div class="bloque-secundario" style="margin-top:1rem">
+                                <label>EVIDENCIA (OPCIONAL)</label>
+                                <div class="archivo-box">
+                                    <label for="archivoEvidenciaAsesoramiento">📎 Elegir imagen</label>
+                                    <input type="file" id="archivoEvidenciaAsesoramiento" accept="image/*">
+                                    <span id="nombreArchivoAsesoramiento">Ningún archivo seleccionado</span>
+                                </div>
                             </div>
                         </div>
                     </div>

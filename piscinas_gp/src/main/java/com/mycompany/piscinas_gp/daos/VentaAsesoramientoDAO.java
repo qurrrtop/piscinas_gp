@@ -28,24 +28,24 @@ public class VentaAsesoramientoDAO extends GenericoDAO<VentaAsesoramiento> {
 
     private static final String[] COLUMNS_FOR_INSERT = {
         "fecha_inicio", "observacion", "fecha_cierre", "problema",
-        "diagnostico", "cobrado", "monto", "metodo_pago_id",
+        "diagnostico", "cobrado", "monto", "imagen_evidencia", "metodo_pago_id",
         "estado_venta_id", "tipo_venta_id", "cliente_id"
     };
 
     private static final String[] PLACEHOLDER_VALUES = {
-        "?", "?", "?", "?", "?", "?", "?", "?", "?",
+        "?", "?", "?", "?", "?", "?", "?", "?", "?", "?",
         "(SELECT id FROM tipo_ventas WHERE nombre = 'asesoramiento')", "?"
     };
 
     private static final String[] COLUMNS_FOR_SELECT = {
         "id", "fecha_inicio", "observacion", "fecha_cierre",
-        "problema", "diagnostico", "cobrado", "monto",
+        "problema", "diagnostico", "cobrado", "monto", "imagen_evidencia",
         "metodo_pago_id", "estado_venta_id", "cliente_id"
     };
 
     private static final String[] COLUMNS_FOR_UPDATE = {
         "fecha_inicio = ?", "observacion = ?", "fecha_cierre = ?",
-        "problema = ?", "diagnostico = ?", "cobrado = ?", "monto = ?",
+        "problema = ?", "diagnostico = ?", "cobrado = ?", "monto = ?", "imagen_evidencia = ?",
         "metodo_pago_id = ?", "estado_venta_id = ?", "cliente_id = ?"
     };
 
@@ -95,8 +95,8 @@ public class VentaAsesoramientoDAO extends GenericoDAO<VentaAsesoramiento> {
     }
 
     private String getSqlVentasConRelaciones() {
-        return "SELECT v.id AS venta_id, v.fecha_inicio, v.observacion, v.fecha_cierre, "
-                + "v.problema, v.diagnostico, v.cobrado, v.monto, "
+            return "SELECT v.id AS venta_id, v.fecha_inicio, v.observacion, v.fecha_cierre, "
+                + "v.problema, v.diagnostico, v.cobrado, v.monto, v.imagen_evidencia, "
                 + "ev.id AS estado_id, ev.nombre AS estado_nombre, "
                 + "mp.id AS metodo_pago_id, mp.nombre AS metodo_pago_nombre, "
                 + "c.id AS cliente_id, c.email, c.telefono, c.calle_numero, c.observaciones, "
@@ -141,7 +141,6 @@ public class VentaAsesoramientoDAO extends GenericoDAO<VentaAsesoramiento> {
             EstadoVenta estadoVenta = new EstadoVenta(
                     rs.getLong("estado_id"), rs.getString("estado_nombre"));
 
-            // metodo_pago_id puede ser NULL cuando el asesoramiento no se cobra
             MetodoPago metodoPago = rs.getObject("metodo_pago_id") == null ? null : new MetodoPago(
                     rs.getLong("metodo_pago_id"), rs.getString("metodo_pago_nombre"));
 
@@ -149,11 +148,12 @@ public class VentaAsesoramientoDAO extends GenericoDAO<VentaAsesoramiento> {
             Date fechaCierreSql = rs.getDate("fecha_cierre");
             LocalDate fechaCierre = fechaCierreSql == null ? null : fechaCierreSql.toLocalDate();
 
-            boolean cobrado = rs.getBoolean("cobrado"); // false si la columna es NULL
+            boolean cobrado = rs.getBoolean("cobrado");
+            String imagenEvidencia = rs.getString("imagen_evidencia");
 
             return new VentaAsesoramiento(
                     rs.getString("problema"), rs.getString("diagnostico"),
-                    cobrado, rs.getBigDecimal("monto"),
+                    cobrado, rs.getBigDecimal("monto"), imagenEvidencia,
                     rs.getLong("venta_id"), cliente, estadoVenta, fechaInicio,
                     metodoPago, rs.getString("observacion"), null,
                     fechaInicio, fechaCierre);
@@ -163,6 +163,33 @@ public class VentaAsesoramientoDAO extends GenericoDAO<VentaAsesoramiento> {
         }
     }
 
+    @Override
+    protected VentaAsesoramiento mapResultSet(ResultSet rs) throws PersistenceException {
+        try {
+            Cliente cliente = new ClienteParticular(
+                    rs.getLong("cliente_id"), null, null, null,
+                    null, null, null, null, null, true);
+            EstadoVenta estadoVenta = new EstadoVenta(
+                    rs.getLong("estado_venta_id"), "sin especificar");
+            MetodoPago metodoPago = new MetodoPago(
+                    rs.getLong("metodo_pago_id"), "sin especificar");
+
+            LocalDateTime fechaInicio = rs.getTimestamp("fecha_inicio").toLocalDateTime();
+            Date fechaCierreSql = rs.getDate("fecha_cierre");
+            LocalDate fechaCierre = fechaCierreSql == null ? null : fechaCierreSql.toLocalDate();
+
+            return new VentaAsesoramiento(
+                    rs.getString("problema"), rs.getString("diagnostico"),
+                    rs.getBoolean("cobrado"), rs.getBigDecimal("monto"), rs.getString("imagen_evidencia"),
+                    rs.getLong("id"), cliente, estadoVenta, fechaInicio,
+                    metodoPago, rs.getString("observacion"), null,
+                    fechaInicio, fechaCierre);
+
+        } catch (SQLException e) {
+            throw new PersistenceException("Error al mapear el asesoramiento desde la base de datos", e);
+        }
+    }
+    
     @Override
     protected String getTableName() {
         return TABLE_NAME;
@@ -203,13 +230,16 @@ public class VentaAsesoramientoDAO extends GenericoDAO<VentaAsesoramiento> {
             setStringOpcional(pstmt, 5, venta.getDiagnostico());
             pstmt.setBoolean(6, venta.isCobrado());
             setMontoOpcional(pstmt, 7, venta.getMonto());
+            setStringOpcional(pstmt, 8, venta.getImagenEvidencia());
+
             if (venta.getMetodoPago() != null) {
-                pstmt.setLong(8, venta.getMetodoPago().getId());
+                pstmt.setLong(9, venta.getMetodoPago().getId());
             } else {
-                pstmt.setNull(8, java.sql.Types.BIGINT);
+                pstmt.setNull(9, java.sql.Types.BIGINT);
             }
-            pstmt.setLong(9, venta.getEstadoVenta().getId());
-            pstmt.setLong(10, venta.getCliente().getId());
+
+            pstmt.setLong(10, venta.getEstadoVenta().getId());
+            pstmt.setLong(11, venta.getCliente().getId());
         } catch (SQLException e) {
             throw new PersistenceException("Error al asignar los parametros del asesoramiento", e);
         }
@@ -241,33 +271,6 @@ public class VentaAsesoramientoDAO extends GenericoDAO<VentaAsesoramiento> {
             pstmt.setNull(index, java.sql.Types.DECIMAL);
         } else {
             pstmt.setBigDecimal(index, valor);
-        }
-    }
-
-    @Override
-    protected VentaAsesoramiento mapResultSet(ResultSet rs) throws PersistenceException {
-        try {
-            Cliente cliente = new ClienteParticular(
-                    rs.getLong("cliente_id"), null, null, null,
-                    null, null, null, null, null, true);
-            EstadoVenta estadoVenta = new EstadoVenta(
-                    rs.getLong("estado_venta_id"), "sin especificar");
-            MetodoPago metodoPago = new MetodoPago(
-                    rs.getLong("metodo_pago_id"), "sin especificar");
-
-            LocalDateTime fechaInicio = rs.getTimestamp("fecha_inicio").toLocalDateTime();
-            Date fechaCierreSql = rs.getDate("fecha_cierre");
-            LocalDate fechaCierre = fechaCierreSql == null ? null : fechaCierreSql.toLocalDate();
-
-            return new VentaAsesoramiento(
-                    rs.getString("problema"), rs.getString("diagnostico"),
-                    rs.getBoolean("cobrado"), rs.getBigDecimal("monto"),
-                    rs.getLong("id"), cliente, estadoVenta, fechaInicio,
-                    metodoPago, rs.getString("observacion"), null,
-                    fechaInicio, fechaCierre);
-
-        } catch (SQLException e) {
-            throw new PersistenceException("Error al mapear el asesoramiento desde la base de datos", e);
         }
     }
 }

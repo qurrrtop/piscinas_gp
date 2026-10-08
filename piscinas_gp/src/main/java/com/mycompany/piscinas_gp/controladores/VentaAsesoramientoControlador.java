@@ -211,6 +211,7 @@ public class VentaAsesoramientoControlador extends HttpServlet {
         asesoramiento.setDiagnostico(dto.getDiagnostico());
         asesoramiento.setCobrado(dto.isCobrado());
         asesoramiento.setMonto(dto.getMonto());
+        asesoramiento.setImagenEvidencia(dto.getImagenEvidencia());
 
         return asesoramiento;
     }
