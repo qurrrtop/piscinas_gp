@@ -139,7 +139,6 @@ CREATE TABLE ventas (
 
     problema TEXT NULL,
     diagnostico TEXT NULL,
-    imagen_evidencia VARCHAR(255) NULL,
 
     mano_obra DECIMAL(12, 2) NULL,
     cobrado BOOLEAN NULL,
@@ -196,4 +195,16 @@ CREATE TABLE detalle_ventas (
         REFERENCES productos(id)
         ON UPDATE CASCADE
         ON DELETE RESTRICT
+);
+
+CREATE TABLE imagen_ventas (
+    id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    archivo VARCHAR(255) NOT NULL UNIQUE,
+    venta_id INT UNSIGNED NOT NULL,
+
+    CONSTRAINT fk_imagen_ventas_venta
+        FOREIGN KEY (venta_id)
+        REFERENCES ventas(id)
+        ON UPDATE CASCADE
+        ON DELETE CASCADE
 );
