@@ -27,6 +27,13 @@ class ListadoServicios extends HTMLElement {
         });
     }
 
+    // El historial solo muestra servicios completados y cancelados;
+    // los pendientes se ven en el módulo de pendientes.
+    esHistorial(venta) {
+        const estado = (venta.estadoVenta?.nombre || "").toLowerCase();
+        return estado === "cerrada" || estado === "cancelada";
+    }
+
     async cargarDatos() {
         try {
             const [tecnicos, asesoramientos, subrubros] = await Promise.all([
@@ -34,8 +41,8 @@ class ListadoServicios extends HTMLElement {
                 fetch("servicios/asesoramientos").then(r => r.json()),
                 fetch("subrubros-servicio-tecnico").then(r => r.json())
             ]);
-            this._tecnicos = tecnicos;
-            this._asesoramientos = asesoramientos;
+            this._tecnicos = tecnicos.filter(v => this.esHistorial(v));
+            this._asesoramientos = asesoramientos.filter(v => this.esHistorial(v));
             this._subrubros = subrubros;
             this.cargarOpcionesSubrubro();
         } catch (error) {
@@ -62,16 +69,25 @@ class ListadoServicios extends HTMLElement {
         return "Pendiente";
     }
 
+    // Tonos más oscuros que los del modal, para que se lean sobre el fondo claro de la tabla
     colorEstado(nombre) {
         const e = (nombre || "").toLowerCase();
-        if (e === "cerrada") return "#4ADE80";
-        if (e === "cancelada") return "#F87171";
-        return "#FBBF24";
+        if (e === "cerrada") return "#15803D";
+        if (e === "cancelada") return "#B91C1C";
+        return "#B45309";
     }
 
     colorSubrubro(nombre) {
-        const colores = { "Bomba": "#37A4FF", "Piscina": "#FBBF24", "Reparación": "#FB923C" };
-        return colores[nombre] || "#888888";
+        const colores = { "Bomba": "#0369A1", "Piscina": "#B45309", "Reparación": "#C2410C" };
+        return colores[nombre] || "#475569";
+    }
+
+    // Píldora con fondo suave, borde y texto del mismo color.
+    // Va con estilos en línea porque la tabla la dibuja dentro de su propio shadow DOM.
+    pildora(texto, color) {
+        return `<span style="display:inline-block;padding:.15rem .75rem;border-radius:20px;`
+             + `border:1px solid ${color};background:${color}26;color:${color};`
+             + `font-weight:700;font-size:.8rem;white-space:nowrap">${texto}</span>`;
     }
 
     formatearFecha(fecha) {
@@ -92,6 +108,7 @@ class ListadoServicios extends HTMLElement {
     // combina ambas listas en filas planas con un campo "tipo" discriminador
     obtenerFilasCombinadas() {
         const filasTecnicas = this._tecnicos.map(v => ({
+            id: v.id,
             tipo: "tecnico",
             codigo: `T-${String(v.id).padStart(3, "0")}`,
             cliente: this.obtenerNombreCliente(v.cliente),
@@ -106,6 +123,7 @@ class ListadoServicios extends HTMLElement {
         }));
 
         const filasAsesoramiento = this._asesoramientos.map(v => ({
+            id: v.id,
             tipo: "asesoramiento",
             codigo: `A-${String(v.id).padStart(3, "0")}`,
             cliente: this.obtenerNombreCliente(v.cliente),
@@ -116,7 +134,7 @@ class ListadoServicios extends HTMLElement {
             inicio: v.fechaInicio,
             cierre: v.fechaCierre,
             descripcion: v.problema || "",
-            total: v.cobrado ? v.total : null
+            total: v.cobrado ? v.monto : null
         }));
 
         return [...filasTecnicas, ...filasAsesoramiento];
@@ -151,8 +169,6 @@ class ListadoServicios extends HTMLElement {
         const tarjetas = this.shadowRoot.querySelector("tarjetas-resumen");
         const todas = this.obtenerFilasCombinadas();
 
-        // const tecnicosCompletados = todas.filter(f => f.tipo === "tecnico" && f.estadoNombre.toLowerCase() === "cerrada").length;
-        // const tecnicosCancelados = todas.filter(f => f.tipo === "tecnico" && f.estadoNombre.toLowerCase() === "cancelada").length;
         const totalTecnicos = this._tecnicos.length;
         const totalAsesoramientos = this._asesoramientos.length;
 
@@ -175,21 +191,23 @@ class ListadoServicios extends HTMLElement {
                 ancho: "14%",
                 formato: (valor) => {
                     if (valor.tipo === "tecnico") {
-                        const color = this.colorSubrubro(valor.subrubro);
-                        return `<div><span style="color:#37A4FF;font-weight:600">Serv. Téc.</span><br>
-                                <span style="color:${color};font-size:.85em">${valor.subrubro}</span></div>`;
+                        const subrubro = valor.subrubro
+                            ? this.pildora(valor.subrubro, this.colorSubrubro(valor.subrubro))
+                            : "";
+
+                        return `<div style="display:flex;flex-direction:column;align-items:flex-start;gap:.3rem">
+                                    ${this.pildora("Serv. Téc.", "#1D4ED8")}
+                                    ${subrubro}
+                                </div>`;
                     }
-                    return `<span style="color:#E85FC9;font-weight:600">Asesoram.</span>`;
+                    return this.pildora("Asesoram.", "#A21CAF");
                 }
             },
             {
                 clave: "estadoNombre",
                 titulo: "Estado",
                 ancho: "11%",
-                formato: (valor) => {
-                    const color = this.colorEstado(valor);
-                    return `<span style="color:${color};font-weight:700">${this.etiquetaEstado(valor)}</span>`;
-                }
+                formato: (valor) => this.pildora(this.etiquetaEstado(valor), this.colorEstado(valor))
             },
             {
                 clave: "inicio",
@@ -251,8 +269,18 @@ class ListadoServicios extends HTMLElement {
         });
 
         this.shadowRoot.querySelector("tabla-generica").addEventListener("fila-clickeada", (evento) => {
-            console.log("Fila clickeada:", evento.detail);
-            // TODO: abrir detalle de servicio tecnico o asesoramiento segun evento.detail.tipo
+            const { tipo, id, codigo } = evento.detail;
+
+            const modal = document.createElement("modal-component");
+            modal.setAttribute("subTitulo", tipo === "tecnico" ? "SERVICIO TÉCNICO" : "ASESORAMIENTO");
+            modal.setAttribute("titulo", codigo);
+
+            const detalle = document.createElement("detalle-servicio");
+            detalle.setAttribute("tipo", tipo);
+            detalle.setAttribute("servicio-id", id);
+
+            modal.appendChild(detalle);
+            document.body.appendChild(modal);
         });
     }
 
@@ -361,7 +389,6 @@ class ListadoServicios extends HTMLElement {
                         <label>Estado</label>
                         <select id="filtroEstado">
                             <option value="">Todos</option>
-                            <option value="pendiente">Pendiente</option>
                             <option value="cerrada">Completado</option>
                             <option value="cancelada">Cancelado</option>
                         </select>

@@ -146,6 +146,10 @@ public class VentaServTecnicoServicio {
 
         try {
             VentaServTecnico servicioExistente = buscarServicioPorId(servicio.getId());
+            
+            if (estaCancelada(servicioExistente)) {
+                throw new BusinessException("No se puede editar un servicio cancelado");
+            }
 
             prepararServicio(
                     servicio, clienteId, estadoVentaId, metodoPagoId, subrubroServicioId, false,
@@ -318,8 +322,8 @@ public class VentaServTecnicoServicio {
     // A diferencia de venta de producto, los repuestos son opcionales: un
     // servicio puede consistir solo en mano de obra, sin usar ningun producto.
     private void validarYPrepararDetalles(
-            List<DetalleVenta> detalles,
-            List<DetalleVenta> detallesStockAReponer
+        List<DetalleVenta> detalles,
+        List<DetalleVenta> detallesStockAReponer
     ) throws PersistenceException, BusinessException {
 
         if (detalles == null || detalles.isEmpty()) {
@@ -330,6 +334,17 @@ public class VentaServTecnicoServicio {
         Map<Long, Integer> cantidadesAReponer = agruparCantidades(detallesStockAReponer);
         Map<Long, Producto> productosReales = new HashMap<>();
 
+        // Los repuestos que ya estaban en el servicio conservan el precio al que se cargaron;
+        // solo los repuestos nuevos toman el precio actual del producto.
+        Map<Long, BigDecimal> preciosOriginales = new HashMap<>();
+        if (detallesStockAReponer != null) {
+            for (DetalleVenta anterior : detallesStockAReponer) {
+                if (anterior.getId() != null) {
+                    preciosOriginales.put(anterior.getId(), anterior.getPrecioUnitario());
+                }
+            }
+        }
+
         for (Map.Entry<Long, Integer> entrada : cantidadesPorProducto.entrySet()) {
             Long productoId = entrada.getKey();
             int cantidadSolicitada = entrada.getValue();
@@ -339,7 +354,11 @@ public class VentaServTecnicoServicio {
             if (producto == null) {
                 throw new BusinessException("No existe el producto con id " + productoId);
             }
-            if (!producto.isActivo()) {
+
+            // Un producto inactivo no se puede agregar ni sumar de nuevo a un servicio,
+            // pero si ya estaba, se puede dejar igual o reducir.
+            if (!producto.isActivo()
+                    && cantidadSolicitada > cantidadesAReponer.getOrDefault(productoId, 0)) {
                 throw new BusinessException("El producto " + producto.getNombre() + " se encuentra inactivo");
             }
 
@@ -357,10 +376,15 @@ public class VentaServTecnicoServicio {
         for (DetalleVenta detalle : detalles) {
             Producto productoReal = productosReales.get(detalle.getProducto().getId());
             detalle.setProducto(productoReal);
-            detalle.setPrecioUnitario(productoReal.getPrecioActual());
+
+            BigDecimal precioOriginal = detalle.getId() != null
+                    ? preciosOriginales.get(detalle.getId())
+                    : null;
+
+            detalle.setPrecioUnitario(precioOriginal != null ? precioOriginal : productoReal.getPrecioActual());
         }
     }
-
+    
     private Map<Long, Integer> agruparCantidades(List<DetalleVenta> detalles) throws BusinessException {
         Map<Long, Integer> cantidades = new HashMap<>();
 

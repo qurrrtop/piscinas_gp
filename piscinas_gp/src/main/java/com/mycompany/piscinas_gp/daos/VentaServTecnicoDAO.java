@@ -48,9 +48,11 @@ public class VentaServTecnicoDAO extends GenericoDAO<VentaServTecnico> {
         "descuento_global", "imagen_evidencia", "monto", "metodo_pago_id", "estado_venta_id", "cliente_id"
     };
 
+    // El orden de esta lista tiene que coincidir con el orden de los parametros en setUpdateParams
     private static final String[] COLUMNS_FOR_UPDATE = {
         "fecha_inicio = ?", "observacion = ?", "fecha_cierre = ?",
         "problema = ?", "diagnostico = ?", "mano_obra = ?", "monto = ?",
+        "descuento_global = ?",
         "fecha_entrega = ?", "imagen_evidencia = ?", "subrubro_servicio_id = ?",
         "metodo_pago_id = ?", "estado_venta_id = ?", "cliente_id = ?"
     };
@@ -146,7 +148,7 @@ public class VentaServTecnicoDAO extends GenericoDAO<VentaServTecnico> {
         }
     }
 
-        private String getSqlVentasConRelaciones() {
+    private String getSqlVentasConRelaciones() {
         return "SELECT v.id AS venta_id, v.fecha_inicio, v.observacion, v.fecha_cierre, "
                 + "v.problema, v.diagnostico, v.mano_obra, v.fecha_entrega, v.descuento_global, v.imagen_evidencia, "
                 + "v.monto, "
@@ -292,18 +294,19 @@ public class VentaServTecnicoDAO extends GenericoDAO<VentaServTecnico> {
             pstmt.setString(5, venta.getDiagnostico());
             pstmt.setBigDecimal(6, venta.getManoObra());
             pstmt.setBigDecimal(7, venta.getTotal());
-            setFechaOpcional(pstmt, 8, venta.getFechaEntrega());
+            pstmt.setInt(8, venta.getDescuentoGlobal());
+            setFechaOpcional(pstmt, 9, venta.getFechaEntrega());
 
             if (venta.getImagenEvidencia() != null) {
-                pstmt.setString(9, venta.getImagenEvidencia());
+                pstmt.setString(10, venta.getImagenEvidencia());
             } else {
-                pstmt.setNull(9, java.sql.Types.VARCHAR);
+                pstmt.setNull(10, java.sql.Types.VARCHAR);
             }
 
-            pstmt.setLong(10, venta.getSubrubroServicio().getId());
-            pstmt.setLong(11, venta.getMetodoPago().getId());
-            pstmt.setLong(12, venta.getEstadoVenta().getId());
-            pstmt.setLong(13, venta.getCliente().getId());
+            pstmt.setLong(11, venta.getSubrubroServicio().getId());
+            pstmt.setLong(12, venta.getMetodoPago().getId());
+            pstmt.setLong(13, venta.getEstadoVenta().getId());
+            pstmt.setLong(14, venta.getCliente().getId());
         } catch (SQLException e) {
             throw new PersistenceException("Error al asignar los parametros para actualizar el servicio tecnico", e);
         }
