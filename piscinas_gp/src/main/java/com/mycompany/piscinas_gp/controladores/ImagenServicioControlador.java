@@ -7,6 +7,7 @@ import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import com.mycompany.piscinas_gp.utils.AlmacenImagenes;
 import jakarta.servlet.http.Part;
 import java.io.File;
 import java.io.IOException;
@@ -20,9 +21,8 @@ import java.util.UUID;
 @MultipartConfig(maxFileSize = 10 * 1024 * 1024) // 10MB
 public class ImagenServicioControlador extends HttpServlet {
 
-    private static final String DIRECTORIO_IMAGENES = System.getProperty("user.home")
-            + File.separator + "piscinas_gp_data" + File.separator + "imagenes_servicios";
-
+    private static final String DIRECTORIO_IMAGENES = AlmacenImagenes.DIRECTORIO.toString();
+    
     @Override
     public void init() throws ServletException {
         File directorio = new File(DIRECTORIO_IMAGENES);

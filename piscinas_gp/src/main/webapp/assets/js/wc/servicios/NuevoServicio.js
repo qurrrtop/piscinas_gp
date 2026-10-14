@@ -21,8 +21,8 @@ class NuevoServicio extends HTMLElement {
         this._cobradoAsesoramiento = false;
         this._montoAsesoramiento = 0;
         this._mostrandoFormProducto = false;
-        this._archivoSeleccionado = null;
-        this._archivoAsesoramiento = null;
+        this._imagenes = { tecnico: [], asesoramiento: [] };
+        this._maxImagenes = 5;
     }
 
     async connectedCallback() {
@@ -173,15 +173,13 @@ class NuevoServicio extends HTMLElement {
         });
 
         this.shadowRoot.querySelector("#archivoEvidencia").addEventListener("change", (e) => {
-            this._archivoSeleccionado = e.target.files[0] || null;
-            const nombreEl = this.shadowRoot.querySelector("#nombreArchivo");
-            nombreEl.textContent = this._archivoSeleccionado ? this._archivoSeleccionado.name : "Ningún archivo seleccionado";
+            this.agregarImagenes("tecnico", Array.from(e.target.files));
+            e.target.value = "";
         });
-        
+
         this.shadowRoot.querySelector("#archivoEvidenciaAsesoramiento").addEventListener("change", (e) => {
-            this._archivoAsesoramiento = e.target.files[0] || null;
-            const nombreEl = this.shadowRoot.querySelector("#nombreArchivoAsesoramiento");
-            nombreEl.textContent = this._archivoAsesoramiento ? this._archivoAsesoramiento.name : "Ningún archivo seleccionado";
+            this.agregarImagenes("asesoramiento", Array.from(e.target.files));
+            e.target.value = "";
         });
 
         this.shadowRoot.querySelector("#btnAgregarProductos").addEventListener("click", () => {
@@ -569,6 +567,55 @@ class NuevoServicio extends HTMLElement {
             this.renderAreaProductos();
         });
     }
+    
+    notificar(mensaje, tipo) {
+        document.dispatchEvent(new CustomEvent("mostrar-notificacion", { detail: { mensaje, tipo } }));
+    }
+
+    agregarImagenes(tipo, archivos) {
+        const lista = this._imagenes[tipo];
+
+        for (const archivo of archivos) {
+            if (!archivo.type.startsWith("image/")) {
+                this.notificar(`"${archivo.name}" no es una imagen`, "error");
+                continue;
+            }
+            if (archivo.size > 10 * 1024 * 1024) {
+                this.notificar(`"${archivo.name}" pesa más de 10 MB`, "error");
+                continue;
+            }
+            if (lista.length >= this._maxImagenes) {
+                this.notificar(`Se pueden adjuntar hasta ${this._maxImagenes} imágenes`, "advertencia");
+                break;
+            }
+
+            lista.push({ file: archivo, preview: URL.createObjectURL(archivo) });
+        }
+
+        this.renderGaleria(tipo);
+    }
+
+    renderGaleria(tipo) {
+        const sufijo = tipo === "tecnico" ? "Tecnico" : "Asesoramiento";
+        const lista = this._imagenes[tipo];
+
+        this.shadowRoot.querySelector(`#galeria${sufijo}`).innerHTML = lista.map((imagen, i) => `
+            <div class="galeria-item">
+                <img src="${imagen.preview}" alt="Evidencia ${i + 1}">
+                <button type="button" class="btn-x" data-index="${i}" aria-label="Quitar imagen" title="Quitar imagen">&times;</button>
+            </div>
+        `).join("");
+
+        this.shadowRoot.querySelector(`#contador${sufijo}`).textContent = `${lista.length} de ${this._maxImagenes}`;
+
+        this.shadowRoot.querySelectorAll(`#galeria${sufijo} .btn-x`).forEach(btn => {
+            btn.addEventListener("click", () => {
+                const [quitada] = lista.splice(Number(btn.dataset.index), 1);
+                URL.revokeObjectURL(quitada.preview);
+                this.renderGaleria(tipo);
+            });
+        });
+    }
 
     // ---------- envío ----------
 
@@ -591,15 +638,15 @@ class NuevoServicio extends HTMLElement {
 
         try {
             let body, url;
-            let nombreImagen = null;
-            
-            // sube la imagen del tipo elegido (si hay una) antes de crear el registro
-            const archivoElegido = this._tipo === "tecnico" ? this._archivoSeleccionado : this._archivoAsesoramiento;
 
-            if (archivoElegido) {
-                try {
+            // sube las imagenes del tipo elegido (si hay) antes de crear el registro
+            const imagenesElegidas = this._imagenes[this._tipo === "tecnico" ? "tecnico" : "asesoramiento"];
+            const nombresImagenes = [];
+
+            try {
+                for (const imagen of imagenesElegidas) {
                     const formData = new FormData();
-                    formData.append("archivo", archivoElegido);
+                    formData.append("archivo", imagen.file);
 
                     const resImagen = await fetch(`${this.basePath}/imagenes/servicios`, {
                         method: "POST",
@@ -609,12 +656,11 @@ class NuevoServicio extends HTMLElement {
                     const dataImagen = await resImagen.json();
                     if (!resImagen.ok) throw new Error(dataImagen.error || "No se pudo subir la imagen");
 
-                    nombreImagen = dataImagen.archivo;
-
-                } catch (error) {
-                    document.dispatchEvent(new CustomEvent("mostrar-notificacion", { detail: { mensaje: error.message, tipo: "error" } }));
-                    return;
+                    nombresImagenes.push(dataImagen.archivo);
                 }
+            } catch (error) {
+                document.dispatchEvent(new CustomEvent("mostrar-notificacion", { detail: { mensaje: error.message, tipo: "error" } }));
+                return;
             }
 
             if (this._tipo === "tecnico") {
@@ -629,7 +675,7 @@ class NuevoServicio extends HTMLElement {
                     fechaEntrega: this.shadowRoot.querySelector("#fechaEntrega").value || null,
                     problema: this.shadowRoot.querySelector("#descripcionProblema").value,
                     diagnostico: this.shadowRoot.querySelector("#recomendacion").value || null,
-                    imagenEvidencia: nombreImagen,
+                    imagenesEvidencia: nombresImagenes,
                     detallesVenta: this._carrito.map(i => ({ productoId: i.productoId, cantidad: i.cantidad }))
                 };
                 url = `${this.basePath}/servicios/tecnicos`;
@@ -643,7 +689,7 @@ class NuevoServicio extends HTMLElement {
                     monto: this._cobradoAsesoramiento ? this._montoAsesoramiento : 0,
                     problema: this.shadowRoot.querySelector("#consultaMotivo").value,
                     diagnostico: this.shadowRoot.querySelector("#recomendacionAsesoramiento").value || null,
-                    imagenEvidencia: nombreImagen
+                    imagenesEvidencia: nombresImagenes
                 };
                 url = `${this.basePath}/servicios/asesoramientos`;
             }
@@ -976,13 +1022,6 @@ class NuevoServicio extends HTMLElement {
                     font-weight: 600;
                 }
 
-                #nombreArchivo {
-                    display: block;
-                    margin-top: .5rem;
-                    font-size: .8rem;
-                    color: rgba(255, 255, 255, .7);
-                }
-
                 .tabs-categoria-mini {
                     display: flex;
                     gap: .5rem;
@@ -1176,14 +1215,6 @@ class NuevoServicio extends HTMLElement {
                     font-weight: 700;
                     white-space: nowrap;
                 }
-        
-                #nombreArchivo,
-                #nombreArchivoAsesoramiento {
-                    display: block;
-                    margin-top: .5rem;
-                    font-size: .8rem;
-                    color: rgba(255, 255, 255, .7);
-                }
 
                 .fila-carrito-simple {
                     display: grid;
@@ -1320,6 +1351,56 @@ class NuevoServicio extends HTMLElement {
                     cursor: pointer;
                     margin-top: .1rem;
                 }
+        
+                .contador-imagenes {
+                    display: block;
+                    margin-top: .5rem;
+                    font-size: .8rem;
+                    color: rgba(255, 255, 255, .7);
+                }
+
+                .galeria {
+                    display: grid;
+                    grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+                    gap: .9rem;
+                    margin-top: .9rem;
+                }
+
+                .galeria:empty {
+                    display: none;
+                }
+
+                .galeria-item {
+                    position: relative;
+                }
+
+                .galeria-item img {
+                    display: block;
+                    width: 100%;
+                    aspect-ratio: 1 / 1;
+                    object-fit: cover;
+                    border-radius: 8px;
+                    border: 1px solid rgba(255, 255, 255, .25);
+                }
+
+                .btn-x {
+                    position: absolute;
+                    top: -.5rem;
+                    right: -.5rem;
+                    width: 1.7rem;
+                    height: 1.7rem;
+                    border-radius: 50%;
+                    border: 2px solid rgba(11, 62, 121, 1);
+                    background: #DC2626;
+                    color: white;
+                    font-size: 1rem;
+                    line-height: 1;
+                    cursor: pointer;
+                }
+
+                .btn-x:hover {
+                    background: #B91C1C;
+                }
             </style>
 
             <div class="card">
@@ -1403,12 +1484,13 @@ class NuevoServicio extends HTMLElement {
                             </div>
 
                             <div class="bloque-evidencia">
-                                <label>EVIDENCIA (OPCIONAL)</label>
+                                <label>EVIDENCIA (OPCIONAL, HASTA 5 IMÁGENES)</label>
                                 <div class="archivo-box">
-                                    <label for="archivoEvidencia">📎 Elegir imagen</label>
-                                    <input type="file" id="archivoEvidencia" accept="image/*">
-                                    <span id="nombreArchivo">Ningún archivo seleccionado</span>
+                                    <label for="archivoEvidencia">📎 Elegir imágenes</label>
+                                    <input type="file" id="archivoEvidencia" accept="image/*" multiple>
+                                    <span class="contador-imagenes" id="contadorTecnico">0 de 5</span>
                                 </div>
+                                <div class="galeria" id="galeriaTecnico"></div>
                             </div>
                         </div>
                     </div>
@@ -1465,12 +1547,13 @@ class NuevoServicio extends HTMLElement {
                             </div>
         
                             <div class="bloque-secundario" style="margin-top:1rem">
-                                <label>EVIDENCIA (OPCIONAL)</label>
+                                <label>EVIDENCIA (OPCIONAL, HASTA 5 IMÁGENES)</label>
                                 <div class="archivo-box">
-                                    <label for="archivoEvidenciaAsesoramiento">📎 Elegir imagen</label>
-                                    <input type="file" id="archivoEvidenciaAsesoramiento" accept="image/*">
-                                    <span id="nombreArchivoAsesoramiento">Ningún archivo seleccionado</span>
+                                    <label for="archivoEvidenciaAsesoramiento">📎 Elegir imágenes</label>
+                                    <input type="file" id="archivoEvidenciaAsesoramiento" accept="image/*" multiple>
+                                    <span class="contador-imagenes" id="contadorAsesoramiento">0 de 5</span>
                                 </div>
+                                <div class="galeria" id="galeriaAsesoramiento"></div>
                             </div>
                         </div>
                     </div>

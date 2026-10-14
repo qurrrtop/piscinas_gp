@@ -1,5 +1,5 @@
-
 package com.mycompany.piscinas_gp.dtos;
+
 import java.time.LocalDate;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -9,8 +9,8 @@ public class VentaDTO {
     //atributos de venta
     private Long id;
     private String tipo;
-    
-    private Long clienteId ;
+
+    private Long clienteId;
     private Long estadoVentaId;
     private LocalDateTime fecha;
     private Long metodoPagoId;
@@ -26,8 +26,10 @@ public class VentaDTO {
     //atributos de ventaasesoramento
     private String problema;
     private String diagnostico;
-    private String imagenEvidencia;
-    
+
+    // nombres de los archivos de evidencia (maximo 5, se controla en el servicio)
+    private List<String> imagenesEvidencia;
+
     private boolean cobrado;
     private BigDecimal monto;
 
@@ -38,7 +40,7 @@ public class VentaDTO {
 
     public VentaDTO() {
     }
-    
+
     public Long getId() {
         return id;
     }
@@ -81,8 +83,8 @@ public class VentaDTO {
     public String getDiagnostico() {
         return diagnostico;
     }
-    public String getImagenEvidencia() {
-        return imagenEvidencia;
+    public List<String> getImagenesEvidencia() {
+        return imagenesEvidencia;
     }
     public boolean isCobrado() {
         return cobrado;
@@ -96,7 +98,7 @@ public class VentaDTO {
     public LocalDate getFechaEntrega() {
         return fechaEntrega;
     }
-    
+
     public Long getSubrubroServicioId() {
         return subrubroServicioId;
     }
@@ -143,8 +145,8 @@ public class VentaDTO {
     public void setDiagnostico(String diagnostico) {
         this.diagnostico = diagnostico;
     }
-    public void setImagenEvidencia(String imagenEvidencia) {
-        this.imagenEvidencia = imagenEvidencia;
+    public void setImagenesEvidencia(List<String> imagenesEvidencia) {
+        this.imagenesEvidencia = imagenesEvidencia;
     }
     public void setCobrado(boolean cobrado) {
         this.cobrado = cobrado;
@@ -158,7 +160,7 @@ public class VentaDTO {
     public void setFechaEntrega(LocalDate fechaEntrega) {
         this.fechaEntrega = fechaEntrega;
     }
-    
+
     public void setSubrubroServicioId(Long subrubroServicioId) {
         this.subrubroServicioId = subrubroServicioId;
     }

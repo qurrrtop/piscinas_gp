@@ -6,6 +6,7 @@ class DetalleServicio extends HTMLElement {
         this.basePath = "";
         this.tipo = "";
         this.servicioId = "";
+        this.maxImagenes = 5;
         this._servicio = null;
         this._edicion = null;
         this._clientes = [];
@@ -179,12 +180,17 @@ class DetalleServicio extends HTMLElement {
             ? `<p class="texto">${this.esc(s.diagnostico)}</p>`
             : `<p class="texto vacio">Todavía no se cargó una recomendación.</p>`;
 
-        const evidencia = s.imagenEvidencia
-            ? `<section class="seccion-evidencia">
+        const imagenes = s.imagenesEvidencia || [];
+        const evidencia = imagenes.length > 0
+            ? `<section>
                     <h3>Evidencia</h3>
-                    <a class="evidencia" href="${this.esc(this.urlImagen(s.imagenEvidencia))}" target="_blank" rel="noopener">
-                        <img src="${this.esc(this.urlImagen(s.imagenEvidencia))}" alt="Evidencia del servicio">
-                    </a>
+                    <div class="galeria">
+                        ${imagenes.map(archivo => `
+                            <a class="galeria-item" href="${this.esc(this.urlImagen(archivo))}" target="_blank" rel="noopener">
+                                <img src="${this.esc(this.urlImagen(archivo))}" alt="Evidencia del servicio">
+                            </a>
+                        `).join("")}
+                    </div>
                </section>`
             : "";
 
@@ -217,15 +223,21 @@ class DetalleServicio extends HTMLElement {
             ${esTecnico && !cancelado ? this.htmlAcciones() : ""}
         `;
 
-        this.shadowRoot.querySelectorAll(".evidencia img").forEach(img => {
-            img.addEventListener("error", () => {
-                img.closest(".seccion-evidencia").innerHTML =
-                    `<h3>Evidencia</h3><p class="texto vacio">No se pudo cargar la imagen.</p>`;
-            });
-        });
+        this.reemplazarImagenesRotas();
 
         this.shadowRoot.querySelector("#btnEditar")?.addEventListener("click", () => this.iniciarEdicion());
         this.shadowRoot.querySelector("#btnCancelarServicio")?.addEventListener("click", (e) => this.cancelarServicio(e.currentTarget));
+    }
+
+    reemplazarImagenesRotas() {
+        this.shadowRoot.querySelectorAll(".galeria-item img").forEach(img => {
+            img.addEventListener("error", () => {
+                img.replaceWith(Object.assign(document.createElement("span"), {
+                    className: "imagen-rota",
+                    textContent: "No disponible"
+                }));
+            });
+        });
     }
 
     datoPago(esTecnico, s) {
@@ -352,12 +364,13 @@ class DetalleServicio extends HTMLElement {
         `;
     }
 
+    // los mensajes de error y de aviso salen en el toast global
     mostrarErrorAcciones(mensaje) {
         this.notificar(mensaje, "error");
     }
 
     // ---------- cancelar servicio ----------
-    
+
     async cancelarServicio(boton) {
         boton.disabled = true;
         boton.textContent = "Cancelando…";
@@ -434,8 +447,10 @@ class DetalleServicio extends HTMLElement {
             cambiandoCliente: false,
             problema: s.problema || "",
             diagnostico: s.diagnostico || "",
-            imagen: s.imagenEvidencia || null,
-            archivoNuevo: null,
+            // archivo: nombre guardado en el servidor; file/preview: imagen nueva que todavia no se subio
+            imagenes: (s.imagenesEvidencia || []).map(archivo => ({
+                archivo, file: null, preview: null, archivoSubido: null
+            })),
             agregandoProducto: false,
             carrito: (s.detallesVenta || []).map(d => ({
                 detalleId: d.id,
@@ -500,6 +515,7 @@ class DetalleServicio extends HTMLElement {
         this.renderResumenEdicion();
 
         this.shadowRoot.querySelector("#btnDescartar").addEventListener("click", () => {
+            this.liberarPreviews();
             this._edicion = null;
             this.renderDetalle(this._servicio);
         });
@@ -507,13 +523,9 @@ class DetalleServicio extends HTMLElement {
         this.shadowRoot.querySelector("#btnGuardar").addEventListener("click", () => this.guardarEdicion());
     }
 
+    // los mensajes de error y de aviso salen en el toast global
     mostrarErrorEdicion(mensaje) {
         this.notificar(mensaje, "error");
-    }
-
-    ocultarErrorEdicion() {
-        const el = this.shadowRoot.querySelector("#errorEdicion");
-        if (el) el.hidden = true;
     }
 
     // ----- cliente -----
@@ -590,64 +602,84 @@ class DetalleServicio extends HTMLElement {
         });
     }
 
-    // ----- evidencia -----
+    // ----- evidencia (hasta 5 imágenes) -----
 
     renderAreaEvidencia() {
         const area = this.shadowRoot.querySelector("#areaEvidencia");
         const ed = this._edicion;
-        const hayImagen = !!ed.archivoNuevo || !!ed.imagen;
-        const src = ed.archivoNuevo ? ed.previewNuevo : (ed.imagen ? this.urlImagen(ed.imagen) : "");
+        const cantidad = ed.imagenes.length;
+        const puedeAgregar = cantidad < this.maxImagenes;
 
         area.innerHTML = `
-            ${hayImagen ? `
-                <div class="miniatura-contenedor">
-                    <img class="miniatura" src="${this.esc(src)}" alt="Evidencia">
-                    <button type="button" class="btn-x" id="btnQuitarImagen" aria-label="Quitar imagen" title="Quitar imagen">&times;</button>
+            ${cantidad > 0 ? `
+                <div class="galeria">
+                    ${ed.imagenes.map((imagen, i) => `
+                        <div class="galeria-item">
+                            <img src="${this.esc(imagen.file ? imagen.preview : this.urlImagen(imagen.archivo))}" alt="Evidencia ${i + 1}">
+                            <button type="button" class="btn-x" data-index="${i}" aria-label="Quitar imagen" title="Quitar imagen">&times;</button>
+                        </div>
+                    `).join("")}
                 </div>
-            ` : `<p class="texto vacio">Sin imagen.</p>`}
+            ` : `<p class="texto vacio">Sin imágenes.</p>`}
 
             <div class="acciones-botones izquierda">
-                <label class="btn btn-secundario" for="archivoEdicion">${hayImagen ? "Cambiar imagen" : "Agregar imagen"}</label>
-                <input type="file" id="archivoEdicion" accept="image/*" hidden>
+                ${puedeAgregar ? `
+                    <label class="btn btn-secundario" for="archivoEdicion">Agregar imágenes</label>
+                    <input type="file" id="archivoEdicion" accept="image/*" multiple hidden>
+                ` : ""}
+                <span class="contador-imagenes">${cantidad} de ${this.maxImagenes}</span>
             </div>
         `;
 
-        area.querySelector(".miniatura")?.addEventListener("error", (e) => {
-            e.target.replaceWith(Object.assign(document.createElement("span"), {
-                className: "texto vacio",
-                textContent: "No se pudo cargar la imagen."
-            }));
+        this.reemplazarImagenesRotas();
+
+        area.querySelector("#archivoEdicion")?.addEventListener("change", (e) => {
+            this.agregarArchivos(Array.from(e.target.files));
         });
 
-        area.querySelector("#archivoEdicion").addEventListener("change", (e) => {
-            const archivo = e.target.files[0];
-            if (!archivo) return;
-
-            if (!archivo.type.startsWith("image/")) {
-                this.mostrarErrorEdicion("El archivo tiene que ser una imagen");
-                return;
-            }
-            if (archivo.size > 10 * 1024 * 1024) {
-                this.mostrarErrorEdicion("La imagen no puede pesar más de 10 MB");
-                return;
-            }
-
-            this.ocultarErrorEdicion();
-            if (ed.previewNuevo) URL.revokeObjectURL(ed.previewNuevo);
-            ed.archivoNuevo = archivo;
-            ed.previewNuevo = URL.createObjectURL(archivo);
-            this.renderAreaEvidencia();
-        });
-
-        area.querySelector("#btnQuitarImagen")?.addEventListener("click", () => {
-            if (ed.previewNuevo) URL.revokeObjectURL(ed.previewNuevo);
-            ed.archivoNuevo = null;
-            ed.previewNuevo = null;
-            ed.imagen = null;
-            this.renderAreaEvidencia();
+        area.querySelectorAll(".btn-x").forEach(btn => {
+            btn.addEventListener("click", () => {
+                const [quitada] = ed.imagenes.splice(Number(btn.dataset.index), 1);
+                if (quitada.preview) URL.revokeObjectURL(quitada.preview);
+                this.renderAreaEvidencia();
+            });
         });
     }
-    
+
+    agregarArchivos(archivos) {
+        const ed = this._edicion;
+
+        for (const archivo of archivos) {
+            if (!archivo.type.startsWith("image/")) {
+                this.notificar(`"${archivo.name}" no es una imagen`, "error");
+                continue;
+            }
+            if (archivo.size > 10 * 1024 * 1024) {
+                this.notificar(`"${archivo.name}" pesa más de 10 MB`, "error");
+                continue;
+            }
+            if (ed.imagenes.length >= this.maxImagenes) {
+                this.notificar(`Se pueden adjuntar hasta ${this.maxImagenes} imágenes por servicio`, "advertencia");
+                break;
+            }
+
+            ed.imagenes.push({
+                archivo: null,
+                file: archivo,
+                preview: URL.createObjectURL(archivo),
+                archivoSubido: null
+            });
+        }
+
+        this.renderAreaEvidencia();
+    }
+
+    liberarPreviews() {
+        (this._edicion?.imagenes || []).forEach(imagen => {
+            if (imagen.preview) URL.revokeObjectURL(imagen.preview);
+        });
+    }
+
     // ----- repuestos -----
 
     actualizarRepuestos() {
@@ -717,7 +749,6 @@ class DetalleServicio extends HTMLElement {
         area.querySelectorAll(".btn-quitar").forEach(btn => {
             btn.addEventListener("click", () => {
                 ed.carrito.splice(Number(btn.dataset.index), 1);
-                this.ocultarErrorEdicion();
                 this.actualizarRepuestos();
             });
         });
@@ -817,7 +848,7 @@ class DetalleServicio extends HTMLElement {
         ed.agregandoProducto = false;
         this.actualizarRepuestos();
     }
-    
+
     cambiarCantidad(indice, delta) {
         const item = this._edicion.carrito[indice];
         const nueva = item.cantidad + delta;
@@ -882,15 +913,18 @@ class DetalleServicio extends HTMLElement {
         }
 
         this._guardando = true;
-        this.ocultarErrorEdicion();
         boton.disabled = true;
         boton.textContent = "Guardando…";
 
         try {
-            let imagenEvidencia = ed.imagen;
-
-            if (ed.archivoNuevo) {
-                imagenEvidencia = await this.subirImagen(ed.archivoNuevo);
+            // sube las imagenes nuevas en orden; las que ya estaban conservan su nombre.
+            // Si el guardado falla y se reintenta, no se vuelve a subir lo que ya se subio.
+            const imagenesEvidencia = [];
+            for (const imagen of ed.imagenes) {
+                if (imagen.file && !imagen.archivoSubido) {
+                    imagen.archivoSubido = await this.subirImagen(imagen.file);
+                }
+                imagenesEvidencia.push(imagen.archivoSubido || imagen.archivo);
             }
 
             // El PUT reemplaza el servicio completo, por eso se reenvían tal cual
@@ -909,7 +943,7 @@ class DetalleServicio extends HTMLElement {
                 descuentoGlobal: s.descuentoGlobal,
                 problema,
                 diagnostico: diagnostico || null,
-                imagenEvidencia,
+                imagenesEvidencia,
                 detallesVenta: ed.carrito.map(i => ({
                     id: i.detalleId,
                     productoId: i.productoId,
@@ -928,6 +962,7 @@ class DetalleServicio extends HTMLElement {
                 throw new Error(data.error || "No se pudieron guardar los cambios");
             }
 
+            this.liberarPreviews();
             this.notificar("Servicio actualizado correctamente", "exito");
             document.dispatchEvent(new CustomEvent("servicio-guardado", { bubbles: true, composed: true }));
             await this.cargar();
@@ -1060,17 +1095,66 @@ class DetalleServicio extends HTMLElement {
                 .avatar-particular { background: linear-gradient(160deg, #5FD9E8, #0B5C7A); }
                 .avatar-empresa { background: linear-gradient(160deg, #E85FC9, #6A1B6E); }
 
-                .evidencia {
-                    display: inline-block;
+                /* ---------- galería de evidencia ---------- */
+
+                .galeria {
+                    display: grid;
+                    grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
+                    gap: .9rem;
+                    margin-bottom: .2rem;
                 }
 
-                .evidencia img,
-                .miniatura {
+                .galeria-item {
+                    position: relative;
                     display: block;
-                    max-width: 100%;
-                    max-height: 240px;
+                }
+
+                .galeria-item img {
+                    display: block;
+                    width: 100%;
+                    aspect-ratio: 1 / 1;
+                    object-fit: cover;
                     border-radius: 8px;
                     border: 1px solid rgba(255, 255, 255, .25);
+                }
+
+                .imagen-rota {
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    box-sizing: border-box;
+                    width: 100%;
+                    aspect-ratio: 1 / 1;
+                    border-radius: 8px;
+                    border: 1px dashed rgba(255, 255, 255, .3);
+                    color: rgba(255, 255, 255, .55);
+                    font-size: .8rem;
+                    font-style: italic;
+                    text-align: center;
+                }
+
+                .btn-x {
+                    position: absolute;
+                    top: -.5rem;
+                    right: -.5rem;
+                    width: 1.7rem;
+                    height: 1.7rem;
+                    border-radius: 50%;
+                    border: 2px solid rgba(5, 68, 141, 1);
+                    background: #DC2626;
+                    color: white;
+                    font-size: 1rem;
+                    line-height: 1;
+                    cursor: pointer;
+                }
+
+                .btn-x:hover {
+                    background: #B91C1C;
+                }
+
+                .contador-imagenes {
+                    font-size: .85rem;
+                    color: rgba(255, 255, 255, .7);
                 }
 
                 .tabla-repuestos {
@@ -1131,6 +1215,7 @@ class DetalleServicio extends HTMLElement {
 
                 .acciones-botones {
                     display: flex;
+                    align-items: center;
                     justify-content: flex-end;
                     gap: .6rem;
                     margin-top: .6rem;
@@ -1184,13 +1269,6 @@ class DetalleServicio extends HTMLElement {
                 .btn-bloque {
                     width: 100%;
                     margin-top: .8rem;
-                }
-
-                .error-form {
-                    margin: .8rem 0 0;
-                    color: #F87171;
-                    font-size: .9rem;
-                    font-weight: 600;
                 }
 
                 /* ---------- formulario de edición ---------- */

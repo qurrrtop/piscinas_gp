@@ -5,6 +5,7 @@ import com.mycompany.piscinas_gp.daos.ClienteEmpresaDAO;
 import com.mycompany.piscinas_gp.daos.ClienteParticularDAO;
 import com.mycompany.piscinas_gp.daos.DetalleVentaDAO;
 import com.mycompany.piscinas_gp.daos.EstadoVentaDAO;
+import com.mycompany.piscinas_gp.daos.ImagenVentaDAO;
 import com.mycompany.piscinas_gp.daos.MetodoPagoDAO;
 import com.mycompany.piscinas_gp.daos.ProductoDAO;
 import com.mycompany.piscinas_gp.daos.SubrubroServicioTecnicoDAO;
@@ -21,6 +22,7 @@ import com.mycompany.piscinas_gp.modelos.MetodoPago;
 import com.mycompany.piscinas_gp.modelos.Producto;
 import com.mycompany.piscinas_gp.modelos.SubrubroServicioTecnico;
 import com.mycompany.piscinas_gp.modelos.VentaServTecnico;
+import com.mycompany.piscinas_gp.utils.AlmacenImagenes;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.sql.Connection;
@@ -39,6 +41,12 @@ public class VentaServTecnicoServicio {
 
     private static final Logger logger = LoggerFactory.getLogger(VentaServTecnicoServicio.class);
 
+    // Regla de negocio: el modulo de servicios solo muestra los servicios ya resueltos
+    // (completados y cancelados). Los pendientes se ven en el modulo de pendientes.
+    private static final List<String> ESTADOS_HISTORIAL = List.of("cerrada", "cancelada");
+
+    private static final int MAX_IMAGENES_EVIDENCIA = 5;
+
     private final VentaServTecnicoDAO ventaServTecnicoDAO;
     private final DetalleVentaDAO detalleVentaDAO;
     private final ProductoDAO productoDAO;
@@ -47,6 +55,7 @@ public class VentaServTecnicoServicio {
     private final ClienteEmpresaDAO clienteEmpresaDAO;
     private final EstadoVentaDAO estadoVentaDAO;
     private final MetodoPagoDAO metodoPagoDAO;
+    private final ImagenVentaDAO imagenVentaDAO;
     private final DbConnection dbConn;
 
     public VentaServTecnicoServicio(
@@ -57,7 +66,8 @@ public class VentaServTecnicoServicio {
             ClienteParticularDAO clienteParticularDAO,
             ClienteEmpresaDAO clienteEmpresaDAO,
             EstadoVentaDAO estadoVentaDAO,
-            MetodoPagoDAO metodoPagoDAO
+            MetodoPagoDAO metodoPagoDAO,
+            ImagenVentaDAO imagenVentaDAO
     ) {
         this.ventaServTecnicoDAO = ventaServTecnicoDAO;
         this.detalleVentaDAO = detalleVentaDAO;
@@ -67,6 +77,7 @@ public class VentaServTecnicoServicio {
         this.clienteEmpresaDAO = clienteEmpresaDAO;
         this.estadoVentaDAO = estadoVentaDAO;
         this.metodoPagoDAO = metodoPagoDAO;
+        this.imagenVentaDAO = imagenVentaDAO;
         this.dbConn = DbConnection.getInstance();
     }
 
@@ -75,6 +86,16 @@ public class VentaServTecnicoServicio {
             return ventaServTecnicoDAO.buscarTodos();
         } catch (PersistenceException e) {
             logger.error("Error al listar servicios tecnicos", e);
+            throw new ServiceException("Error al recuperar el historial de servicios tecnicos", e);
+        }
+    }
+
+    // El listado no carga repuestos ni imagenes; eso se ve en el detalle (buscarServicioPorId)
+    public List<VentaServTecnico> listarHistorial() throws ServiceException {
+        try {
+            return ventaServTecnicoDAO.buscarPorEstados(ESTADOS_HISTORIAL);
+        } catch (PersistenceException e) {
+            logger.error("Error al listar el historial de servicios tecnicos", e);
             throw new ServiceException("Error al recuperar el historial de servicios tecnicos", e);
         }
     }
@@ -93,6 +114,7 @@ public class VentaServTecnicoServicio {
 
             List<DetalleVenta> detalles = detalleVentaDAO.buscarPorVentaId(id);
             servicio.setDetallesVenta(detalles);
+            servicio.setImagenesEvidencia(imagenVentaDAO.buscarPorVentaId(id));
 
             return servicio;
 
@@ -146,7 +168,7 @@ public class VentaServTecnicoServicio {
 
         try {
             VentaServTecnico servicioExistente = buscarServicioPorId(servicio.getId());
-            
+
             if (estaCancelada(servicioExistente)) {
                 throw new BusinessException("No se puede editar un servicio cancelado");
             }
@@ -159,6 +181,9 @@ public class VentaServTecnicoServicio {
             );
 
             VentaServTecnico servicioActualizado = actualizarEnTransaccion(servicio, servicioExistente);
+
+            // recien con el guardado confirmado se borran del disco las imagenes que se quitaron
+            borrarImagenesQuitadas(servicioExistente.getImagenesEvidencia(), servicio.getImagenesEvidencia());
 
             logger.info("Servicio tecnico actualizado correctamente con id {}", servicioActualizado.getId());
 
@@ -239,6 +264,8 @@ public class VentaServTecnicoServicio {
             List<DetalleVenta> detallesStockAReponer
     ) throws PersistenceException, BusinessException {
 
+        validarImagenes(servicio.getImagenesEvidencia());
+
         Cliente cliente = buscarClienteReal(clienteId);
         EstadoVenta estadoVenta = resolverEstadoVenta(estadoVentaId);
         MetodoPago metodoPago = resolverMetodoPago(metodoPagoId);
@@ -260,6 +287,33 @@ public class VentaServTecnicoServicio {
         );
 
         servicio.setTotal(total);
+    }
+
+    private void validarImagenes(List<String> archivos) throws BusinessException {
+        if (archivos == null || archivos.isEmpty()) {
+            return;
+        }
+
+        if (archivos.size() > MAX_IMAGENES_EVIDENCIA) {
+            throw new BusinessException("Se pueden adjuntar hasta " + MAX_IMAGENES_EVIDENCIA + " imagenes de evidencia");
+        }
+
+        if (new HashSet<>(archivos).size() != archivos.size()) {
+            throw new BusinessException("No se puede adjuntar la misma imagen mas de una vez");
+        }
+    }
+
+    // recien con el guardado confirmado se borran del disco las imagenes que se quitaron
+    private void borrarImagenesQuitadas(List<String> anteriores, List<String> nuevas) {
+        if (anteriores == null) {
+            return;
+        }
+
+        for (String archivo : anteriores) {
+            if (nuevas == null || !nuevas.contains(archivo)) {
+                AlmacenImagenes.borrar(archivo);
+            }
+        }
     }
 
     private Cliente buscarClienteReal(Long clienteId) throws PersistenceException, BusinessException {
@@ -322,8 +376,8 @@ public class VentaServTecnicoServicio {
     // A diferencia de venta de producto, los repuestos son opcionales: un
     // servicio puede consistir solo en mano de obra, sin usar ningun producto.
     private void validarYPrepararDetalles(
-        List<DetalleVenta> detalles,
-        List<DetalleVenta> detallesStockAReponer
+            List<DetalleVenta> detalles,
+            List<DetalleVenta> detallesStockAReponer
     ) throws PersistenceException, BusinessException {
 
         if (detalles == null || detalles.isEmpty()) {
@@ -384,7 +438,7 @@ public class VentaServTecnicoServicio {
             detalle.setPrecioUnitario(precioOriginal != null ? precioOriginal : productoReal.getPrecioActual());
         }
     }
-    
+
     private Map<Long, Integer> agruparCantidades(List<DetalleVenta> detalles) throws BusinessException {
         Map<Long, Integer> cantidades = new HashMap<>();
 
@@ -432,6 +486,10 @@ public class VentaServTecnicoServicio {
                     detalleVentaDAO.crear(detalle, servicioCreado.getId(), conn);
                 }
 
+                imagenVentaDAO.sincronizar(
+                        servicioCreado.getId(), Collections.emptyList(), servicio.getImagenesEvidencia(), conn
+                );
+
                 descontarStockDeDetalles(servicio.getDetallesVenta(), conn);
 
                 servicioCreado.setDetallesVenta(servicio.getDetallesVenta());
@@ -466,6 +524,13 @@ public class VentaServTecnicoServicio {
                         servicioExistente.getDetallesVenta(),
                         servicio.getDetallesVenta(),
                         servicio.getId(),
+                        conn
+                );
+
+                imagenVentaDAO.sincronizar(
+                        servicio.getId(),
+                        servicioExistente.getImagenesEvidencia(),
+                        servicio.getImagenesEvidencia(),
                         conn
                 );
 

@@ -26,8 +26,8 @@ public enum StringFieldType implements FieldType< String > {
     CUIT("cuit", 11, 11, "^[0-9]+$"),
 
     //venta
-    PROBLEMA("problema", 3, 250, "^[a-zA-ZÀ-ÿ0-9\\s:º°',.-]+$"),
-    DIAGNOSTICO("diagnostico", 3, 250, "^[a-zA-ZÀ-ÿ0-9\\s:º°',.-]+$"),
+    PROBLEMA("problema", 3, 1000, "^[a-zA-ZÀ-ÿ0-9\\s:º°',.-]+$"),
+    DIAGNOSTICO("diagnostico", 3, 1000, "^[a-zA-ZÀ-ÿ0-9\\s:º°',.-]+$"),
     
     //producto
     CODIGO_PROVEEDOR("codigo de proveedor", 1, 30, "^[A-Za-z0-9+./-]+$"),

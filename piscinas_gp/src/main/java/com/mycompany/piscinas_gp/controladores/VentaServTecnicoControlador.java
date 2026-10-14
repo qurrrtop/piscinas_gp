@@ -33,6 +33,7 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import com.mycompany.piscinas_gp.daos.ImagenVentaDAO;
 
 @WebServlet(
         name = "VentaServTecnicoControlador",
@@ -54,7 +55,8 @@ public class VentaServTecnicoControlador extends HttpServlet {
                 new ClienteParticularDAO(db),
                 new ClienteEmpresaDAO(db),
                 new EstadoVentaDAO(db),
-                new MetodoPagoDAO(db)
+                new MetodoPagoDAO(db),
+                new ImagenVentaDAO(db)
         );
     }
 
@@ -226,7 +228,7 @@ public class VentaServTecnicoControlador extends HttpServlet {
 
         servicio.setProblema(dto.getProblema());
         servicio.setDiagnostico(dto.getDiagnostico());
-        servicio.setImagenEvidencia(dto.getImagenEvidencia());
+        servicio.setImagenesEvidencia(dto.getImagenesEvidencia());
         servicio.setManoObra(dto.getManoObra() != null ? dto.getManoObra() : java.math.BigDecimal.ZERO);
         servicio.setDescuentoGlobal(dto.getDescuentoGlobal());
 

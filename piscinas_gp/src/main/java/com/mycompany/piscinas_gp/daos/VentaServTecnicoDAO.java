@@ -32,12 +32,12 @@ public class VentaServTecnicoDAO extends GenericoDAO<VentaServTecnico> {
     private static final String[] COLUMNS_FOR_INSERT = {
         "fecha_inicio", "observacion", "fecha_cierre", "problema",
         "diagnostico", "mano_obra", "monto", "descuento_global",
-        "fecha_entrega", "imagen_evidencia", "subrubro_servicio_id", "metodo_pago_id",
+        "fecha_entrega", "subrubro_servicio_id", "metodo_pago_id",
         "estado_venta_id", "tipo_venta_id", "cliente_id"
     };
 
     private static final String[] PLACEHOLDER_VALUES = {
-        "?", "?", "?", "?", "?", "?", "?", "?", "?", "?", "?", "?", "?",
+        "?", "?", "?", "?", "?", "?", "?", "?", "?", "?", "?", "?",
         "(SELECT id FROM tipo_ventas WHERE nombre = 'servicio_tecnico')",
         "?"
     };
@@ -45,7 +45,7 @@ public class VentaServTecnicoDAO extends GenericoDAO<VentaServTecnico> {
     private static final String[] COLUMNS_FOR_SELECT = {
         "id", "fecha_inicio", "observacion", "fecha_cierre", "problema",
         "diagnostico", "mano_obra", "fecha_entrega", "subrubro_servicio_id",
-        "descuento_global", "imagen_evidencia", "monto", "metodo_pago_id", "estado_venta_id", "cliente_id"
+        "descuento_global", "monto", "metodo_pago_id", "estado_venta_id", "cliente_id"
     };
 
     // El orden de esta lista tiene que coincidir con el orden de los parametros en setUpdateParams
@@ -53,7 +53,7 @@ public class VentaServTecnicoDAO extends GenericoDAO<VentaServTecnico> {
         "fecha_inicio = ?", "observacion = ?", "fecha_cierre = ?",
         "problema = ?", "diagnostico = ?", "mano_obra = ?", "monto = ?",
         "descuento_global = ?",
-        "fecha_entrega = ?", "imagen_evidencia = ?", "subrubro_servicio_id = ?",
+        "fecha_entrega = ?", "subrubro_servicio_id = ?",
         "metodo_pago_id = ?", "estado_venta_id = ?", "cliente_id = ?"
     };
 
@@ -148,9 +148,40 @@ public class VentaServTecnicoDAO extends GenericoDAO<VentaServTecnico> {
         }
     }
 
+    public List<VentaServTecnico> buscarPorEstados(List<String> estados) throws PersistenceException {
+        if (estados == null || estados.isEmpty()) {
+            return new ArrayList<>();
+        }
+
+        String placeholders = String.join(", ", Collections.nCopies(estados.size(), "?"));
+        String sql = getSqlVentasConRelaciones()
+                + " AND LOWER(ev.nombre) IN (" + placeholders + ")"
+                + " ORDER BY v.fecha_inicio DESC, v.id DESC";
+
+        List<VentaServTecnico> ventas = new ArrayList<>();
+
+        try (Connection conn = dbConn.getConnection();
+                PreparedStatement pstmt = conn.prepareStatement(sql)) {
+
+            for (int i = 0; i < estados.size(); i++) {
+                pstmt.setString(i + 1, estados.get(i).toLowerCase());
+            }
+
+            try (ResultSet rs = pstmt.executeQuery()) {
+                while (rs.next()) {
+                    ventas.add(mapResultSetConRelaciones(rs));
+                }
+            }
+            return ventas;
+
+        } catch (SQLException e) {
+            throw new PersistenceException("Error al recuperar los servicios tecnicos por estado", e);
+        }
+    }
+
     private String getSqlVentasConRelaciones() {
         return "SELECT v.id AS venta_id, v.fecha_inicio, v.observacion, v.fecha_cierre, "
-                + "v.problema, v.diagnostico, v.mano_obra, v.fecha_entrega, v.descuento_global, v.imagen_evidencia, "
+                + "v.problema, v.diagnostico, v.mano_obra, v.fecha_entrega, v.descuento_global, "
                 + "v.monto, "
                 + "st.id AS subrubro_id, st.nombre AS subrubro_nombre, "
                 + "ev.id AS estado_id, ev.nombre AS estado_nombre, "
@@ -209,13 +240,13 @@ public class VentaServTecnicoDAO extends GenericoDAO<VentaServTecnico> {
 
             Date fechaEntregaSql = rs.getDate("fecha_entrega");
             LocalDate fechaEntrega = fechaEntregaSql == null ? null : fechaEntregaSql.toLocalDate();
-            String imagenEvidencia = rs.getString("imagen_evidencia");
 
+            // las imagenes se cargan aparte, desde imagen_ventas (ver ImagenVentaDAO)
             return new VentaServTecnico(
                     rs.getString("problema"), rs.getString("diagnostico"),
                     rs.getBigDecimal("mano_obra"), fechaEntrega, subrubro,
                     rs.getInt("descuento_global"),
-                    imagenEvidencia,
+                    new ArrayList<>(),
                     Collections.emptyList(),
                     rs.getLong("venta_id"), cliente, estadoVenta, fechaInicio,
                     metodoPago, rs.getString("observacion"), rs.getBigDecimal("monto"),
@@ -268,17 +299,10 @@ public class VentaServTecnicoDAO extends GenericoDAO<VentaServTecnico> {
             pstmt.setBigDecimal(7, venta.getTotal());
             pstmt.setInt(8, venta.getDescuentoGlobal());
             setFechaOpcional(pstmt, 9, venta.getFechaEntrega());
-
-            if (venta.getImagenEvidencia() != null) {
-                pstmt.setString(10, venta.getImagenEvidencia());
-            } else {
-                pstmt.setNull(10, java.sql.Types.VARCHAR);
-            }
-
-            pstmt.setLong(11, venta.getSubrubroServicio().getId());
-            pstmt.setLong(12, venta.getMetodoPago().getId());
-            pstmt.setLong(13, venta.getEstadoVenta().getId());
-            pstmt.setLong(14, venta.getCliente().getId());
+            pstmt.setLong(10, venta.getSubrubroServicio().getId());
+            pstmt.setLong(11, venta.getMetodoPago().getId());
+            pstmt.setLong(12, venta.getEstadoVenta().getId());
+            pstmt.setLong(13, venta.getCliente().getId());
         } catch (SQLException e) {
             throw new PersistenceException("Error al asignar los parametros de la venta de servicio tecnico", e);
         }
@@ -296,17 +320,10 @@ public class VentaServTecnicoDAO extends GenericoDAO<VentaServTecnico> {
             pstmt.setBigDecimal(7, venta.getTotal());
             pstmt.setInt(8, venta.getDescuentoGlobal());
             setFechaOpcional(pstmt, 9, venta.getFechaEntrega());
-
-            if (venta.getImagenEvidencia() != null) {
-                pstmt.setString(10, venta.getImagenEvidencia());
-            } else {
-                pstmt.setNull(10, java.sql.Types.VARCHAR);
-            }
-
-            pstmt.setLong(11, venta.getSubrubroServicio().getId());
-            pstmt.setLong(12, venta.getMetodoPago().getId());
-            pstmt.setLong(13, venta.getEstadoVenta().getId());
-            pstmt.setLong(14, venta.getCliente().getId());
+            pstmt.setLong(10, venta.getSubrubroServicio().getId());
+            pstmt.setLong(11, venta.getMetodoPago().getId());
+            pstmt.setLong(12, venta.getEstadoVenta().getId());
+            pstmt.setLong(13, venta.getCliente().getId());
         } catch (SQLException e) {
             throw new PersistenceException("Error al asignar los parametros para actualizar el servicio tecnico", e);
         }
@@ -338,13 +355,12 @@ public class VentaServTecnicoDAO extends GenericoDAO<VentaServTecnico> {
             LocalDate fechaCierre = fechaCierreSql == null ? null : fechaCierreSql.toLocalDate();
             Date fechaEntregaSql = rs.getDate("fecha_entrega");
             LocalDate fechaEntrega = fechaEntregaSql == null ? null : fechaEntregaSql.toLocalDate();
-            String imagenEvidencia = rs.getString("imagen_evidencia");
 
             return new VentaServTecnico(
                     rs.getString("problema"), rs.getString("diagnostico"),
                     rs.getBigDecimal("mano_obra"), fechaEntrega, subrubro,
                     rs.getInt("descuento_global"),
-                    imagenEvidencia,
+                    new ArrayList<>(),
                     Collections.emptyList(),
                     rs.getLong("venta_id"), cliente, estadoVenta, fechaInicio,
                     metodoPago, rs.getString("observacion"), rs.getBigDecimal("monto"),

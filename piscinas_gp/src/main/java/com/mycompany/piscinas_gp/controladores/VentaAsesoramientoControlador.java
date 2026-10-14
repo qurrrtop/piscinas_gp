@@ -22,6 +22,7 @@ import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.time.LocalDateTime;
 import java.util.List;
+import com.mycompany.piscinas_gp.daos.ImagenVentaDAO;
 
 @WebServlet(
         name = "VentaAsesoramientoControlador",
@@ -40,7 +41,8 @@ public class VentaAsesoramientoControlador extends HttpServlet {
                 new ClienteParticularDAO(db),
                 new ClienteEmpresaDAO(db),
                 new EstadoVentaDAO(db),
-                new MetodoPagoDAO(db)
+                new MetodoPagoDAO(db),
+                new ImagenVentaDAO(db)
         );
     }
 
@@ -211,7 +213,7 @@ public class VentaAsesoramientoControlador extends HttpServlet {
         asesoramiento.setDiagnostico(dto.getDiagnostico());
         asesoramiento.setCobrado(dto.isCobrado());
         asesoramiento.setMonto(dto.getMonto());
-        asesoramiento.setImagenEvidencia(dto.getImagenEvidencia());
+        asesoramiento.setImagenesEvidencia(dto.getImagenesEvidencia());
 
         return asesoramiento;
     }
