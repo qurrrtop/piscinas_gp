@@ -307,15 +307,15 @@ class DetalleVenta extends HTMLElement {
                 }
 
                 #btnCancelarVenta { background: rgba(222, 31, 31, .7); color: white; }
-                #btnVerFactura { background: transparent; color: white; border: 1px solid rgba(255,255,255,.3); }
+                #btnVerComprobante { background: rgba(7, 69, 140); color: white; border: 1px solid rgba(255,255,255,.3); }
                 #btnEditarVenta { background: #37E0E0; color: #05448D; }
         
                 #btnCancelarVenta:hover {
                     background: rgba(222, 31, 31, .6);
                 }
         
-                #btnVerFactura:hover {
-                    background: rgba(255,255,255,.04);
+                #btnVerComprobante:hover {
+                    background: rgba(33, 79, 133, .5);
                 }
         
                 #btnEditarVenta:hover {

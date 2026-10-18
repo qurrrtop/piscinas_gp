@@ -20,6 +20,29 @@ class ComprobanteVenta extends HTMLElement {
     close() {
         this.remove();
     }
+    
+    generarOlas() {
+        const olaClara = "M0 0 H300 C275 22 240 44 190 50 C140 56 95 46 55 64 C30 75 12 92 0 110 Z";
+        const olaOscura = "M0 0 H205 C185 16 160 32 125 36 C90 40 55 34 28 50 C14 58 5 70 0 82 Z";
+
+        return `
+            <div class="olas" aria-hidden="true">
+
+                <svg class="ola ola-superior" viewBox="0 0 300 110" xmlns="http://www.w3.org/2000/svg">
+                    <path d="${olaClara}" fill="#D6ECFA" fill-opacity="0.9"/>
+                    <path d="${olaOscura}" fill="#B5DCF4" fill-opacity="0.85"/>
+                </svg>
+
+                <svg class="ola ola-inferior" viewBox="0 0 300 110" xmlns="http://www.w3.org/2000/svg">
+                    <g transform="rotate(180 150 55)">
+                        <path d="${olaClara}" fill="#D6ECFA" fill-opacity="0.9"/>
+                        <path d="${olaOscura}" fill="#B5DCF4" fill-opacity="0.85"/>
+                    </g>
+                </svg>
+
+            </div>
+        `;
+    }
 
     obtenerNombreCliente(cliente) {
         if (!cliente) {
@@ -125,21 +148,12 @@ class ComprobanteVenta extends HTMLElement {
                 }
 
                 #btnImprimir {
-                    background: transparent;
-                    color: white;
-                }
-
-                #btnImprimir:hover {
-                    background: rgba(255, 255, 255, .1);
-                }
-
-                #btnDescargar {
                     background: #37E0E0;
                     color: #05448D;
                     border: none;
                 }
 
-                #btnDescargar:hover {
+                #btnImprimir:hover {
                     background: rgba(55, 224, 224, .85);
                 }
 
@@ -166,14 +180,7 @@ class ComprobanteVenta extends HTMLElement {
                         type="button"
                         id="btnImprimir"
                     >
-                        🖨️ Imprimir
-                    </button>
-
-                    <button
-                        type="button"
-                        id="btnDescargar"
-                    >
-                        ⬇ Descargar PDF
+                        🖨️ Imprimir / Guardar PDF
                     </button>
 
                 </div>
@@ -200,136 +207,37 @@ class ComprobanteVenta extends HTMLElement {
             .addEventListener("click", () => {
                 this.abrirVentanaImpresion();
             });
-
-        this.shadowRoot
-            .querySelector("#btnDescargar")
-            .addEventListener("click", () => {
-                this.descargarPDF();
-            });
     }
 
     abrirVentanaImpresion() {
-        const ventana = window.open(
-            "",
-            "_blank",
-            "width=900,height=900"
-        );
+        const nombre = `comprobante-venta-${String(this._venta.id).padStart(6, "0")}`;
+        const tituloOriginal = document.title;
 
-        ventana.document.write(
-            this.generarDocumentoCompleto(this._venta)
-        );
+        // el comprobante se imprime desde un iframe oculto de esta misma pagina:
+        // asi Chrome sugiere como nombre del archivo el titulo de la pagina principal
+        const iframe = document.createElement("iframe");
+        iframe.style.cssText = "position:fixed;right:0;bottom:0;width:0;height:0;border:0;";
 
-        ventana.document.close();
-
-        ventana.focus();
-
-        ventana.onload = () => {
-            ventana.print();
+        const limpiar = () => {
+            document.title = tituloOriginal;
+            iframe.remove();
         };
+
+        iframe.onload = () => {
+            document.title = nombre;
+
+            iframe.contentWindow.addEventListener("afterprint", limpiar, { once: true });
+            window.addEventListener("afterprint", limpiar, { once: true });
+
+            iframe.contentWindow.focus();
+            iframe.contentWindow.print();
+        };
+
+        // srcdoc se asigna antes de insertar el iframe para que onload corresponda al comprobante
+        iframe.srcdoc = this.generarDocumentoCompleto(this._venta);
+        document.body.appendChild(iframe);
     }
     
-    async descargarPDF() {
-        const numeroVenta = String(this._venta.id).padStart(6, "0");
-
-        const contenedor = document.createElement("div");
-
-        contenedor.style.position = "fixed";
-        contenedor.style.left = "-10000px";
-        contenedor.style.top = "0";
-        contenedor.style.width = "800px";
-        contenedor.style.background = "#ffffff";
-        contenedor.style.zIndex = "-1";
-
-        contenedor.innerHTML = `
-            <style>
-                ${this.estilosTicket()}
-
-                .ticket {
-                    width: 800px;
-                    max-height: none;
-                    overflow: visible;
-                    margin: 0;
-                    box-shadow: none;
-                }
-
-                .tabla-productos td {
-                    height: auto;
-                    min-height: 9mm;
-                }
-
-                .detalle {
-                    white-space: normal;
-                    word-break: break-word;
-                    overflow-wrap: break-word;
-                }
-            </style>
-
-            <div class="ticket">
-                ${this.generarHtmlTicket(this._venta)}
-            </div>
-        `;
-
-        document.body.appendChild(contenedor);
-
-        const ticket = contenedor.querySelector(".ticket");
-
-        try {
-            const imagenes = ticket.querySelectorAll("img");
-
-            await Promise.all(
-                Array.from(imagenes).map((imagen) => {
-                    if (imagen.complete) {
-                        return Promise.resolve();
-                    }
-
-                    return new Promise((resolve) => {
-                        imagen.onload = resolve;
-                        imagen.onerror = resolve;
-                    });
-                })
-            );
-
-            await new Promise((resolve) => {
-                requestAnimationFrame(() => {
-                    requestAnimationFrame(resolve);
-                });
-            });
-
-            const opciones = {
-                margin: 0,
-
-                filename: `comprobante-venta-${numeroVenta}.pdf`,
-
-                image: {
-                    type: "jpeg",
-                    quality: 0.98
-                },
-
-                html2canvas: {
-                    scale: 2,
-                    useCORS: true,
-                    backgroundColor: "#ffffff",
-                    scrollX: 0,
-                    scrollY: 0
-                },
-
-                jsPDF: {
-                    unit: "mm",
-                    format: "a4",
-                    orientation: "portrait"
-                }
-            };
-
-            await html2pdf()
-                .set(opciones)
-                .from(ticket)
-                .save();
-
-        } finally {
-            contenedor.remove();
-        }
-    }
-
     generarDocumentoCompleto(v) {
         return `
             <!DOCTYPE html>
@@ -340,9 +248,7 @@ class ComprobanteVenta extends HTMLElement {
 
                 <meta charset="UTF-8">
 
-                <title>
-                    Comprobante de venta ${v.id}
-                </title>
+                <title>comprobante-venta-${String(v.id).padStart(6, "0")}</title>
 
                 <style>
 
@@ -353,6 +259,8 @@ class ComprobanteVenta extends HTMLElement {
 
                     * {
                         box-sizing: border-box;
+                        -webkit-print-color-adjust: exact;
+                        print-color-adjust: exact;
                     }
 
                     html,
@@ -410,6 +318,8 @@ class ComprobanteVenta extends HTMLElement {
         const basePath = this.getAttribute("base-path") || "";
 
         return `
+            ${this.generarOlas()}
+            
             <div class="encabezado">
 
                 <div class="logo-container">
@@ -580,7 +490,7 @@ class ComprobanteVenta extends HTMLElement {
                 position: relative;
                 width: min(92vw, 800px);
                 max-height: none;
-                padding: 18mm 15mm;
+                padding: 18mm 15mm 26mm;
                 margin: auto;
                 box-sizing: border-box;
                 background: white;
@@ -835,7 +745,7 @@ class ComprobanteVenta extends HTMLElement {
             }
 
             .gracias {
-                margin-top: 18mm;
+                margin-top: 10mm;
 
                 padding-right: 3mm;
 
@@ -845,6 +755,41 @@ class ComprobanteVenta extends HTMLElement {
                 font-style: italic;
 
                 text-align: right;
+            }
+        
+            .olas {
+                position: absolute;
+                inset: 0;
+                overflow: hidden;
+                pointer-events: none;
+                z-index: 0;
+            }
+
+            .ola {
+                position: absolute;
+                display: block;
+                width: 72mm;
+                height: 26.4mm;
+            }
+
+            .ola-superior {
+                top: 0;
+                left: 0;
+            }
+
+            .ola-inferior {
+                bottom: 0;
+                right: 0;
+            }
+
+            /* el contenido queda por encima de las olas */
+            .encabezado,
+            .info-venta,
+            .tabla-productos,
+            .pie-comprobante,
+            .gracias {
+                position: relative;
+                z-index: 1;
             }
         `;
     }

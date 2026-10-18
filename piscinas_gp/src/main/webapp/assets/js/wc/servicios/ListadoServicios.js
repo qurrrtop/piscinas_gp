@@ -68,26 +68,34 @@ class ListadoServicios extends HTMLElement {
         if (e === "cancelada") return "Cancelado";
         return "Pendiente";
     }
+    
+    colorTecnico() {
+        return "#1D4ED8";
+    }
 
     // Tonos más oscuros que los del modal, para que se lean sobre el fondo claro de la tabla
     colorEstado(nombre) {
         const e = (nombre || "").toLowerCase();
-        if (e === "cerrada") return "#15803D";
-        if (e === "cancelada") return "#B91C1C";
-        return "#B45309";
+        if (e === "cerrada") return "#136312";
+        if (e === "cancelada") return "#91221A";
+        return "#827705";
     }
 
-    colorSubrubro(nombre) {
-        const colores = { "Bomba": "#0369A1", "Piscina": "#B45309", "Reparación": "#C2410C" };
-        return colores[nombre] || "#475569";
+    colorSubrubro() {
+        return this.colorTecnico();
     }
 
     // Píldora con fondo suave, borde y texto del mismo color.
     // Va con estilos en línea porque la tabla la dibuja dentro de su propio shadow DOM.
     pildora(texto, color) {
-        return `<span style="display:inline-block;padding:.15rem .75rem;border-radius:20px;`
-             + `border:1px solid ${color};background:${color}26;color:${color};`
-             + `font-weight:700;font-size:.8rem;white-space:nowrap">${texto}</span>`;
+        return `<span style="
+            color:${color};
+            background:${color}38;
+            padding:.25rem .7rem;
+            border-radius:20px;
+            font-weight:600;
+            white-space:nowrap
+        ">${texto}</span>`;
     }
 
     formatearFecha(fecha) {
@@ -192,11 +200,11 @@ class ListadoServicios extends HTMLElement {
                 formato: (valor) => {
                     if (valor.tipo === "tecnico") {
                         const subrubro = valor.subrubro
-                            ? this.pildora(valor.subrubro, this.colorSubrubro(valor.subrubro))
+                            ? this.pildora(valor.subrubro, this.colorSubrubro())
                             : "";
 
                         return `<div style="display:flex;flex-direction:column;align-items:flex-start;gap:.3rem">
-                                    ${this.pildora("Serv. Téc.", "#1D4ED8")}
+                                    ${this.pildora("Serv. Téc.", this.colorTecnico())}
                                     ${subrubro}
                                 </div>`;
                     }

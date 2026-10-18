@@ -107,7 +107,7 @@ class HistorialVentas extends HTMLElement {
                 titulo: "Estado",
                 formato: (valor) => {
                     const estado = this.capitalizar(valor);
-                    const color = coloresEstado[estado] || "#888";
+                    const color = coloresEstado[estado] || "rgba(136, 136, 136)";
 
                     return `<span style="
                         color:${color};

@@ -273,34 +273,12 @@ class ConfirmacionVenta extends HTMLElement {
                     <div class="totales-fila total"><span>Total</span><span>$${d.total.toLocaleString("es-AR")}</span></div>
                 </div>
 
-                <div>
-                    <div class="titulo-seccion">Documento</div>
-                    <div class="documentos">
-                        <button type="button" class="doc-btn" data-doc="factura">
-                            🧾 Factura interna
-                            <small>Genera un comprobante interno de la venta</small>
-                        </button>
-                        <button type="button" class="doc-btn seleccionado" data-doc="sin">
-                            Sin documento
-                            <small>Registra la venta sin generar comprobante</small>
-                        </button>
-                    </div>
-                </div>
-
                 <div class="acciones">
                     <button type="button" class="btn-cancelar">Cancelar</button>
                     <button type="button" class="btn-registrar">Registrar</button>
                 </div>
             </div>
         `;
-
-        this.shadowRoot.querySelectorAll(".doc-btn").forEach(btn => {
-            btn.addEventListener("click", () => {
-                this._documento = btn.dataset.doc;
-                this.shadowRoot.querySelectorAll(".doc-btn").forEach(b => b.classList.remove("seleccionado"));
-                btn.classList.add("seleccionado");
-            });
-        });
 
         this.shadowRoot.querySelector(".btn-cancelar").addEventListener("click", () => {
             this.closest("modal-component")?.remove();
