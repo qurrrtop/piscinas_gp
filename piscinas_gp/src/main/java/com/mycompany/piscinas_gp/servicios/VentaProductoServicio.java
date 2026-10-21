@@ -37,6 +37,11 @@ public class VentaProductoServicio {
     
     private static final Logger logger = LoggerFactory.getLogger( VentaProductoServicio.class );
     
+    // Regla de negocio: sin un estado explicito, el historial muestra solo las ventas ya
+    // resueltas (cerradas y canceladas). Las pendientes se piden con estado=pendiente
+    // y se ven en el modulo de pendientes.
+    private static final List<String> ESTADOS_HISTORIAL = List.of("cerrada", "cancelada");
+    
     private final VentaProductoDAO ventaProductoDAO;
     private final DetalleVentaDAO detalleVentaDAO;
     private final ProductoDAO productoDAO;
@@ -75,12 +80,16 @@ public class VentaProductoServicio {
             LocalDate fechaDesde,
             LocalDate fechaHasta
     ) throws ServiceException {
-        
+
         logger.debug( "listando historial de ventas de productos" );
-        
+
+        List<String> estados = (estado == null || estado.isBlank())
+                ? ESTADOS_HISTORIAL
+                : List.of(estado.trim().toLowerCase());
+
         try {
             return ventaProductoDAO.listarHistorial(
-                    cliente, estado, fechaDesde, fechaHasta);
+                    cliente, estados, fechaDesde, fechaHasta);
         } catch ( PersistenceException e ) {
             logger.error( "error al listar ventas de productos", e );
             throw new ServiceException("error al recuperar el historial de ventas", e);
@@ -226,6 +235,43 @@ public class VentaProductoServicio {
         }
     }
         
+    public VentaProducto cerrarVenta( Long ventaId ) throws ServiceException, BusinessException {
+
+        logger.debug("cerrando venta de producto con id {}", ventaId);
+
+        try {
+            VentaProducto venta = buscarVentaPorId(ventaId);
+
+            if ( estaCancelada(venta) ) {
+                throw new BusinessException("no se puede cerrar una venta cancelada");
+            }
+            if ( "cerrada".equalsIgnoreCase(venta.getEstadoVenta().getNombre()) ) {
+                throw new BusinessException("la venta ya esta cerrada");
+            }
+
+            EstadoVenta estadoCerrada = estadoVentaDAO.buscarPorNombre("cerrada");
+
+            if ( estadoCerrada == null ) {
+                throw new BusinessException("no existe el estado de venta 'cerrada'");
+            }
+
+            // primero el estado y despues la fecha: Venta no acepta fecha de cierre en una venta pendiente
+            venta.setEstadoVenta(estadoCerrada);
+            venta.setFechaCierre(LocalDate.now());
+
+            VentaProducto ventaCerrada = ventaProductoDAO.actualizar(venta);
+            ventaCerrada.setDetallesVenta(venta.getDetallesVenta());
+
+            logger.info("venta de producto cerrada correctamente con id {}", ventaId);
+
+            return ventaCerrada;
+
+        } catch (PersistenceException e) {
+            logger.error("Error al cerrar la venta de producto con ID {}", ventaId, e);
+            throw new ServiceException("Error al cerrar la venta", e);
+        }
+    }
+    
     private void prepararVenta( 
             VentaProducto venta,
             Long clienteId,

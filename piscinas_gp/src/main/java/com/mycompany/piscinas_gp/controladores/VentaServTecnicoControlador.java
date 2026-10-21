@@ -8,6 +8,7 @@ import com.mycompany.piscinas_gp.daos.ClienteEmpresaDAO;
 import com.mycompany.piscinas_gp.daos.ClienteParticularDAO;
 import com.mycompany.piscinas_gp.daos.DetalleVentaDAO;
 import com.mycompany.piscinas_gp.daos.EstadoVentaDAO;
+import com.mycompany.piscinas_gp.daos.ImagenVentaDAO;
 import com.mycompany.piscinas_gp.daos.MetodoPagoDAO;
 import com.mycompany.piscinas_gp.daos.ProductoDAO;
 import com.mycompany.piscinas_gp.daos.SubrubroServicioTecnicoDAO;
@@ -16,8 +17,6 @@ import com.mycompany.piscinas_gp.dtos.DetalleVentaDTO;
 import com.mycompany.piscinas_gp.dtos.VentaDTO;
 import com.mycompany.piscinas_gp.exceptions.BusinessException;
 import com.mycompany.piscinas_gp.exceptions.ServiceException;
-import com.mycompany.piscinas_gp.modelos.ClienteEmpresa;
-import com.mycompany.piscinas_gp.modelos.ClienteParticular;
 import com.mycompany.piscinas_gp.modelos.DetalleVenta;
 import com.mycompany.piscinas_gp.modelos.Producto;
 import com.mycompany.piscinas_gp.modelos.SubrubroServicioTecnico;
@@ -33,7 +32,6 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-import com.mycompany.piscinas_gp.daos.ImagenVentaDAO;
 
 @WebServlet(
         name = "VentaServTecnicoControlador",
@@ -68,7 +66,13 @@ public class VentaServTecnicoControlador extends HttpServlet {
 
         try {
             if (pathInfo == null || pathInfo.equals("/")) {
-                List<VentaServTecnico> servicios = ventaServTecnicoServicio.listarServicios();
+                // sin parametros: historial (cerradas y canceladas); con ?estado=pendiente: pendientes
+                boolean pendientes = "pendiente".equalsIgnoreCase(request.getParameter("estado"));
+
+                List<VentaServTecnico> servicios = pendientes
+                        ? ventaServTecnicoServicio.listarPendientes()
+                        : ventaServTecnicoServicio.listarHistorial();
+
                 sendJsonResponse(servicios, response, HttpServletResponse.SC_OK);
                 return;
             }

@@ -44,6 +44,7 @@ public class VentaServTecnicoServicio {
     // Regla de negocio: el modulo de servicios solo muestra los servicios ya resueltos
     // (completados y cancelados). Los pendientes se ven en el modulo de pendientes.
     private static final List<String> ESTADOS_HISTORIAL = List.of("cerrada", "cancelada");
+    private static final List<String> ESTADOS_PENDIENTES = List.of("pendiente");
 
     private static final int MAX_IMAGENES_EVIDENCIA = 5;
 
@@ -97,6 +98,15 @@ public class VentaServTecnicoServicio {
         } catch (PersistenceException e) {
             logger.error("Error al listar el historial de servicios tecnicos", e);
             throw new ServiceException("Error al recuperar el historial de servicios tecnicos", e);
+        }
+    }
+
+    public List<VentaServTecnico> listarPendientes() throws ServiceException {
+        try {
+            return ventaServTecnicoDAO.buscarPorEstados(ESTADOS_PENDIENTES);
+        } catch (PersistenceException e) {
+            logger.error("Error al listar los servicios tecnicos pendientes", e);
+            throw new ServiceException("Error al recuperar los servicios tecnicos pendientes", e);
         }
     }
 
@@ -234,6 +244,11 @@ public class VentaServTecnicoServicio {
                 throw new BusinessException("El servicio ya esta cerrado");
             }
 
+            // Regla de negocio: la recomendacion es obligatoria recien al cerrar el servicio.
+            if (servicio.getDiagnostico() == null || servicio.getDiagnostico().isBlank()) {
+                throw new BusinessException("Debe cargar una recomendacion antes de cerrar el servicio");
+            }
+
             EstadoVenta estadoCerrada = estadoVentaDAO.buscarPorNombre("cerrada");
 
             if (estadoCerrada == null) {
@@ -273,6 +288,12 @@ public class VentaServTecnicoServicio {
 
         if (esNuevo && "cancelada".equalsIgnoreCase(estadoVenta.getNombre())) {
             throw new BusinessException("No se puede crear un servicio con estado cancelada");
+        }
+
+        // Regla de negocio: la recomendacion es obligatoria recien al cerrar el servicio.
+        if ("cerrada".equalsIgnoreCase(estadoVenta.getNombre())
+                && (servicio.getDiagnostico() == null || servicio.getDiagnostico().isBlank())) {
+            throw new BusinessException("Debe cargar una recomendacion para cerrar el servicio");
         }
 
         servicio.setCliente(cliente);

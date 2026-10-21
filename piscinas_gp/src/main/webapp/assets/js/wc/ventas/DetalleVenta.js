@@ -68,6 +68,27 @@ class DetalleVenta extends HTMLElement {
                 }));
             }
         });
+        
+        this.shadowRoot.querySelector("#btnCompletarVenta")?.addEventListener("click", async () => {
+            try {
+                const response = await fetch(`${this.basePath}/ventas/productos/${this._venta.id}/cerrar`, { method: "POST" });
+                const data = await response.json();
+                if (!response.ok) throw new Error(data.error || "Error al completar la venta");
+
+                document.dispatchEvent(new CustomEvent("mostrar-notificacion", {
+                    detail: { mensaje: "Venta completada correctamente", tipo: "exito" }
+                }));
+                document.dispatchEvent(new CustomEvent("venta-guardada", { bubbles: true, composed: true }));
+
+                const modal = this.closest("modal-component") || document.querySelector("modal-component");
+                if (modal) modal.remove();
+
+            } catch (error) {
+                document.dispatchEvent(new CustomEvent("mostrar-notificacion", {
+                    detail: { mensaje: error.message, tipo: "error" }
+                }));
+            }
+        });
 
         this.shadowRoot.querySelector("#btnVerComprobante")?.addEventListener("click", () => {
             const comprobante = document.createElement("comprobante-venta");
@@ -113,6 +134,7 @@ class DetalleVenta extends HTMLElement {
         const nombreCliente = this.obtenerNombreCliente(c);
         const colorEst = this.colorEstado(v.estadoVenta.nombre);
         const estaCancelada = v.estadoVenta.nombre.toLowerCase() === "cancelada";
+        const esPendiente = v.estadoVenta.nombre.toLowerCase() === "pendiente";
 
         const subtotal = v.detallesVenta.reduce((acc, d) => acc + (d.precioUnitario * d.cantidad), 0);
         const montoDescuento = subtotal * (v.descuentoGlobal / 100);
@@ -172,6 +194,7 @@ class DetalleVenta extends HTMLElement {
                     background: rgba(255,255,255,.08);
                     border-radius: 8px;
                     padding: .8rem 1rem;
+                    border: 1px solid rgba(255,255,255,.25);
                 }
 
                 .avatar {
@@ -204,36 +227,44 @@ class DetalleVenta extends HTMLElement {
 
                 table.tabla-productos {
                     width: 100%;
-                    border-collapse: collapse;
+                    border-collapse: separate;
+                    border-spacing: 0;
                     font-size: .88rem;
-                    padding: .5rem;
+                    border: 1px solid rgba(101, 181, 232, .55);
                     border-radius: 10px;
                     overflow: hidden;
+                    background: rgba(5, 68, 141, .25);
                 }
-        
-                thead {
-                    background: rgba(6, 76, 156);
+
+                table.tabla-productos thead {
+                    background: rgba(6, 76, 156, .85);
                 }
-        
+
                 table.tabla-productos thead th {
                     text-align: left;
                     font-size: .72rem;
                     text-transform: uppercase;
                     color: #B8D7FF;
                     padding: .8rem .7rem;
-                    border-bottom: 1px solid rgba(255,255,255,.25);
+                    border-bottom: 1px solid rgba(101, 181, 232, .45);
                 }
 
-                table.tabla-productos thead th.col-num { text-align: right; }
-                
-                tbody {
-                    background: rgba(255,255,255,.08);
+                table.tabla-productos thead th.col-num {
+                    text-align: right;
+                }
+
+                table.tabla-productos tbody {
+                    background: rgba(255, 255, 255, .08);
                 }
 
                 table.tabla-productos tbody td {
                     padding: .7rem;
-                    border-bottom: 1px solid rgba(255,255,255,.1);
+                    border-bottom: 1px solid rgba(101, 181, 232, .25);
                     vertical-align: middle;
+                }
+
+                table.tabla-productos tbody tr:last-child td {
+                    border-bottom: none;
                 }
 
                 table.tabla-productos thead th.col-num,
@@ -241,7 +272,7 @@ class DetalleVenta extends HTMLElement {
                     text-align: right;
                     white-space: nowrap;
                 }
-        
+
                 table.tabla-productos thead th.col-cant,
                 table.tabla-productos tbody td.col-cant {
                     text-align: center;
@@ -260,6 +291,7 @@ class DetalleVenta extends HTMLElement {
                     background: rgba(255,255,255,.08);
                     padding: .8rem;
                     border-radius: 10px;
+                    border: 1px solid rgba(255,255,255,.25);
                 }
 
                 .totales-fila {
@@ -283,6 +315,7 @@ class DetalleVenta extends HTMLElement {
                     padding: .8rem 1rem;
                     font-size: .88rem;
                     color: rgba(255,255,255,.85);
+                    border: 1px solid rgba(255,255,255,.25);
                 }
 
                 .acciones {
@@ -307,6 +340,8 @@ class DetalleVenta extends HTMLElement {
                 }
 
                 #btnCancelarVenta { background: rgba(222, 31, 31, .7); color: white; }
+                #btnCompletarVenta { background: rgba(31, 157, 85, .9); color: white; }
+                #btnCompletarVenta:hover { background: rgba(31, 157, 85, .75); }
                 #btnVerComprobante { background: rgba(7, 69, 140); color: white; border: 1px solid rgba(255,255,255,.3); }
                 #btnEditarVenta { background: #37E0E0; color: #05448D; }
         
@@ -372,11 +407,14 @@ class DetalleVenta extends HTMLElement {
                         </tbody>
                     </table>
                 </div>
-
-                <div class="totales">
-                    <div class="totales-fila"><span>Subtotal</span><span>$${subtotal.toLocaleString("es-AR")}</span></div>
-                    <div class="totales-fila"><span>Descuento global (${v.descuentoGlobal}%)</span><span>-$${montoDescuento.toLocaleString("es-AR")}</span></div>
-                    <div class="totales-fila total"><span>Total</span><span>$${Number(v.total).toLocaleString("es-AR")}</span></div>
+        
+                <div>
+                    <div class="titulo-seccion" style="margin-bottom:.6rem">Resumen</div>
+                    <div class="totales">
+                        <div class="totales-fila"><span>Subtotal</span><span>$${subtotal.toLocaleString("es-AR")}</span></div>
+                        <div class="totales-fila"><span>Descuento global (${v.descuentoGlobal}%)</span><span>-$${montoDescuento.toLocaleString("es-AR")}</span></div>
+                        <div class="totales-fila total"><span>Total</span><span>$${Number(v.total).toLocaleString("es-AR")}</span></div>
+                    </div>
                 </div>
 
                 <div>
@@ -386,8 +424,8 @@ class DetalleVenta extends HTMLElement {
 
                 <div class="acciones">
                     <button type="button" id="btnCancelarVenta" ${estaCancelada ? "disabled" : ""}>✕ Cancelar venta</button>
+                    ${esPendiente ? `<button type="button" id="btnCompletarVenta">✓ Completar</button>` : ""}
                     <button type="button" id="btnVerComprobante">📄 Ver Comprobante</button>
-                    <button type="button" id="btnEditarVenta" ${estaCancelada ? "disabled" : ""}>✎ Editar</button>
                 </div>
             </div>
         `;

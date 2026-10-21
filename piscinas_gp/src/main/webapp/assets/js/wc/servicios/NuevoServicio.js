@@ -69,9 +69,9 @@ class NuevoServicio extends HTMLElement {
 
     colorCategoria(nombre) {
         const colores = {
-            "Químico": "rgba(23, 153, 32,.60)",
-            "Repuesto": "rgba(186, 85, 26,.60)",
-            "Accesorios de Instalación": "rgba(161, 29, 136,.60)"
+            "Químico": "rgba(31, 209, 44,.60)",
+            "Repuesto": "rgba(230, 112, 44,.60)",
+            "Accesorios de Instalación": "rgba(227, 95, 201,.60)"
         };
         return colores[nombre] || "#888888";
     }
@@ -801,6 +801,16 @@ class NuevoServicio extends HTMLElement {
                     gap: 1rem;
                     margin-bottom: 1.2rem; 
                 }
+        
+                input::placeholder, textarea::placeholder {
+                    color: rgba(255,255,255,.65);
+                }
+        
+                select:focus, input:focus, textarea:focus {
+                    outline: none;
+                    border-color: rgba(47, 190, 214, .80);
+                    box-shadow: 0 0 0 3px rgba(77, 216, 255, .20);
+                }
 
                 .tarjeta-tipo { 
                     width: 30%;
@@ -1032,7 +1042,7 @@ class NuevoServicio extends HTMLElement {
                 .tab-cat-mini {
                     padding: .4rem .9rem;
                     border-radius: 20px;
-                    border: 1px solid var(--color-cat, rgba(255, 255, 255, .3));
+                    border: 2px solid var(--color-cat, rgba(255, 255, 255, .3));
                     background: rgba(255, 255, 255, .06);
                     color: white;
                     cursor: pointer;

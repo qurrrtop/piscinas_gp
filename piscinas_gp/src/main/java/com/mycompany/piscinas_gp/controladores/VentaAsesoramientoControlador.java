@@ -7,6 +7,7 @@ import com.mycompany.piscinas_gp.config.DbConnection;
 import com.mycompany.piscinas_gp.daos.ClienteEmpresaDAO;
 import com.mycompany.piscinas_gp.daos.ClienteParticularDAO;
 import com.mycompany.piscinas_gp.daos.EstadoVentaDAO;
+import com.mycompany.piscinas_gp.daos.ImagenVentaDAO;
 import com.mycompany.piscinas_gp.daos.MetodoPagoDAO;
 import com.mycompany.piscinas_gp.daos.VentaAsesoramientoDAO;
 import com.mycompany.piscinas_gp.dtos.VentaDTO;
@@ -22,7 +23,6 @@ import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.time.LocalDateTime;
 import java.util.List;
-import com.mycompany.piscinas_gp.daos.ImagenVentaDAO;
 
 @WebServlet(
         name = "VentaAsesoramientoControlador",
@@ -54,7 +54,13 @@ public class VentaAsesoramientoControlador extends HttpServlet {
 
         try {
             if (pathInfo == null || pathInfo.equals("/")) {
-                List<VentaAsesoramiento> asesoramientos = ventaAsesoramientoServicio.listarAsesoramientos();
+                // sin parametros: historial (cerradas y canceladas); con ?estado=pendiente: pendientes
+                boolean pendientes = "pendiente".equalsIgnoreCase(request.getParameter("estado"));
+
+                List<VentaAsesoramiento> asesoramientos = pendientes
+                        ? ventaAsesoramientoServicio.listarPendientes()
+                        : ventaAsesoramientoServicio.listarHistorial();
+
                 sendJsonResponse(asesoramientos, response, HttpServletResponse.SC_OK);
                 return;
             }

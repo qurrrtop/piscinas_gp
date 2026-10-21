@@ -29,6 +29,7 @@
         <script src="${pageContext.request.contextPath}/assets/js/wc/servicios/NuevoServicio.js" type="module" defer></script>
         <script src="${pageContext.request.contextPath}/assets/js/wc/servicios/ListadoServicios.js" type="module" defer></script>
         <script src="${pageContext.request.contextPath}/assets/js/wc/servicios/DetalleServicio.js" type="module" defer></script>
+        <script src="${pageContext.request.contextPath}/assets/js/wc/pendientes/HistorialPendientes.js" type="module" defer></script>
 
         
         <title>PiscinasGP</title>

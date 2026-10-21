@@ -97,7 +97,7 @@ public class VentaProductoControlador extends HttpServlet {
 
                     listado.add(new VentaListadoDTO(
                             v.getId(), nombreCliente, v.getEstadoVenta().getNombre(),
-                            v.getFechaInicio(), v.getTotal()
+                            v.getFechaInicio(), v.getTotal(), v.getObservacion()
                     ));
                 }
 
@@ -154,7 +154,29 @@ public class VentaProductoControlador extends HttpServlet {
             HttpServletRequest request,
             HttpServletResponse response
     ) throws ServletException, IOException {
+        
+        String pathInfo = request.getPathInfo();
 
+        // POST /ventas/productos/{id}/cerrar: completa una venta pendiente
+        if (pathInfo != null && pathInfo.endsWith("/cerrar")) {
+            try {
+                Long id = Long.parseLong(pathInfo.replace("/cerrar", "").substring(1));
+                VentaProducto ventaCerrada = ventaProductoServicio.cerrarVenta(id);
+                sendJsonResponse(ventaCerrada, response, HttpServletResponse.SC_OK);
+
+            } catch (NumberFormatException e) {
+                sendJsonResponse(java.util.Map.of("error", "El ID debe ser un número"),
+                        response, HttpServletResponse.SC_BAD_REQUEST);
+            } catch (BusinessException e) {
+                sendJsonResponse(java.util.Map.of("error", e.getMessage()),
+                        response, HttpServletResponse.SC_NOT_FOUND);
+            } catch (ServiceException e) {
+                sendJsonResponse(java.util.Map.of("error", "Error interno al cerrar la venta"),
+                        response, HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
+            }
+            return;
+        }
+        
         request.setCharacterEncoding("UTF-8");
         ObjectMapper mapper = crearMapper();
 

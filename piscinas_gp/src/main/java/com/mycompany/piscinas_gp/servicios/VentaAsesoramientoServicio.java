@@ -34,6 +34,7 @@ public class VentaAsesoramientoServicio {
     // Regla de negocio: el modulo de servicios solo muestra los asesoramientos ya resueltos
     // (completados y cancelados). Los pendientes se ven en el modulo de pendientes.
     private static final List<String> ESTADOS_HISTORIAL = List.of("cerrada", "cancelada");
+    private static final List<String> ESTADOS_PENDIENTES = List.of("pendiente");
 
     private static final int MAX_IMAGENES_EVIDENCIA = 5;
 
@@ -78,6 +79,15 @@ public class VentaAsesoramientoServicio {
         } catch (PersistenceException e) {
             logger.error("Error al listar el historial de asesoramientos", e);
             throw new ServiceException("Error al recuperar el historial de asesoramientos", e);
+        }
+    }
+
+    public List<VentaAsesoramiento> listarPendientes() throws ServiceException {
+        try {
+            return ventaAsesoramientoDAO.buscarPorEstados(ESTADOS_PENDIENTES);
+        } catch (PersistenceException e) {
+            logger.error("Error al listar los asesoramientos pendientes", e);
+            throw new ServiceException("Error al recuperar los asesoramientos pendientes", e);
         }
     }
 

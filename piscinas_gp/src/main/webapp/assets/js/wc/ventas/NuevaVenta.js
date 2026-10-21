@@ -848,6 +848,7 @@ class NuevaVenta extends HTMLElement {
                     background: rgba(255,255,255,.08);
                     border-radius: 8px;
                     padding: .9rem 1rem;
+                    border: 1px solid rgba(255,255,255,.25);
                 }
 
                 .cliente-info {

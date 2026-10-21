@@ -161,7 +161,7 @@ public class VentaProductoDAO extends GenericoDAO<VentaProducto> {
 // los filtros son opcionales, si no se selecciona un filtro desde la vista, llega como null,
 // entonces no se aplica ese filtro y muestra las ventas que correspondan
     public List<VentaProducto> listarHistorial(
-            String cliente, String estado, LocalDate fechaDesde, LocalDate fechaHasta
+            String cliente, List<String> estados, LocalDate fechaDesde, LocalDate fechaHasta
     ) throws PersistenceException {
 
         StringBuilder sql = new StringBuilder(getSqlVentasConRelaciones());
@@ -176,9 +176,13 @@ public class VentaProductoDAO extends GenericoDAO<VentaProducto> {
             parametros.add(texto);
         }
 
-        if (estado != null && !estado.isBlank()) {
-            sql.append(" AND LOWER(ev.nombre) = ?");
-            parametros.add(estado.trim().toLowerCase());
+        if (estados != null && !estados.isEmpty()) {
+            sql.append(" AND LOWER(ev.nombre) IN (")
+                    .append(String.join(", ", Collections.nCopies(estados.size(), "?")))
+                    .append(")");
+            for (String estado : estados) {
+                parametros.add(estado.toLowerCase());
+            }
         }
 
         if (fechaDesde != null) {
@@ -191,7 +195,7 @@ public class VentaProductoDAO extends GenericoDAO<VentaProducto> {
             parametros.add(Timestamp.valueOf(fechaHasta.plusDays(1).atStartOfDay()));
         }
 
-        sql.append(" ORDER BY v.fecha_inicio DESC, v.id DESC");
+        sql.append(" ORDER BY COALESCE(v.fecha_cierre, v.fecha_inicio) DESC, v.id DESC");
 
         List<VentaProducto> ventas = new ArrayList<>();
 

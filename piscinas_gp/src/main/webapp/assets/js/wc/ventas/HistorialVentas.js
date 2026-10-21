@@ -15,7 +15,7 @@ class HistorialVentas extends HTMLElement {
         return texto.charAt(0).toUpperCase() + texto.slice(1);
     }
 
-    static ESTADOS_TABS = ["Cerrada", "Pendiente", "Cancelada"];
+    static ESTADOS_TABS = ["Cerrada", "Cancelada"];
 
     async connectedCallback() {
         this.basePath = this.getAttribute("base-path") || "";
@@ -79,13 +79,11 @@ class HistorialVentas extends HTMLElement {
 
         const total = this._ventas.length;
         const cerradas = this._ventas.filter(v => v.estado.toLowerCase() === "cerrada").length;
-        const pendientes = this._ventas.filter(v => v.estado.toLowerCase() === "pendiente").length;
         const canceladas = this._ventas.filter(v => v.estado.toLowerCase() === "cancelada").length;
 
         tarjetas.tarjetas = [
             { titulo: "Total ventas", valor: total },
             { titulo: "Cerradas", valor: cerradas },
-            { titulo: "Pendientes", valor: pendientes },
             { titulo: "Canceladas", valor: canceladas }
         ];
     }
@@ -337,7 +335,7 @@ class HistorialVentas extends HTMLElement {
                 <div class="fila-tabs">
                     <button class="tab-estado activo" data-estado="">Todas</button>
                     ${HistorialVentas.ESTADOS_TABS.map(estado => `
-                        <button class="tab-estado" data-estado="${estado}">${estado === "Cerrada" ? "Cerradas" : estado === "Pendiente" ? "Pendientes" : "Canceladas"}</button>
+                        <button class="tab-estado" data-estado="${estado}">${estado === "Cerrada" ? "Cerradas" : "Canceladas"}</button>
                     `).join("")}
                     <button class="btn-limpiar" id="limpiarFiltros">Limpiar filtros</button>
                 </div>

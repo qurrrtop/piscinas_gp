@@ -7,6 +7,7 @@ class DetalleServicio extends HTMLElement {
         this.tipo = "";
         this.servicioId = "";
         this.maxImagenes = 5;
+        this.tiposImagen = ["image/jpeg", "image/png", "image/gif", "image/webp"];
         this._servicio = null;
         this._edicion = null;
         this._clientes = [];
@@ -31,10 +32,14 @@ class DetalleServicio extends HTMLElement {
         return this.basePath ? `${this.basePath}/` : "";
     }
 
+    carpetaServicio() {
+        if (this.tipo === "tecnico") return "tecnicos";
+        if (this.tipo === "asesoramiento") return "asesoramientos";
+        return null;
+    }
+
     async cargar() {
-        const carpeta = this.tipo === "tecnico" ? "tecnicos"
-                : this.tipo === "asesoramiento" ? "asesoramientos"
-                : null;
+        const carpeta = this.carpetaServicio();
 
         if (!carpeta || !this.servicioId) {
             this.renderError("Falta indicar el tipo o el id del servicio");
@@ -110,9 +115,33 @@ class DetalleServicio extends HTMLElement {
         return "#FBBF24";
     }
 
-    colorSubrubro(nombre) {
-        const colores = { "Bomba": "#37A4FF", "Piscina": "#FBBF24", "Reparación": "#FB923C" };
-        return colores[nombre] || "#FFFFFF";
+    // todos los subrubros usan el mismo color
+    colorSubrubro() {
+        return "#37A4FF";
+    }
+
+    colorCategoria(nombre) {
+        const colores = {
+            "Químico": "#4ADE80",
+            "Repuesto": "#FB923C",
+            "Accesorios de Instalación": "#C084FC"
+        };
+        return colores[nombre] || "#B8D7FF";
+    }
+
+    // Misma pildora que el detalle de venta: texto en el color y fondo del mismo color al 22 %.
+    // El color tiene que ser hexadecimal de 6 digitos ("38" al final equivale a ese 22 %).
+    pildora(texto, color) {
+        return `<span class="pildora" style="color:${color};background:${color}38">${this.esc(texto)}</span>`;
+    }
+
+    htmlEtiquetasProducto(categoria, marca) {
+        const etiquetas = [
+            categoria ? this.pildora(categoria, this.colorCategoria(categoria)) : "",
+            marca ? `<span class="pildora pildora-gris">${this.esc(marca)}</span>` : ""
+        ].join("");
+
+        return etiquetas ? `<div class="etiquetas">${etiquetas}</div>` : "";
     }
 
     nombreCliente(c) {
@@ -157,24 +186,20 @@ class DetalleServicio extends HTMLElement {
     renderDetalle(s) {
         const esTecnico = this.tipo === "tecnico";
         const estadoNombre = s.estadoVenta?.nombre;
-        const colorEstado = this.colorEstado(estadoNombre);
         const subrubro = esTecnico ? (s.subrubroServicio?.nombre || "") : "";
         const cancelado = (estadoNombre || "").toLowerCase() === "cancelada";
+        const pendiente = (estadoNombre || "").toLowerCase() === "pendiente";
 
         const datos = [
-            ["Estado", `<span class="badge-estado" style="--c:${colorEstado}">${this.etiquetaEstado(estadoNombre)}</span>`],
+            ["Estado", this.pildora(this.etiquetaEstado(estadoNombre), this.colorEstado(estadoNombre))],
             esTecnico && subrubro
-                ? ["Subrubro", `<span style="color:${this.colorSubrubro(subrubro)}">${this.esc(subrubro)}</span>`]
+                ? ["Subrubro", this.pildora(subrubro, this.colorSubrubro())]
                 : null,
             ["Inicio", this.formatearFecha(s.fechaInicio, true)],
             esTecnico ? ["Entrega estimada", this.formatearFecha(s.fechaEntrega)] : null,
             ["Cierre", this.formatearFecha(s.fechaCierre)],
             this.datoPago(esTecnico, s)
         ].filter(Boolean);
-
-        const observacion = s.observacion && s.observacion !== "Sin observaciones"
-            ? `<section><h3>Observaciones</h3><p class="texto">${this.esc(s.observacion)}</p></section>`
-            : "";
 
         const recomendacion = s.diagnostico
             ? `<p class="texto">${this.esc(s.diagnostico)}</p>`
@@ -208,25 +233,31 @@ class DetalleServicio extends HTMLElement {
 
             <section>
                 <h3>${esTecnico ? "Problema" : "Consulta"}</h3>
-                <p class="texto">${this.esc(s.problema || "-")}</p>
+                <div class="caja"><p class="texto">${this.esc(s.problema || "-")}</p></div>
             </section>
 
             <section>
                 <h3>Recomendación brindada</h3>
-                ${recomendacion}
+                <div class="caja">${recomendacion}</div>
             </section>
 
-            ${observacion}
             ${evidencia}
             ${esTecnico ? this.htmlRepuestos(s) : ""}
             ${esTecnico ? this.htmlTotalesTecnico(s) : this.htmlTotalAsesoramiento(s)}
-            ${esTecnico && !cancelado ? this.htmlAcciones() : ""}
+
+            <section>
+                <h3>Observaciones</h3>
+                <div class="caja"><p class="texto">${this.esc(s.observacion || "Sin observaciones")}</p></div>
+            </section>
+
+            ${!cancelado ? this.htmlAcciones(pendiente) : ""}
         `;
 
         this.reemplazarImagenesRotas();
 
         this.shadowRoot.querySelector("#btnEditar")?.addEventListener("click", () => this.iniciarEdicion());
         this.shadowRoot.querySelector("#btnCancelarServicio")?.addEventListener("click", (e) => this.cancelarServicio(e.currentTarget));
+        this.shadowRoot.querySelector("#btnCompletarServicio")?.addEventListener("click", (e) => this.completarServicio(e.currentTarget));
     }
 
     reemplazarImagenesRotas() {
@@ -251,22 +282,24 @@ class DetalleServicio extends HTMLElement {
     }
 
     htmlCliente(c) {
-        if (!c) return `<p class="texto vacio">Sin datos del cliente.</p>`;
+        if (!c) return `<div class="caja"><p class="texto vacio">Sin datos del cliente.</p></div>`;
 
         const nombre = this.nombreCliente(c);
         const esEmpresa = !c.nombre;
 
-        const documento = c.cuil ? `CUIL ${c.cuil}` : (c.cuit ? `CUIT ${c.cuit}` : "");
+        const documento = c.cuil ? `CUIL: ${c.cuil}` : (c.cuit ? `CUIT: ${c.cuit}` : "");
+        const contacto = [c.email, c.telefono, documento].filter(Boolean).join(" · ");
         const direccion = [c.calleYnumero, c.localidad?.nombre].filter(Boolean).join(", ");
-        const lineas = [documento, c.telefono, c.email, direccion].filter(Boolean);
 
         return `
-            <div class="cliente">
+            <div class="cliente-card">
                 <span class="avatar ${esEmpresa ? "avatar-empresa" : "avatar-particular"}">${this.esc(this.iniciales(nombre))}</span>
-                <div>
+                <div class="cliente-info">
                     <strong>${this.esc(nombre)}</strong>
-                    ${lineas.map(l => `<span class="linea-cliente">${this.esc(l)}</span>`).join("")}
+                    ${contacto ? `<span class="cliente-linea">${this.esc(contacto)}</span>` : ""}
+                    ${direccion ? `<span class="cliente-linea">${this.esc(direccion)}</span>` : ""}
                 </div>
+                <span class="pildora pildora-gris">${esEmpresa ? "Empresa" : "Particular"}</span>
             </div>
         `;
     }
@@ -275,24 +308,26 @@ class DetalleServicio extends HTMLElement {
         const detalles = s.detallesVenta || [];
 
         if (detalles.length === 0) {
-            return `<section><h3>Repuestos</h3><p class="texto vacio">Sin repuestos, solo mano de obra.</p></section>`;
+            return `
+                <section>
+                    <h3>Repuestos</h3>
+                    <div class="caja"><p class="texto vacio">Sin repuestos, solo mano de obra.</p></div>
+                </section>
+            `;
         }
 
         const filas = detalles.map(d => {
             const p = d.producto || {};
-            const contenido = [p.contenido, p.unidadMedida?.abreviatura]
-                .filter(v => v != null && v !== "").join(" ");
-            const secundario = [p.marcaProducto?.nombre, contenido].filter(Boolean).join(", ");
             const subtotal = Number(d.precioUnitario || 0) * Number(d.cantidad || 0);
 
             return `
                 <tr>
                     <td>
                         <div class="prod-nombre">${this.esc(p.nombre || `Producto #${p.id ?? "?"}`)}</div>
-                        ${secundario ? `<div class="prod-detalle">${this.esc(secundario)}</div>` : ""}
+                        ${this.htmlEtiquetasProducto(p.categoriaProducto?.nombre, p.marcaProducto?.nombre)}
                     </td>
-                    <td class="centro">${this.esc(d.cantidad)}</td>
                     <td class="der">${this.money(d.precioUnitario)}</td>
+                    <td class="centro">${this.esc(d.cantidad)}</td>
                     <td class="der">${this.money(subtotal)}</td>
                 </tr>
             `;
@@ -301,17 +336,19 @@ class DetalleServicio extends HTMLElement {
         return `
             <section>
                 <h3>Repuestos</h3>
-                <table class="tabla-repuestos">
-                    <thead>
-                        <tr>
-                            <th>Producto</th>
-                            <th class="centro">Cant.</th>
-                            <th class="der">Precio</th>
-                            <th class="der">Subtotal</th>
-                        </tr>
-                    </thead>
-                    <tbody>${filas}</tbody>
-                </table>
+                <div class="tabla-card">
+                    <table class="tabla-repuestos">
+                        <thead>
+                            <tr>
+                                <th>Producto</th>
+                                <th class="der col-precio">Precio unit.</th>
+                                <th class="centro col-cant">Cant.</th>
+                                <th class="der col-subtotal">Subtotal</th>
+                            </tr>
+                        </thead>
+                        <tbody>${filas}</tbody>
+                    </table>
+                </div>
             </section>
         `;
     }
@@ -338,29 +375,42 @@ class DetalleServicio extends HTMLElement {
         const subtotal = repuestos + manoObra;
         const total = s.total != null ? s.total : subtotal - subtotal * porcentaje / 100;
 
-        return `<section class="totales">${this.htmlFilasTotales(repuestos, manoObra, porcentaje, total, "Total")}</section>`;
-    }
-
-    htmlTotalAsesoramiento(s) {
-        if (!s.cobrado) {
-            return `<section class="totales"><div class="fila-total"><span>Este asesoramiento no se cobró</span></div></section>`;
-        }
-
         return `
-            <section class="totales">
-                <div class="fila-total total-final"><span>Monto cobrado</span><span>${this.money(s.monto)}</span></div>
+            <section>
+                <div class="tarjeta-totales">
+                    ${this.htmlFilasTotales(repuestos, manoObra, porcentaje, total, "Total")}
+                </div>
             </section>
         `;
     }
 
-    htmlAcciones() {
+    htmlTotalAsesoramiento(s) {
+        if (!s.cobrado) {
+            return `
+                <section>
+                    <div class="tarjeta-totales">
+                        <div class="fila-total"><span>Este asesoramiento no se cobró</span></div>
+                    </div>
+                </section>
+            `;
+        }
+
         return `
-            <section class="acciones" id="acciones">
-                <div class="acciones-botones">
-                    <button type="button" class="btn btn-primario" id="btnEditar">Editar</button>
-                    <button type="button" class="btn btn-peligro" id="btnCancelarServicio">Cancelar servicio</button>
+            <section>
+                <div class="tarjeta-totales">
+                    <div class="fila-total total-final"><span>Monto cobrado</span><span>${this.money(s.monto)}</span></div>
                 </div>
             </section>
+        `;
+    }
+
+    htmlAcciones(pendiente) {
+        return `
+            <div class="pie-acciones" id="acciones">
+                <button type="button" class="btn btn-peligro" id="btnCancelarServicio">✕ Cancelar servicio</button>
+                ${pendiente ? `<button type="button" class="btn btn-completar" id="btnCompletarServicio">✓ Completar</button>` : ""}
+                <button type="button" class="btn btn-primario" id="btnEditar">✎ Editar</button>
+            </div>
         `;
     }
 
@@ -372,11 +422,13 @@ class DetalleServicio extends HTMLElement {
     // ---------- cancelar servicio ----------
 
     async cancelarServicio(boton) {
+        const esTecnico = this.tipo === "tecnico";
+
         boton.disabled = true;
         boton.textContent = "Cancelando…";
 
         try {
-            const respuesta = await fetch(`${this.prefijo()}servicios/tecnicos/${this.servicioId}`, {
+            const respuesta = await fetch(`${this.prefijo()}servicios/${this.carpetaServicio()}/${this.servicioId}`, {
                 method: "DELETE"
             });
             const data = await respuesta.json();
@@ -385,7 +437,33 @@ class DetalleServicio extends HTMLElement {
                 throw new Error(data.error || "No se pudo cancelar el servicio");
             }
 
-            this.notificar("Servicio cancelado correctamente", "exito");
+            this.notificar(esTecnico ? "Servicio cancelado correctamente" : "Asesoramiento cancelado correctamente", "exito");
+            document.dispatchEvent(new CustomEvent("servicio-guardado", { bubbles: true, composed: true }));
+            await this.cargar();
+
+        } catch (error) {
+            this.renderDetalle(this._servicio);
+            this.mostrarErrorAcciones(error.message);
+        }
+    }
+    
+    async completarServicio(boton) {
+        const esTecnico = this.tipo === "tecnico";
+
+        boton.disabled = true;
+        boton.textContent = "Completando…";
+
+        try {
+            const respuesta = await fetch(`${this.prefijo()}servicios/${this.carpetaServicio()}/${this.servicioId}/cerrar`, {
+                method: "POST"
+            });
+            const data = await respuesta.json();
+
+            if (!respuesta.ok) {
+                throw new Error(data.error || "No se pudo completar el servicio");
+            }
+
+            this.notificar(esTecnico ? "Servicio completado correctamente" : "Asesoramiento completado correctamente", "exito");
             document.dispatchEvent(new CustomEvent("servicio-guardado", { bubbles: true, composed: true }));
             await this.cargar();
 
@@ -419,12 +497,15 @@ class DetalleServicio extends HTMLElement {
 
     async iniciarEdicion() {
         const s = this._servicio;
+        const esTecnico = this.tipo === "tecnico";
         this.renderCargando();
 
         try {
             const [clientes, productos] = await Promise.all([
                 fetch(`${this.prefijo()}clientes`).then(r => r.json()),
-                fetch(`${this.prefijo()}productos`).then(r => r.json())
+                esTecnico
+                    ? fetch(`${this.prefijo()}productos`).then(r => r.json())
+                    : Promise.resolve([])
             ]);
             this._clientes = clientes.filter(c => c.activo);
             this._productos = productos.filter(p => p.activo);
@@ -456,9 +537,8 @@ class DetalleServicio extends HTMLElement {
                 detalleId: d.id,
                 productoId: d.producto.id,
                 nombre: d.producto.nombre,
+                categoria: d.producto.categoriaProducto?.nombre || "",
                 marca: d.producto.marcaProducto?.nombre || "",
-                contenido: [d.producto.contenido, d.producto.unidadMedida?.abreviatura]
-                    .filter(v => v != null && v !== "").join(" "),
                 precioUnitario: Number(d.precioUnitario || 0),
                 cantidad: Number(d.cantidad || 0),
                 stockMax: d.producto.activo === false
@@ -472,15 +552,16 @@ class DetalleServicio extends HTMLElement {
 
     renderEdicion() {
         const ed = this._edicion;
+        const esTecnico = this.tipo === "tecnico";
 
         this.shadowRoot.querySelector(".contenido").innerHTML = `
-            <section class="sin-borde">
+            <section class="sin-margen">
                 <h3>Cliente</h3>
                 <div id="areaCliente"></div>
             </section>
 
             <section>
-                <h3>Problema</h3>
+                <h3>${esTecnico ? "Problema" : "Consulta"}</h3>
                 <textarea id="editProblema" rows="3">${this.esc(ed.problema)}</textarea>
             </section>
 
@@ -494,25 +575,30 @@ class DetalleServicio extends HTMLElement {
                 <div id="areaEvidencia"></div>
             </section>
 
-            <section>
-                <h3>Repuestos</h3>
-                <div id="areaRepuestos"></div>
-            </section>
+            ${esTecnico ? `
+                <section>
+                    <h3>Repuestos</h3>
+                    <div id="areaRepuestos"></div>
+                </section>
 
-            <section class="totales" id="resumenEdicion"></section>
+                <section>
+                    <div class="tarjeta-totales" id="resumenEdicion"></div>
+                </section>
+            ` : ""}
 
-            <section class="acciones">
-                <div class="acciones-botones">
-                    <button type="button" class="btn btn-secundario" id="btnDescartar">Descartar cambios</button>
-                    <button type="button" class="btn btn-primario" id="btnGuardar">Guardar cambios</button>
-                </div>
-            </section>
+            <div class="pie-acciones">
+                <button type="button" class="btn btn-secundario" id="btnDescartar">Descartar cambios</button>
+                <button type="button" class="btn btn-primario" id="btnGuardar">Guardar cambios</button>
+            </div>
         `;
 
         this.renderAreaCliente();
         this.renderAreaEvidencia();
-        this.renderAreaRepuestos();
-        this.renderResumenEdicion();
+
+        if (esTecnico) {
+            this.renderAreaRepuestos();
+            this.renderResumenEdicion();
+        }
 
         this.shadowRoot.querySelector("#btnDescartar").addEventListener("click", () => {
             this.liberarPreviews();
@@ -537,11 +623,11 @@ class DetalleServicio extends HTMLElement {
 
         if (!ed.cambiandoCliente) {
             area.innerHTML = `
-                <div class="cliente">
+                <div class="cliente-card">
                     <span class="avatar ${c.esEmpresa ? "avatar-empresa" : "avatar-particular"}">${this.esc(this.iniciales(c.nombreCompleto))}</span>
-                    <div>
+                    <div class="cliente-info">
                         <strong>${this.esc(c.nombreCompleto)}</strong>
-                        <span class="linea-cliente">${this.esc([c.cuitCuil, c.email].filter(Boolean).join(", "))}</span>
+                        <span class="cliente-linea">${this.esc([c.email, c.cuitCuil].filter(Boolean).join(" · "))}</span>
                     </div>
                     <button type="button" class="btn btn-secundario" id="btnCambiarCliente">Cambiar</button>
                 </div>
@@ -625,7 +711,7 @@ class DetalleServicio extends HTMLElement {
             <div class="acciones-botones izquierda">
                 ${puedeAgregar ? `
                     <label class="btn btn-secundario" for="archivoEdicion">Agregar imágenes</label>
-                    <input type="file" id="archivoEdicion" accept="image/*" multiple hidden>
+                    <input type="file" id="archivoEdicion" accept="${this.tiposImagen.join(",")}" multiple hidden>
                 ` : ""}
                 <span class="contador-imagenes">${cantidad} de ${this.maxImagenes}</span>
             </div>
@@ -650,8 +736,8 @@ class DetalleServicio extends HTMLElement {
         const ed = this._edicion;
 
         for (const archivo of archivos) {
-            if (!archivo.type.startsWith("image/")) {
-                this.notificar(`"${archivo.name}" no es una imagen`, "error");
+            if (!this.tiposImagen.includes(archivo.type)) {
+                this.notificar(`"${archivo.name}" no es un formato válido (JPG, PNG, GIF o WEBP)`, "error");
                 continue;
             }
             if (archivo.size > 10 * 1024 * 1024) {
@@ -680,7 +766,7 @@ class DetalleServicio extends HTMLElement {
         });
     }
 
-    // ----- repuestos -----
+    // ----- repuestos (solo servicio técnico) -----
 
     actualizarRepuestos() {
         this.renderAreaRepuestos();
@@ -692,39 +778,41 @@ class DetalleServicio extends HTMLElement {
         const ed = this._edicion;
 
         const tabla = ed.carrito.length === 0
-            ? `<p class="texto vacio">Sin repuestos, solo mano de obra.</p>`
+            ? `<div class="caja"><p class="texto vacio">Sin repuestos, solo mano de obra.</p></div>`
             : `
-                <table class="tabla-repuestos">
-                    <thead>
-                        <tr>
-                            <th>Producto</th>
-                            <th class="centro">Cant.</th>
-                            <th class="der">Subtotal</th>
-                            <th></th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        ${ed.carrito.map((item, i) => `
+                <div class="tabla-card">
+                    <table class="tabla-repuestos">
+                        <thead>
                             <tr>
-                                <td>
-                                    <div class="prod-nombre">${this.esc(item.nombre)}</div>
-                                    <div class="prod-detalle">${this.esc([item.marca, item.contenido].filter(Boolean).join(", "))}</div>
-                                </td>
-                                <td>
-                                    <div class="cantidad">
-                                        <button type="button" class="btn-cant" data-accion="restar" data-index="${i}">-</button>
-                                        <span>${item.cantidad}</span>
-                                        <button type="button" class="btn-cant" data-accion="sumar" data-index="${i}">+</button>
-                                    </div>
-                                </td>
-                                <td class="der">${this.money(item.precioUnitario * item.cantidad)}</td>
-                                <td class="der">
-                                    <button type="button" class="btn-quitar" data-index="${i}" aria-label="Quitar repuesto">&times;</button>
-                                </td>
+                                <th>Producto</th>
+                                <th class="centro col-cantidad">Cant.</th>
+                                <th class="der col-subtotal">Subtotal</th>
+                                <th class="col-quitar"></th>
                             </tr>
-                        `).join("")}
-                    </tbody>
-                </table>
+                        </thead>
+                        <tbody>
+                            ${ed.carrito.map((item, i) => `
+                                <tr>
+                                    <td>
+                                        <div class="prod-nombre">${this.esc(item.nombre)}</div>
+                                        ${this.htmlEtiquetasProducto(item.categoria, item.marca)}
+                                    </td>
+                                    <td>
+                                        <div class="cantidad">
+                                            <button type="button" class="btn-cant" data-accion="restar" data-index="${i}">-</button>
+                                            <span>${item.cantidad}</span>
+                                            <button type="button" class="btn-cant" data-accion="sumar" data-index="${i}">+</button>
+                                        </div>
+                                    </td>
+                                    <td class="der">${this.money(item.precioUnitario * item.cantidad)}</td>
+                                    <td class="der">
+                                        <button type="button" class="btn-quitar" data-index="${i}" aria-label="Quitar repuesto">&times;</button>
+                                    </td>
+                                </tr>
+                            `).join("")}
+                        </tbody>
+                    </table>
+                </div>
             `;
 
         area.innerHTML = `
@@ -836,9 +924,8 @@ class DetalleServicio extends HTMLElement {
                 detalleId: null,
                 productoId: producto.id,
                 nombre: producto.nombre,
+                categoria: producto.categoriaProducto?.nombre || "",
                 marca: producto.marcaProducto?.nombre || "",
-                contenido: [producto.contenido, producto.unidadMedida?.abreviatura]
-                    .filter(v => v != null && v !== "").join(" "),
                 precioUnitario: Number(producto.precioActual || 0),
                 cantidad: 1,
                 stockMax: disponible
@@ -902,13 +989,14 @@ class DetalleServicio extends HTMLElement {
 
         const ed = this._edicion;
         const s = this._servicio;
+        const esTecnico = this.tipo === "tecnico";
         const boton = this.shadowRoot.querySelector("#btnGuardar");
 
         const problema = this.shadowRoot.querySelector("#editProblema").value.trim();
         const diagnostico = this.shadowRoot.querySelector("#editDiagnostico").value.trim();
 
         if (!problema) {
-            this.mostrarErrorEdicion("Describí el problema del servicio");
+            this.mostrarErrorEdicion(esTecnico ? "Describí el problema del servicio" : "Indicá el motivo de la consulta");
             return;
         }
 
@@ -928,30 +1016,41 @@ class DetalleServicio extends HTMLElement {
             }
 
             // El PUT reemplaza el servicio completo, por eso se reenvían tal cual
-            // los datos que esta pantalla no edita (estado, pago, subrubro, fechas, mano de obra, descuento).
-            const body = {
+            // los datos que esta pantalla no edita (estado, cobro, pago, fechas, etc.).
+            const base = {
                 id: s.id,
                 clienteId: ed.cliente.id,
                 estadoVentaId: s.estadoVenta.id,
-                metodoPagoId: s.metodoPago.id,
-                subrubroServicioId: s.subrubroServicio.id,
                 fechaInicio: s.fechaInicio,
                 fechaCierre: s.fechaCierre,
-                fechaEntrega: s.fechaEntrega,
                 observacion: s.observacion,
-                manoObra: s.manoObra,
-                descuentoGlobal: s.descuentoGlobal,
                 problema,
                 diagnostico: diagnostico || null,
-                imagenesEvidencia,
-                detallesVenta: ed.carrito.map(i => ({
-                    id: i.detalleId,
-                    productoId: i.productoId,
-                    cantidad: i.cantidad
-                }))
+                imagenesEvidencia
             };
 
-            const respuesta = await fetch(`${this.prefijo()}servicios/tecnicos`, {
+            const body = esTecnico
+                ? {
+                    ...base,
+                    metodoPagoId: s.metodoPago.id,
+                    subrubroServicioId: s.subrubroServicio.id,
+                    fechaEntrega: s.fechaEntrega,
+                    manoObra: s.manoObra,
+                    descuentoGlobal: s.descuentoGlobal,
+                    detallesVenta: ed.carrito.map(i => ({
+                        id: i.detalleId,
+                        productoId: i.productoId,
+                        cantidad: i.cantidad
+                    }))
+                }
+                : {
+                    ...base,
+                    metodoPagoId: s.metodoPago?.id ?? null,
+                    cobrado: s.cobrado,
+                    monto: s.monto
+                };
+
+            const respuesta = await fetch(`${this.prefijo()}servicios/${this.carpetaServicio()}`, {
                 method: "PUT",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify(body)
@@ -963,7 +1062,7 @@ class DetalleServicio extends HTMLElement {
             }
 
             this.liberarPreviews();
-            this.notificar("Servicio actualizado correctamente", "exito");
+            this.notificar(esTecnico ? "Servicio actualizado correctamente" : "Asesoramiento actualizado correctamente", "exito");
             document.dispatchEvent(new CustomEvent("servicio-guardado", { bubbles: true, composed: true }));
             await this.cargar();
 
@@ -998,51 +1097,56 @@ class DetalleServicio extends HTMLElement {
                     color: #F87171;
                 }
 
+                /* ---------- datos principales ---------- */
+
                 .datos {
                     display: grid;
-                    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-                    gap: .9rem 1.5rem;
+                    grid-template-columns: repeat(3, minmax(0, 1fr));
+                    gap: 1.1rem 1.5rem;
                     margin: 0;
-                    padding: 0 0 1rem;
+                    padding: 0 0 1.2rem;
+                    border-bottom: 1px solid rgba(255, 255, 255, .2);
                 }
 
                 .datos dt {
-                    font-size: .78rem;
-                    color: rgba(255, 255, 255, .6);
-                    margin-bottom: .2rem;
+                    margin-bottom: .3rem;
+                    font-size: .72rem;
+                    font-weight: 600;
+                    letter-spacing: .08em;
+                    text-transform: uppercase;
+                    color: rgba(255, 255, 255, .65);
                 }
 
                 .datos dd {
                     margin: 0;
-                    font-weight: 600;
-                    font-size: .95rem;
+                    font-size: 1rem;
+                    font-weight: 700;
                 }
 
-                .badge-estado {
-                    display: inline-block;
-                    padding: .15rem .8rem;
-                    border-radius: 20px;
-                    border: 1px solid var(--c);
-                    color: var(--c);
-                    font-weight: 700;
-                    font-size: .85rem;
-                }
+                /* ---------- secciones ---------- */
 
                 section {
-                    padding: 1rem 0;
-                    border-top: 1px solid rgba(255, 255, 255, .18);
+                    margin-top: 1.4rem;
                 }
 
-                section.sin-borde {
-                    padding-top: 0;
-                    border-top: none;
+                section.sin-margen {
+                    margin-top: 0;
                 }
 
                 h3 {
-                    margin: 0 0 .55rem;
+                    margin: 0 0 .6rem;
                     font-size: .85rem;
-                    font-weight: 600;
+                    font-weight: 700;
+                    letter-spacing: .08em;
+                    text-transform: uppercase;
                     color: #B8D7FF;
+                }
+
+                .caja {
+                    padding: .9rem 1rem;
+                    border-radius: 10px;
+                    background: rgba(255, 255, 255, .08);
+                    border: 1px solid rgba(255,255,255,.25);
                 }
 
                 .texto {
@@ -1058,31 +1162,72 @@ class DetalleServicio extends HTMLElement {
                     font-style: italic;
                 }
 
-                .cliente {
+                /* ---------- píldoras ---------- */
+
+                .pildora {
+                    display: inline-block;
+                    padding: .2rem .8rem;
+                    border-radius: 20px;
+                    font-size: .85rem;
+                    font-weight: 700;
+                    white-space: nowrap;
+                }
+
+                .pildora-gris {
+                    background: rgba(255, 255, 255, .18);
+                    color: white;
+                }
+
+                .etiquetas {
+                    display: flex;
+                    flex-wrap: wrap;
+                    gap: .35rem;
+                    margin-top: .4rem;
+                }
+
+                .etiquetas .pildora {
+                    padding: .12rem .6rem;
+                    font-size: .72rem;
+                }
+
+                /* ---------- cliente ---------- */
+
+                .cliente-card {
                     display: flex;
                     align-items: center;
                     gap: .9rem;
+                    padding: .9rem 1rem;
+                    border-radius: 10px;
+                    background: rgba(255, 255, 255, .08);
+                    border: 1px solid rgba(255,255,255,.25);
                 }
 
-                .cliente .btn {
+                .cliente-card > .btn,
+                .cliente-card > .pildora {
+                    flex-shrink: 0;
                     margin-left: auto;
                 }
 
-                .cliente strong {
-                    display: block;
-                    font-size: 1rem;
-                    margin-bottom: .1rem;
+                .cliente-info {
+                    min-width: 0;
                 }
 
-                .linea-cliente {
+                .cliente-info strong {
+                    display: block;
+                    margin-bottom: .1rem;
+                    font-size: 1rem;
+                }
+
+                .cliente-linea {
                     display: block;
                     font-size: .85rem;
                     color: rgba(255, 255, 255, .7);
+                    overflow-wrap: anywhere;
                 }
 
                 .avatar {
-                    width: 42px;
-                    height: 42px;
+                    width: 44px;
+                    height: 44px;
                     flex-shrink: 0;
                     border-radius: 50%;
                     display: flex;
@@ -1157,39 +1302,72 @@ class DetalleServicio extends HTMLElement {
                     color: rgba(255, 255, 255, .7);
                 }
 
+                /* ---------- tabla de repuestos ---------- */
+
+                .tabla-card {
+                    overflow: hidden;
+                    border: 1px solid rgba(101, 181, 232, .55);
+                    border-radius: 10px;
+                    background: rgba(5, 68, 141, .25);
+                }
+
                 .tabla-repuestos {
                     width: 100%;
                     border-collapse: collapse;
+                    table-layout: fixed;
                 }
 
                 .tabla-repuestos th {
+                    padding: .7rem 1rem;
                     text-align: left;
-                    font-size: .78rem;
-                    font-weight: 600;
-                    color: rgba(255, 255, 255, .6);
-                    padding: 0 0 .5rem;
-                    border-bottom: 1px solid rgba(255, 255, 255, .25);
+                    font-size: .72rem;
+                    font-weight: 700;
+                    letter-spacing: .06em;
+                    text-transform: uppercase;
+                    color: #B8D7FF;
+                    background: rgba(6, 76, 156, .85);
+                    border-bottom: 1px solid rgba(101, 181, 232, .45);
                 }
 
                 .tabla-repuestos td {
-                    padding: .65rem 0;
-                    border-bottom: 1px solid rgba(255, 255, 255, .1);
-                    vertical-align: top;
+                    padding: .8rem 1rem;
+                    vertical-align: middle;
                     font-size: .92rem;
+                    border-top: 1px solid rgba(101, 181, 232, .25);
                 }
 
-                .tabla-repuestos .centro { text-align: center; }
-                .tabla-repuestos .der { text-align: right; white-space: nowrap; }
+                .tabla-repuestos .centro {
+                    text-align: center;
+                }
 
-                .prod-nombre { font-weight: 600; }
+                .tabla-repuestos .der {
+                    text-align: right;
+                    white-space: nowrap;
+                }
+
+                .tabla-repuestos .col-precio { width: 22%; }
+                .tabla-repuestos .col-cant { width: 12%; }
+                .tabla-repuestos .col-subtotal { width: 22%; }
+                .tabla-repuestos .col-cantidad { width: 26%; }
+                .tabla-repuestos .col-quitar { width: 8%; }
+
+                .prod-nombre {
+                    font-weight: 700;
+                    overflow-wrap: anywhere;
+                }
 
                 .prod-detalle {
                     font-size: .8rem;
                     color: rgba(255, 255, 255, .6);
                 }
 
-                .totales {
-                    padding-bottom: 0;
+                /* ---------- totales ---------- */
+
+                .tarjeta-totales {
+                    padding: 1rem 1.2rem;
+                    border-radius: 10px;
+                    background: rgba(255, 255, 255, .1);
+                    border: 1px solid rgba(255,255,255,.25);
                 }
 
                 .fila-total {
@@ -1200,17 +1378,28 @@ class DetalleServicio extends HTMLElement {
                 }
 
                 .total-final {
-                    margin-top: .3rem;
-                    padding-top: .6rem;
+                    margin-top: .4rem;
+                    padding-top: .7rem;
                     border-top: 1px solid rgba(255, 255, 255, .3);
                     font-size: 1.2rem;
                     font-weight: 700;
                 }
 
-                /* ---------- acciones y botones ---------- */
+                .tarjeta-totales .total-final:first-child {
+                    margin-top: 0;
+                    padding-top: 0;
+                    border-top: none;
+                }
 
-                .acciones {
-                    margin-top: .5rem;
+                /* ---------- botones ---------- */
+
+                .pie-acciones {
+                    display: flex;
+                    justify-content: flex-end;
+                    gap: .7rem;
+                    margin-top: 1.6rem;
+                    padding-top: 1rem;
+                    border-top: 1px solid rgba(255, 255, 255, .25);
                 }
 
                 .acciones-botones {
@@ -1219,6 +1408,7 @@ class DetalleServicio extends HTMLElement {
                     justify-content: flex-end;
                     gap: .6rem;
                     margin-top: .6rem;
+                    border: 1px solid rgba(255, 255, 255, .25);   
                 }
 
                 .acciones-botones.izquierda {
@@ -1227,15 +1417,16 @@ class DetalleServicio extends HTMLElement {
 
                 .btn {
                     display: inline-block;
-                    padding: .6rem 1.2rem;
-                    border-radius: 6px;
-                    border: 1px solid rgba(255, 255, 255, .3);
+                    padding: .65rem 1.3rem;
+                    border-radius: 8px;
+                    border: 1px solid rgba(255, 255, 255, .25);
                     background: transparent;
                     color: white;
                     font-family: inherit;
                     font-size: .9rem;
-                    font-weight: 600;
+                    font-weight: 700;
                     cursor: pointer;
+                    
                 }
 
                 .btn:hover:not(:disabled) {
@@ -1248,22 +1439,32 @@ class DetalleServicio extends HTMLElement {
                 }
 
                 .btn-primario {
-                    background: rgba(59, 159, 240, 1);
-                    border-color: rgba(181, 161, 161, 1);
+                    border: none;
+                    background: #37E0E0;
+                    color: #05448D;
                 }
 
                 .btn-primario:hover:not(:disabled) {
-                    background: rgba(59, 159, 240, .8);
+                    background: rgba(55, 224, 224, .85);
                 }
 
                 .btn-peligro {
-                    color: #F87171;
-                    border-color: #F87171;
-                    background: rgba(248, 113, 113, .12);
+                    background: #A52A3A;
+                    color: white;
                 }
 
                 .btn-peligro:hover:not(:disabled) {
-                    background: rgba(248, 113, 113, .25);
+                    background: #8F2331;
+                }
+        
+                .btn-completar {
+                    border: none;
+                    background: #1F9D55;
+                    color: white;
+                }
+
+                .btn-completar:hover:not(:disabled) {
+                    background: #198347;
                 }
 
                 .btn-bloque {
@@ -1278,7 +1479,7 @@ class DetalleServicio extends HTMLElement {
                     width: 100%;
                     box-sizing: border-box;
                     padding: .6rem .8rem;
-                    border-radius: 6px;
+                    border-radius: 8px;
                     border: 1px solid rgba(196, 196, 196, 1);
                     background: rgba(255, 255, 255, .15);
                     color: white;
