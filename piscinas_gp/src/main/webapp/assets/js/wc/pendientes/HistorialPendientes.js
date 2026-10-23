@@ -367,7 +367,7 @@ class HistorialPendientes extends HTMLElement {
                 #lista {
                     display: flex;
                     flex-direction: column;
-                    gap: .9rem;
+                    gap: .5rem;
                 }
 
                 .vacio {
@@ -383,11 +383,11 @@ class HistorialPendientes extends HTMLElement {
                     justify-content: space-between;
                     align-items: center;
                     gap: 1.5rem;
-                    padding: 1rem 1.5rem 1rem 1.3rem;
+                    padding: .7rem 1.5rem .7rem 1rem;
                     border-radius: 10px;
                     border: 1px solid rgba(255,255,255,.35);
                     border-left: 6px solid var(--c);
-                    background: rgba(9, 77, 154, .95);
+                    background: rgba(1, 49, 104, 1);
                     cursor: pointer;
                     transition: background .15s, transform .15s;
                     outline: none;
@@ -395,7 +395,7 @@ class HistorialPendientes extends HTMLElement {
 
                 .tarjeta:hover,
                 .tarjeta:focus-visible {
-                    background: rgba(12, 92, 180, .95);
+                    background: rgba(1, 49, 104, .8);
                     transform: translateY(-1px);
                 }
 

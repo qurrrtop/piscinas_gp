@@ -15,5 +15,6 @@
         ></dashboard-header>
 
         <historial-pendientes base-path="${pageContext.request.contextPath}"></historial-pendientes>
+        <br><br><br><br><br>
     </div>
 </div>

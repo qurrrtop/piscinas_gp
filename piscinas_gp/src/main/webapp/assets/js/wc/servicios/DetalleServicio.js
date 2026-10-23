@@ -14,6 +14,7 @@ class DetalleServicio extends HTMLElement {
         this._productos = [];
         this._cantidadOriginal = {};
         this._guardando = false;
+        this._metodosPago = [];
     }
 
     connectedCallback() {
@@ -195,7 +196,7 @@ class DetalleServicio extends HTMLElement {
             esTecnico && subrubro
                 ? ["Subrubro", this.pildora(subrubro, this.colorSubrubro())]
                 : null,
-            ["Inicio", this.formatearFecha(s.fechaInicio, true)],
+            ["Fecha creación", this.formatearFecha(s.fechaInicio, true)],
             esTecnico ? ["Entrega estimada", this.formatearFecha(s.fechaEntrega)] : null,
             ["Cierre", this.formatearFecha(s.fechaCierre)],
             this.datoPago(esTecnico, s)
@@ -244,11 +245,6 @@ class DetalleServicio extends HTMLElement {
             ${evidencia}
             ${esTecnico ? this.htmlRepuestos(s) : ""}
             ${esTecnico ? this.htmlTotalesTecnico(s) : this.htmlTotalAsesoramiento(s)}
-
-            <section>
-                <h3>Observaciones</h3>
-                <div class="caja"><p class="texto">${this.esc(s.observacion || "Sin observaciones")}</p></div>
-            </section>
 
             ${!cancelado ? this.htmlAcciones(pendiente) : ""}
         `;
@@ -501,14 +497,18 @@ class DetalleServicio extends HTMLElement {
         this.renderCargando();
 
         try {
-            const [clientes, productos] = await Promise.all([
+            const [clientes, productos, metodosPago] = await Promise.all([
                 fetch(`${this.prefijo()}clientes`).then(r => r.json()),
                 esTecnico
                     ? fetch(`${this.prefijo()}productos`).then(r => r.json())
-                    : Promise.resolve([])
+                    : Promise.resolve([]),
+                esTecnico
+                    ? Promise.resolve([])
+                    : fetch(`${this.prefijo()}metodos-pago`).then(r => r.json())
             ]);
             this._clientes = clientes.filter(c => c.activo);
             this._productos = productos.filter(p => p.activo);
+            this._metodosPago = metodosPago;
 
         } catch (error) {
             this.renderDetalle(s);
@@ -528,6 +528,11 @@ class DetalleServicio extends HTMLElement {
             cambiandoCliente: false,
             problema: s.problema || "",
             diagnostico: s.diagnostico || "",
+            cobro: {
+                cobrado: !!s.cobrado,
+                monto: s.monto ?? "",
+                metodoPagoId: s.metodoPago?.id ?? ""
+            },
             // archivo: nombre guardado en el servidor; file/preview: imagen nueva que todavia no se subio
             imagenes: (s.imagenesEvidencia || []).map(archivo => ({
                 archivo, file: null, preview: null, archivoSubido: null
@@ -574,6 +579,13 @@ class DetalleServicio extends HTMLElement {
                 <h3>Evidencia</h3>
                 <div id="areaEvidencia"></div>
             </section>
+        
+            ${!esTecnico ? `
+                <section>
+                    <h3>Cobro</h3>
+                    <div id="areaCobro"></div>
+                </section>
+            ` : ""}
 
             ${esTecnico ? `
                 <section>
@@ -598,6 +610,8 @@ class DetalleServicio extends HTMLElement {
         if (esTecnico) {
             this.renderAreaRepuestos();
             this.renderResumenEdicion();
+        } else {
+            this.renderAreaCobro();
         }
 
         this.shadowRoot.querySelector("#btnDescartar").addEventListener("click", () => {
@@ -763,6 +777,55 @@ class DetalleServicio extends HTMLElement {
     liberarPreviews() {
         (this._edicion?.imagenes || []).forEach(imagen => {
             if (imagen.preview) URL.revokeObjectURL(imagen.preview);
+        });
+    }
+    
+    // ----- cobro (solo asesoramiento) -----
+
+    renderAreaCobro() {
+        const area = this.shadowRoot.querySelector("#areaCobro");
+        const cobro = this._edicion.cobro;
+
+        area.innerHTML = `
+            <div class="opciones-cobro">
+                <button type="button" class="btn-opcion ${!cobro.cobrado ? "seleccionado" : ""}" data-cobrado="no">Sin cobro</button>
+                <button type="button" class="btn-opcion ${cobro.cobrado ? "seleccionado" : ""}" data-cobrado="si">Cobrado</button>
+            </div>
+
+            ${cobro.cobrado ? `
+                <div class="fila-cobro">
+                    <div>
+                        <label class="campo" for="editMonto">Monto cobrado ($)</label>
+                        <input type="number" id="editMonto" min="0" step="any" value="${this.esc(cobro.monto)}">
+                    </div>
+                    <div>
+                        <label class="campo" for="editMetodoPago">Método de pago</label>
+                        <select id="editMetodoPago">
+                            <option value="">Elegí un método</option>
+                            ${this._metodosPago.map(m => `
+                                <option value="${this.esc(m.id)}" ${String(m.id) === String(cobro.metodoPagoId) ? "selected" : ""}>
+                                    ${this.esc(this.capitalizar(m.nombre))}
+                                </option>
+                            `).join("")}
+                        </select>
+                    </div>
+                </div>
+            ` : ""}
+        `;
+
+        area.querySelectorAll(".btn-opcion").forEach(btn => {
+            btn.addEventListener("click", () => {
+                cobro.cobrado = btn.dataset.cobrado === "si";
+                this.renderAreaCobro();
+            });
+        });
+
+        area.querySelector("#editMonto")?.addEventListener("input", (e) => {
+            cobro.monto = e.target.value;
+        });
+
+        area.querySelector("#editMetodoPago")?.addEventListener("change", (e) => {
+            cobro.metodoPagoId = e.target.value;
         });
     }
 
@@ -999,6 +1062,17 @@ class DetalleServicio extends HTMLElement {
             this.mostrarErrorEdicion(esTecnico ? "Describí el problema del servicio" : "Indicá el motivo de la consulta");
             return;
         }
+        
+        if (!esTecnico && ed.cobro.cobrado) {
+            if (!(Number(ed.cobro.monto) > 0)) {
+                this.mostrarErrorEdicion("Indicá un monto mayor a cero para el cobro");
+                return;
+            }
+            if (!ed.cobro.metodoPagoId) {
+                this.mostrarErrorEdicion("Elegí el método de pago del cobro");
+                return;
+            }
+        }
 
         this._guardando = true;
         boton.disabled = true;
@@ -1023,7 +1097,6 @@ class DetalleServicio extends HTMLElement {
                 estadoVentaId: s.estadoVenta.id,
                 fechaInicio: s.fechaInicio,
                 fechaCierre: s.fechaCierre,
-                observacion: s.observacion,
                 problema,
                 diagnostico: diagnostico || null,
                 imagenesEvidencia
@@ -1045,11 +1118,10 @@ class DetalleServicio extends HTMLElement {
                 }
                 : {
                     ...base,
-                    metodoPagoId: s.metodoPago?.id ?? null,
-                    cobrado: s.cobrado,
-                    monto: s.monto
+                    cobrado: ed.cobro.cobrado,
+                    monto: ed.cobro.cobrado ? Number(ed.cobro.monto) : 0,
+                    metodoPagoId: ed.cobro.cobrado ? Number(ed.cobro.metodoPagoId) : null
                 };
-
             const respuesta = await fetch(`${this.prefijo()}servicios/${this.carpetaServicio()}`, {
                 method: "PUT",
                 headers: { "Content-Type": "application/json" },
@@ -1239,6 +1311,62 @@ class DetalleServicio extends HTMLElement {
 
                 .avatar-particular { background: linear-gradient(160deg, #5FD9E8, #0B5C7A); }
                 .avatar-empresa { background: linear-gradient(160deg, #E85FC9, #6A1B6E); }
+        
+                .opciones-cobro {
+                    display: flex;
+                    gap: .7rem;
+                }
+
+                .btn-opcion {
+                    flex: 1;
+                    padding: .65rem;
+                    border-radius: 8px;
+                    border: 2px solid rgba(255, 255, 255, .3);
+                    background: rgba(255, 255, 255, .08);
+                    color: white;
+                    font-family: inherit;
+                    font-weight: 700;
+                    cursor: pointer;
+                }
+
+                .btn-opcion.seleccionado {
+                    border-color: #37E0E0;
+                    background: rgba(55, 224, 224, .18);
+                }
+
+                .fila-cobro {
+                    display: grid;
+                    grid-template-columns: 1fr 1fr;
+                    gap: 1rem;
+                    margin-top: .9rem;
+                }
+
+                label.campo {
+                    display: block;
+                    margin-bottom: .3rem;
+                    font-size: .72rem;
+                    font-weight: 600;
+                    letter-spacing: .06em;
+                    text-transform: uppercase;
+                    color: rgba(255, 255, 255, .65);
+                }
+
+                input[type="number"],
+                select {
+                    width: 100%;
+                    box-sizing: border-box;
+                    padding: .6rem .8rem;
+                    border-radius: 8px;
+                    border: 1px solid rgba(196, 196, 196, 1);
+                    background: rgba(255, 255, 255, .15);
+                    color: white;
+                    font-family: inherit;
+                    font-size: .95rem;
+                }
+
+                select option {
+                    color: black;
+                }
 
                 /* ---------- galería de evidencia ---------- */
 
@@ -1408,7 +1536,6 @@ class DetalleServicio extends HTMLElement {
                     justify-content: flex-end;
                     gap: .6rem;
                     margin-top: .6rem;
-                    border: 1px solid rgba(255, 255, 255, .25);   
                 }
 
                 .acciones-botones.izquierda {

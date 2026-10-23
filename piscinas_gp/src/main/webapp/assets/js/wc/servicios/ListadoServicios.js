@@ -219,7 +219,7 @@ class ListadoServicios extends HTMLElement {
             },
             {
                 clave: "inicio",
-                titulo: "Inicio",
+                titulo: "Fecha creación",
                 ancho: "13%",
                 formato: (valor) => this.formatearFecha(valor)
             },
