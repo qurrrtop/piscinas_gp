@@ -114,16 +114,16 @@ class FormularioCliente extends HTMLElement {
         const btnVolver = this.shadowRoot.querySelector(".btn-volver");
 
         const fields = [
-            { input: "#email", rule: Rules.provisions.EMAIL },
-            { input: "#telefono", rule: Rules.provisions.TELEFONO },
-            { input: "#calleYNumero", rule: Rules.provisions.CALLE_Y_NUMERO },
+            { input: "#email", rule: Rules.provisions.EMAIL, optional: true },
+            { input: "#telefono", rule: Rules.provisions.TELEFONO, optional: true },
+            { input: "#calleYNumero", rule: Rules.provisions.CALLE_Y_NUMERO, optional: true },
             { input: "#observaciones", rule: Rules.provisions.OBSERVACIONES, optional: true },
             { input: "#nombre", rule: Rules.provisions.NOMBRE },
             { input: "#apellido", rule: Rules.provisions.APELLIDO },
             { input: "#cuil", rule: Rules.provisions.CUIL },
             { input: "#razonSocial", rule: Rules.provisions.RAZON_SOCIAL },
-            { input: "#nombreFantasia", rule: Rules.provisions.NOMBRE_FANTASIA },
-            { input: "#rubro", rule: Rules.provisions.RUBRO },
+            { input: "#nombreFantasia", rule: Rules.provisions.NOMBRE_FANTASIA, optional: true },
+            { input: "#rubro", rule: Rules.provisions.RUBRO, optional: true },
             { input: "#cuit", rule: Rules.provisions.CUIT }
         ];
 
@@ -185,9 +185,9 @@ class FormularioCliente extends HTMLElement {
         let formularioValido = true;
 
         const camposComunes = [
-            { input: "#email", rule: Rules.provisions.EMAIL },
-            { input: "#telefono", rule: Rules.provisions.TELEFONO },
-            { input: "#calleYNumero", rule: Rules.provisions.CALLE_Y_NUMERO },
+            { input: "#email", rule: Rules.provisions.EMAIL, optional: true },
+            { input: "#telefono", rule: Rules.provisions.TELEFONO, optional: true },
+            { input: "#calleYNumero", rule: Rules.provisions.CALLE_Y_NUMERO, optional: true },
             { input: "#observaciones", rule: Rules.provisions.OBSERVACIONES, optional: true }
         ];
 
@@ -199,8 +199,8 @@ class FormularioCliente extends HTMLElement {
 
         const camposEmpresa = [
             { input: "#razonSocial", rule: Rules.provisions.RAZON_SOCIAL },
-            { input: "#nombreFantasia", rule: Rules.provisions.NOMBRE_FANTASIA },
-            { input: "#rubro", rule: Rules.provisions.RUBRO },
+            { input: "#nombreFantasia", rule: Rules.provisions.NOMBRE_FANTASIA, optional: true },
+            { input: "#rubro", rule: Rules.provisions.RUBRO, optional: true },
             { input: "#cuit", rule: Rules.provisions.CUIT }
         ];
 
@@ -225,11 +225,14 @@ class FormularioCliente extends HTMLElement {
         });
         
         const inputLocalidad = this.shadowRoot.querySelector("#localidad");
-        const localidadValida = this._localidades.some(loc => loc.nombre === inputLocalidad.value);
+        const nombreLocalidad = inputLocalidad.value.trim();
 
-        if (!localidadValida) {
+        // la localidad es opcional, pero si se escribe algo tiene que ser una de la lista
+        if (nombreLocalidad !== "" && !this._localidades.some(loc => loc.nombre === nombreLocalidad)) {
             this.checkResult(inputLocalidad, "Debe seleccionar una localidad de la lista");
             formularioValido = false;
+        } else {
+            this.checkResult(inputLocalidad, null);
         }
 
         return formularioValido;
@@ -246,11 +249,13 @@ class FormularioCliente extends HTMLElement {
         const nombreLocalidad = this.shadowRoot.querySelector("#localidad").value;
         const localidadEncontrada = this._localidades.find(loc => loc.nombre === nombreLocalidad);
 
+        const valorOpcional = (selector) => this.shadowRoot.querySelector(selector).value.trim() || null;
+
         const base = {
             tipo: this._tipo === 'particular' ? 'Particular' : 'Empresa',
-            email: this.shadowRoot.querySelector("#email").value,
-            telefono: this.shadowRoot.querySelector("#telefono").value,
-            calleYnumero: this.shadowRoot.querySelector("#calleYNumero").value,
+            email: valorOpcional("#email"),
+            telefono: valorOpcional("#telefono"),
+            calleYnumero: valorOpcional("#calleYNumero"),
             localidadId: localidadEncontrada ? localidadEncontrada.id : null,
             observaciones: this.shadowRoot.querySelector("#observaciones").value
         };
@@ -267,8 +272,8 @@ class FormularioCliente extends HTMLElement {
         return {
             ...base,
             razonSocial: this.shadowRoot.querySelector("#razonSocial").value,
-            nombreFantasia: this.shadowRoot.querySelector("#nombreFantasia").value,
-            rubro: this.shadowRoot.querySelector("#rubro").value,
+            nombreFantasia: valorOpcional("#nombreFantasia"),
+            rubro: valorOpcional("#rubro"),
             cuit: this.shadowRoot.querySelector("#cuit").value
         };
     }
@@ -537,7 +542,7 @@ class FormularioCliente extends HTMLElement {
                     <div class="form-group">
                         <label>RAZÓN SOCIAL <span class="required">*</span></label>
                         <input type="text" name="razonSocial" id="razonSocial" 
-                                placeholder="Ej: Piscinas del Norte S.R.L.">
+                                required placeholder="Ej: Piscinas del Norte S.R.L.">
                         <small class="error-message"></small>
                     </div>
                     <div class="form-group">
@@ -547,14 +552,14 @@ class FormularioCliente extends HTMLElement {
                         <small class="error-message"></small>
                     </div>
                     <div class="form-group">
-                        <label>RUBRO <span class="required">*</span></label>
+                        <label>RUBRO</label>
                         <input type="text" name="rubro" id="rubro"
                                 placeholder="Ej: Construcción de piscinas">
                         <small class="error-message"></small>
                     </div>
                     <div class="form-group">
                         <label>CUIT <span class="required">*</span></label>
-                        <input type="text" name="cuit" id="cuit" placeholder="30-12345678-9">
+                        <input type="text" name="cuit" id="cuit" required placeholder="30-12345678-9">
                         <small class="error-message"></small>
                     </div>
                 </div>

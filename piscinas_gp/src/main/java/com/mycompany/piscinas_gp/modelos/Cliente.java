@@ -58,25 +58,34 @@ public abstract class Cliente implements Identifiable{
     }
 
     public void setEmail(String email) {
+        if (email == null || email.isBlank()) {
+            this.email = null;
+            return;
+        }
         SetValidator.validar(email, StringFieldType.EMAIL);
-        
         this.email = email;
     }
 
     public void setTelefono(String telefono) {
+        if (telefono == null || telefono.isBlank()) {
+            this.telefono = null;
+            return;
+        }
         SetValidator.validar(telefono, StringFieldType.TELEFONO);
         this.telefono = telefono;
     }
 
     public void setCalleYnumero(String calleYnumero) {
+        if (calleYnumero == null || calleYnumero.isBlank()) {
+            this.calleYnumero = null;
+            return;
+        }
         SetValidator.validar(calleYnumero, StringFieldType.CALLE_Y_NUMERO);
         this.calleYnumero = calleYnumero;
     }
 
+    // la localidad es opcional
     public void setLocalidad(Localidad localidad) {
-        if(localidad == null) {
-            throw new IllegalArgumentException("La localidad no puede estar nulo");
-        }
         this.localidad = localidad;
     }
 

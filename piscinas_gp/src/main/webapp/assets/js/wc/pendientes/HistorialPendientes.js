@@ -217,12 +217,14 @@ class HistorialPendientes extends HTMLElement {
                             <span class="codigo">${this.esc(t.codigo)}</span>
                             <span class="pildora">${tipo.pildora}</span>
                             ${t.subrubro ? `<span class="subrubro">${this.esc(t.subrubro)}</span>` : ""}
+                            <h2 class="cliente">${this.esc(t.cliente)}</h2>
                         </div>
 
-                        <h2 class="cliente">${this.esc(t.cliente)}</h2>
+                        ${t.descripcion ? `<p class="descripcion" title="${this.esc(t.descripcion)}">${this.esc(t.descripcion)}</p>` : ""}
+                    </div>
 
-                        ${t.descripcion ? `<p class="descripcion">${this.esc(t.descripcion)}</p>` : ""}
-
+                    <div class="lado-derecho">
+                        <div class="monto">${this.esc(t.monto)}</div>
                         <div class="fechas">
                             <span>Creado: <strong>${this.formatearFecha(t.creado)}</strong></span>
                             ${t.entrega ? `
@@ -232,8 +234,6 @@ class HistorialPendientes extends HTMLElement {
                             ` : ""}
                         </div>
                     </div>
-
-                    <div class="monto">${this.esc(t.monto)}</div>
                 </article>
             `;
         }).join("");
@@ -383,7 +383,7 @@ class HistorialPendientes extends HTMLElement {
                     justify-content: space-between;
                     align-items: center;
                     gap: 1.5rem;
-                    padding: .7rem 1.5rem .7rem 1rem;
+                    padding: .75rem 1.3rem .75rem 1.1rem;
                     border-radius: 10px;
                     border: 1px solid rgba(255,255,255,.35);
                     border-left: 6px solid var(--c);
@@ -395,11 +395,12 @@ class HistorialPendientes extends HTMLElement {
 
                 .tarjeta:hover,
                 .tarjeta:focus-visible {
-                    background: rgba(1, 49, 104, .8);
+                    background: rgba(1, 49, 104, .7);
                     transform: translateY(-1px);
                 }
 
                 .tarjeta-info {
+                    flex: 1;
                     min-width: 0;
                 }
 
@@ -407,48 +408,65 @@ class HistorialPendientes extends HTMLElement {
                     display: flex;
                     align-items: center;
                     flex-wrap: wrap;
-                    gap: .7rem;
+                    gap: .3rem .7rem;
                 }
 
                 .codigo {
                     font-weight: 700;
-                    font-size: .95rem;
+                    font-size: .9rem;
                 }
 
                 .pildora {
-                    padding: .12rem .8rem;
+                    padding: .08rem .7rem;
                     border-radius: 20px;
                     border: 1px solid var(--c);
                     background: color-mix(in srgb, var(--c) 18%, transparent);
                     color: var(--c);
-                    font-size: .85rem;
+                    font-size: .8rem;
                     font-weight: 700;
                 }
 
                 .subrubro {
-                    font-size: .9rem;
+                    font-size: .85rem;
                     font-weight: 700;
                 }
 
                 .cliente {
-                    margin: .25rem 0 .2rem;
-                    font-size: 1.6rem;
+                    margin: 0;
+                    font-size: 1.15rem;
                     font-weight: 700;
                     overflow-wrap: anywhere;
                 }
 
                 .descripcion {
-                    margin: 0 0 .4rem;
-                    font-size: .9rem;
+                    margin: .2rem 0 0;
+                    font-size: .85rem;
                     color: rgba(255,255,255,.85);
-                    overflow-wrap: anywhere;
+                    white-space: nowrap;
+                    overflow: hidden;
+                    text-overflow: ellipsis;
+                }
+
+                .lado-derecho {
+                    flex-shrink: 0;
+                    display: flex;
+                    flex-direction: column;
+                    align-items: flex-end;
+                    gap: .15rem;
+                }
+
+                .monto {
+                    font-size: 1.4rem;
+                    font-weight: 700;
+                    white-space: nowrap;
                 }
 
                 .fechas {
                     display: flex;
                     flex-wrap: wrap;
-                    gap: .3rem 1.6rem;
-                    font-size: .8rem;
+                    justify-content: flex-end;
+                    gap: .1rem 1.2rem;
+                    font-size: .78rem;
                     color: rgba(255,255,255,.75);
                 }
 
@@ -461,22 +479,18 @@ class HistorialPendientes extends HTMLElement {
                     color: #FFB4A8;
                 }
 
-                .monto {
-                    flex-shrink: 0;
-                    font-size: 1.7rem;
-                    font-weight: 700;
-                    white-space: nowrap;
-                    text-align: right;
-                }
-
-                @media (max-width: 700px) {
+                @media (max-width: 800px) {
                     .tarjeta {
                         flex-direction: column;
                         align-items: flex-start;
                     }
 
-                    .monto {
-                        text-align: left;
+                    .lado-derecho {
+                        align-items: flex-start;
+                    }
+
+                    .fechas {
+                        justify-content: flex-start;
                     }
                 }
             </style>

@@ -25,6 +25,10 @@ class DetalleServicio extends HTMLElement {
         this.renderShell();
         this.cargar();
     }
+    
+    disconnectedCallback() {
+        this.cerrarVisor();
+    }
 
     // ---------- carga ----------
 
@@ -250,6 +254,15 @@ class DetalleServicio extends HTMLElement {
         `;
 
         this.reemplazarImagenesRotas();
+        
+        // un clic normal abre el visor; con ctrl, shift o la rueda se mantiene la apertura en pestaña nueva
+        this.shadowRoot.querySelectorAll(".galeria-item[href]").forEach((enlace, i) => {
+            enlace.addEventListener("click", (e) => {
+                if (e.ctrlKey || e.metaKey || e.shiftKey) return;
+                e.preventDefault();
+                this.abrirVisor(imagenes, i);
+            });
+        });
 
         this.shadowRoot.querySelector("#btnEditar")?.addEventListener("click", () => this.iniciarEdicion());
         this.shadowRoot.querySelector("#btnCancelarServicio")?.addEventListener("click", (e) => this.cancelarServicio(e.currentTarget));
@@ -265,6 +278,62 @@ class DetalleServicio extends HTMLElement {
                 }));
             });
         });
+    }
+    
+    // ---------- visor de imagenes ----------
+
+    abrirVisor(imagenes, indice) {
+        this.cerrarVisor();
+
+        let actual = indice;
+
+        const visor = document.createElement("div");
+        visor.className = "visor";
+        visor.innerHTML = `
+            <button type="button" class="visor-cerrar" aria-label="Cerrar">&times;</button>
+            ${imagenes.length > 1 ? `
+                <button type="button" class="visor-nav visor-anterior" aria-label="Imagen anterior">&#10094;</button>
+                <button type="button" class="visor-nav visor-siguiente" aria-label="Imagen siguiente">&#10095;</button>
+                <span class="visor-contador"></span>
+            ` : ""}
+            <img class="visor-imagen" alt="Evidencia ampliada">
+        `;
+
+        const imagen = visor.querySelector(".visor-imagen");
+        const contador = visor.querySelector(".visor-contador");
+
+        const mostrar = (nuevo) => {
+            actual = (nuevo + imagenes.length) % imagenes.length;
+            imagen.src = this.urlImagen(imagenes[actual]);
+            if (contador) contador.textContent = `${actual + 1} de ${imagenes.length}`;
+        };
+
+        // un clic en el fondo oscuro cierra; un clic sobre la imagen o los botones no
+        visor.addEventListener("click", (e) => {
+            if (e.target === visor) this.cerrarVisor();
+        });
+        visor.querySelector(".visor-cerrar").addEventListener("click", () => this.cerrarVisor());
+        visor.querySelector(".visor-anterior")?.addEventListener("click", () => mostrar(actual - 1));
+        visor.querySelector(".visor-siguiente")?.addEventListener("click", () => mostrar(actual + 1));
+
+        this._alTeclear = (e) => {
+            if (e.key === "Escape") this.cerrarVisor();
+            if (e.key === "ArrowLeft" && imagenes.length > 1) mostrar(actual - 1);
+            if (e.key === "ArrowRight" && imagenes.length > 1) mostrar(actual + 1);
+        };
+        document.addEventListener("keydown", this._alTeclear);
+
+        this.shadowRoot.appendChild(visor);
+        mostrar(actual);
+    }
+
+    cerrarVisor() {
+        this.shadowRoot.querySelector(".visor")?.remove();
+
+        if (this._alTeclear) {
+            document.removeEventListener("keydown", this._alTeclear);
+            this._alTeclear = null;
+        }
     }
 
     datoPago(esTecnico, s) {
@@ -1428,6 +1497,91 @@ class DetalleServicio extends HTMLElement {
                 .contador-imagenes {
                     font-size: .85rem;
                     color: rgba(255, 255, 255, .7);
+                }
+        
+                /* ---------- visor de imagenes ---------- */
+
+                .galeria-item[href] {
+                    cursor: zoom-in;
+                }
+
+                .visor {
+                    position: fixed;
+                    inset: 0;
+                    z-index: 20;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    padding: 2rem;
+                    background: rgba(0, 0, 0, .8);
+                    animation: visor-entrada .18s ease-out;
+                }
+
+                .visor-imagen {
+                    max-width: min(92vw, 1100px);
+                    max-height: 85vh;
+                    border-radius: 10px;
+                    box-shadow: 0 10px 40px rgba(0, 0, 0, .5);
+                    animation: visor-zoom .18s ease-out;
+                }
+
+                .visor-cerrar {
+                    position: absolute;
+                    top: 1rem;
+                    right: 1.2rem;
+                    width: 2.4rem;
+                    height: 2.4rem;
+                    border: none;
+                    border-radius: 50%;
+                    background: rgba(255, 255, 255, .18);
+                    color: white;
+                    font-size: 1.5rem;
+                    line-height: 1;
+                    cursor: pointer;
+                }
+
+                .visor-nav {
+                    position: absolute;
+                    top: 50%;
+                    transform: translateY(-50%);
+                    width: 2.8rem;
+                    height: 2.8rem;
+                    border: none;
+                    border-radius: 50%;
+                    background: rgba(255, 255, 255, .18);
+                    color: white;
+                    font-size: 1.2rem;
+                    cursor: pointer;
+                }
+
+                .visor-cerrar:hover,
+                .visor-nav:hover {
+                    background: rgba(255, 255, 255, .3);
+                }
+
+                .visor-anterior { left: 1.2rem; }
+                .visor-siguiente { right: 1.2rem; }
+
+                .visor-contador {
+                    position: absolute;
+                    bottom: 1.2rem;
+                    left: 50%;
+                    transform: translateX(-50%);
+                    padding: .25rem .9rem;
+                    border-radius: 20px;
+                    background: rgba(0, 0, 0, .55);
+                    color: white;
+                    font-size: .85rem;
+                }
+
+                @keyframes visor-entrada {
+                    from { opacity: 0; }
+                    to { opacity: 1; }
+                }
+
+                @keyframes visor-zoom {
+                    from { transform: scale(.92); }
+                    to { transform: scale(1); }
                 }
 
                 /* ---------- tabla de repuestos ---------- */

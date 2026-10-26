@@ -49,11 +49,19 @@ public class ClienteEmpresa extends Cliente {
     }
 
     public void setNombreFantasia(String nombreFantasia) {
+        if (nombreFantasia == null || nombreFantasia.isBlank()) {
+            this.nombreFantasia = null;
+            return;
+        }
         SetValidator.validar(nombreFantasia, StringFieldType.NOMBRE_FANTASIA);
         this.nombreFantasia = nombreFantasia;
     }
-
+    
     public void setRubro(String rubro) {
+        if (rubro == null || rubro.isBlank()) {
+            this.rubro = null;
+            return;
+        }
         SetValidator.validar(rubro, StringFieldType.RUBRO);
         this.rubro = rubro;
     }

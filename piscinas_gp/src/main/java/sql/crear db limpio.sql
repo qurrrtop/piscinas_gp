@@ -91,8 +91,8 @@ CREATE TABLE tipo_ventas (
 CREATE TABLE clientes (
     id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
     email VARCHAR(150) NULL,
-    telefono VARCHAR(15) NOT NULL,
-    calle_numero VARCHAR(150) NOT NULL,
+    telefono VARCHAR(15) NULL,
+    calle_numero VARCHAR(150) NULL,
     localidad_id INT UNSIGNED NULL,
     observaciones TEXT NULL,
     activo BOOLEAN NOT NULL DEFAULT TRUE,
@@ -120,7 +120,7 @@ CREATE TABLE clientes_particulares (
 CREATE TABLE clientes_empresas (
     cliente_id INT UNSIGNED PRIMARY KEY,
     razon_social VARCHAR(150) NOT NULL,
-    nombre_fantasia VARCHAR(150) NOT NULL,
+    nombre_fantasia VARCHAR(150) NULL,
     rubro VARCHAR(100) NULL,
     cuit VARCHAR(11) NOT NULL UNIQUE,
 

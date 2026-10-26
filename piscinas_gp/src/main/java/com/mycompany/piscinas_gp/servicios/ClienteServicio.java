@@ -225,13 +225,15 @@ public class ClienteServicio {
         }
     }
     
-    // Busca la Localidad real a partir del ID que manda el DTO, validando que exista
+    // Busca la Localidad real a partir del ID que manda el DTO. La localidad es opcional:
+    // sin ID no hay localidad; con ID tiene que existir.
     private Localidad resolverLocalidad(Long localidadId) throws PersistenceException, BusinessException {
         if (localidadId == null) {
-            throw new BusinessException("La localidad es requerida");
+            return null;
         }
+
         Localidad localidad = localidadDAO.buscarPorId(localidadId);
-        
+
         if (localidad == null) {
             throw new BusinessException("La localidad indicada no existe");
         }
@@ -245,8 +247,10 @@ public class ClienteServicio {
         dto.setEmail(c.getEmail());
         dto.setTelefono(c.getTelefono());
         dto.setCalleYnumero(c.getCalleYnumero());
-        dto.setLocalidadId(c.getLocalidad().getId());
-        dto.setLocalidadNombre(c.getLocalidad().getNombre());
+        if (c.getLocalidad() != null) {
+            dto.setLocalidadId(c.getLocalidad().getId());
+            dto.setLocalidadNombre(c.getLocalidad().getNombre());
+        }
         dto.setObservaciones(c.getObservaciones());
         dto.setActivo(c.isActivo());
         dto.setNombre(c.getNombre());
@@ -263,8 +267,10 @@ public class ClienteServicio {
         dto.setEmail(c.getEmail());
         dto.setTelefono(c.getTelefono());
         dto.setCalleYnumero(c.getCalleYnumero());
-        dto.setLocalidadId(c.getLocalidad().getId());
-        dto.setLocalidadNombre(c.getLocalidad().getNombre());
+        if (c.getLocalidad() != null) {
+            dto.setLocalidadId(c.getLocalidad().getId());
+            dto.setLocalidadNombre(c.getLocalidad().getNombre());
+        }
         dto.setObservaciones(c.getObservaciones());
         dto.setActivo(c.isActivo());
         dto.setRazonSocial(c.getRazonSocial());

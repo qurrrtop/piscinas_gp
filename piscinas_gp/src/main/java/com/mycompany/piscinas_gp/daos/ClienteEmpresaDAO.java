@@ -27,7 +27,7 @@ public class ClienteEmpresaDAO extends GenericoDAO<ClienteEmpresa> {
             + "ce.razon_social, ce.nombre_fantasia, ce.rubro, ce.cuit "
             + "FROM clientes c "
             + "JOIN clientes_empresas ce ON c.id = ce.cliente_id "
-            + "JOIN localidades l ON c.localidad_id = l.id ";
+            + "LEFT JOIN localidades l ON c.localidad_id = l.id ";
 
     public ClienteEmpresaDAO(DbConnection dbConn) {
         super(dbConn);
@@ -47,7 +47,11 @@ public class ClienteEmpresaDAO extends GenericoDAO<ClienteEmpresa> {
                     pstmtCliente.setString(1, cliente.getEmail());
                     pstmtCliente.setString(2, cliente.getTelefono());
                     pstmtCliente.setString(3, cliente.getCalleYnumero());
-                    pstmtCliente.setLong(4, cliente.getLocalidad().getId());
+                    if (cliente.getLocalidad() != null) {
+                        pstmtCliente.setLong(4, cliente.getLocalidad().getId());
+                    } else {
+                        pstmtCliente.setNull(4, java.sql.Types.BIGINT);
+                    }
                     pstmtCliente.setString(5, cliente.getObservaciones());
                     pstmtCliente.setBoolean(6, cliente.isActivo());
 
@@ -135,7 +139,11 @@ public class ClienteEmpresaDAO extends GenericoDAO<ClienteEmpresa> {
                     pstmtCliente.setString(1, cliente.getEmail());
                     pstmtCliente.setString(2, cliente.getTelefono());
                     pstmtCliente.setString(3, cliente.getCalleYnumero());
-                    pstmtCliente.setLong(4, cliente.getLocalidad().getId());
+                    if (cliente.getLocalidad() != null) {
+                        pstmtCliente.setLong(4, cliente.getLocalidad().getId());
+                    } else {
+                        pstmtCliente.setNull(4, java.sql.Types.BIGINT);
+                    }
                     pstmtCliente.setString(5, cliente.getObservaciones());
                     pstmtCliente.setBoolean(6, cliente.isActivo());
                     pstmtCliente.setLong(7, cliente.getId());
@@ -216,7 +224,7 @@ public class ClienteEmpresaDAO extends GenericoDAO<ClienteEmpresa> {
     @Override
     protected ClienteEmpresa mapResultSet(ResultSet rs) throws PersistenceException {
         try {
-            Localidad localidad = new Localidad(
+            Localidad localidad = rs.getObject("localidad_id") == null ? null : new Localidad(
                     rs.getLong("localidad_id"),
                     rs.getString("localidad_nombre")
             );
