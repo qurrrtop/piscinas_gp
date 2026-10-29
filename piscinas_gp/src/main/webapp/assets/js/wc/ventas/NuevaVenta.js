@@ -546,11 +546,17 @@ class NuevaVenta extends HTMLElement {
         formulario.setAttribute("base-path", this.basePath);
 
         formulario.addEventListener("cliente-guardado", async (evento) => {
-            await this.cargarClientes();
-            if (evento.detail?.id) {
-                this._clienteSeleccionado = this._clientes.find(c => c.id === evento.detail.id) || evento.detail;
-                this.renderClienteSeleccionado();
-            }
+            const nuevo = evento.detail;
+            if (!nuevo?.id) return;
+
+            // recargo la lista para que quede en el mismo formato que usa el buscador
+            this._clientes = await fetch(`${this.basePath}/clientes`).then(r => r.json());
+
+            const seleccionado = this._clientes.find(c => c.id === nuevo.id);
+            if (!seleccionado) return;
+
+            this._clienteSeleccionado = seleccionado;
+            this.renderClienteSeleccionado();
         });
 
         modal.appendChild(formulario);

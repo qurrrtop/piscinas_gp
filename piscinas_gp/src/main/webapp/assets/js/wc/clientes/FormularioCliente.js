@@ -542,7 +542,12 @@ class FormularioCliente extends HTMLElement {
                     <div class="form-group">
                         <label>RAZÓN SOCIAL <span class="required">*</span></label>
                         <input type="text" name="razonSocial" id="razonSocial" 
-                                required placeholder="Ej: Piscinas del Norte S.R.L.">
+                                placeholder="Ej: Piscinas del Norte S.R.L.">
+                        <small class="error-message"></small>
+                    </div>
+                    <div class="form-group">
+                        <label>CUIT <span class="required">*</span></label>
+                        <input type="text" name="cuit" id="cuit" placeholder="30-12345678-9">
                         <small class="error-message"></small>
                     </div>
                     <div class="form-group">
@@ -555,11 +560,6 @@ class FormularioCliente extends HTMLElement {
                         <label>RUBRO</label>
                         <input type="text" name="rubro" id="rubro"
                                 placeholder="Ej: Construcción de piscinas">
-                        <small class="error-message"></small>
-                    </div>
-                    <div class="form-group">
-                        <label>CUIT <span class="required">*</span></label>
-                        <input type="text" name="cuit" id="cuit" required placeholder="30-12345678-9">
                         <small class="error-message"></small>
                     </div>
                 </div>

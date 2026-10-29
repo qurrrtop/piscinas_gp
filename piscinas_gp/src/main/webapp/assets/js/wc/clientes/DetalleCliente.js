@@ -216,11 +216,11 @@ class DetalleCliente extends HTMLElement {
                     </div>
                     <div class="campo">
                         <label>Localidad</label>
-                        <div class="valor-box">${c.localidadNombre}</div>
+                        <div class="valor-box">${c.localidadNombre || "No registrado."} </div>
                     </div>
                     <div class="campo">
                         <label>Calle y número</label>
-                        <div class="valor-box">${c.calleYnumero}</div>
+                        <div class="valor-box">${c.calleYnumero || "No registrado."}</div>
                     </div>
                     <div class="campo full-width">
                         <label>Observaciones</label>

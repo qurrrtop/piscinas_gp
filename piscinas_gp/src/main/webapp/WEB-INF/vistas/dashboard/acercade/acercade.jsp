@@ -5,6 +5,7 @@
     <div class="page-background"></div>
 
     <div class="page-content">
-
+        <acerca-de></acerca-de>
+        <br><br>
     </div>
 </div>
