@@ -426,6 +426,7 @@ class DetalleVenta extends HTMLElement {
                     <button type="button" id="btnCancelarVenta" ${estaCancelada ? "disabled" : ""}>✕ Cancelar venta</button>
                     ${esPendiente ? `<button type="button" id="btnCompletarVenta">✓ Completar</button>` : ""}
                     <button type="button" id="btnVerComprobante">📄 Ver Comprobante</button>
+                    <button type="button" id="btnEditarVenta" ${estaCancelada ? "disabled" : ""}>✎ Editar</button>
                 </div>
             </div>
         `;

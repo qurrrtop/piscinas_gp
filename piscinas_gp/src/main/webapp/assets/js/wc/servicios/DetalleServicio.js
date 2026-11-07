@@ -513,31 +513,118 @@ class DetalleServicio extends HTMLElement {
     }
     
     async completarServicio(boton) {
-        const esTecnico = this.tipo === "tecnico";
+        const tieneRecomendacion = (this._servicio.diagnostico || "").trim() !== "";
+
+        // sin recomendación cargada se la pide en una modal; con recomendación se completa directo
+        if (!tieneRecomendacion) {
+            this.pedirRecomendacion();
+            return;
+        }
 
         boton.disabled = true;
         boton.textContent = "Completando…";
 
         try {
-            const respuesta = await fetch(`${this.prefijo()}servicios/${this.carpetaServicio()}/${this.servicioId}/cerrar`, {
-                method: "POST"
-            });
-            const data = await respuesta.json();
-
-            if (!respuesta.ok) {
-                throw new Error(data.error || "No se pudo completar el servicio");
-            }
-
-            this.notificar(esTecnico ? "Servicio completado correctamente" : "Asesoramiento completado correctamente", "exito");
-            document.dispatchEvent(new CustomEvent("servicio-guardado", { bubbles: true, composed: true }));
-            await this.cargar();
-
+            await this.enviarCierre(null);
         } catch (error) {
             this.renderDetalle(this._servicio);
             this.mostrarErrorAcciones(error.message);
         }
     }
 
+    async enviarCierre(recomendacion) {
+        const esTecnico = this.tipo === "tecnico";
+
+        const respuesta = await fetch(`${this.prefijo()}servicios/${this.carpetaServicio()}/${this.servicioId}/cerrar`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: recomendacion ? JSON.stringify({ diagnostico: recomendacion }) : undefined
+        });
+        const data = await respuesta.json();
+
+        if (!respuesta.ok) {
+            throw new Error(data.error || "No se pudo completar el servicio");
+        }
+
+        this.notificar(esTecnico ? "Servicio completado correctamente" : "Asesoramiento completado correctamente", "exito");
+        document.dispatchEvent(new CustomEvent("servicio-guardado", { bubbles: true, composed: true }));
+        await this.cargar();
+    }
+
+    pedirRecomendacion() {
+        const esTecnico = this.tipo === "tecnico";
+
+        const modal = document.createElement("modal-component");
+        modal.setAttribute("subTitulo", esTecnico ? "SERVICIO TÉCNICO" : "ASESORAMIENTO");
+        modal.setAttribute("titulo", "Recomendación brindada");
+
+        // el contenido va en un div con su propio shadow root para que los estilos no se mezclen con la página
+        const contenido = document.createElement("div");
+        const raiz = contenido.attachShadow({ mode: "open" });
+        raiz.innerHTML = `
+            <style>
+                :host { display: block; color: white; font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif; }
+                p { margin: 0 0 .8rem; font-size: .9rem; color: rgba(255, 255, 255, .8); }
+                textarea {
+                    width: 100%; box-sizing: border-box; padding: .6rem .8rem;
+                    border-radius: 8px; border: 1px solid rgba(196, 196, 196, 1);
+                    background: rgba(255, 255, 255, .15); color: white;
+                    font-family: inherit; font-size: .95rem; resize: vertical;
+                }
+                textarea::placeholder { color: rgba(255, 255, 255, .6); }
+                textarea:focus { outline: none; }
+                .acciones { display: flex; justify-content: flex-end; gap: .7rem; margin-top: 1rem; }
+                button {
+                    padding: .65rem 1.3rem; border-radius: 8px; border: 1px solid rgba(255, 255, 255, .25);
+                    background: transparent; color: white; font-family: inherit;
+                    font-size: .9rem; font-weight: 700; cursor: pointer;
+                }
+                button:disabled { opacity: .5; cursor: default; }
+                #btnAceptar { border: none; background: #1F9D55; }
+            </style>
+
+            <p>Para completar ${esTecnico ? "el servicio" : "el asesoramiento"} hace falta dejar una recomendación.</p>
+            <textarea id="recomendacion" rows="4"
+                placeholder="${esTecnico ? "¿Qué se encontró y cómo se resolvió?" : "¿Qué se le recomendó o indicó al cliente?"}"></textarea>
+
+            <div class="acciones">
+                <button type="button" id="btnVolver">Volver</button>
+                <button type="button" id="btnAceptar">✓ Completar</button>
+            </div>
+        `;
+
+        const textarea = raiz.querySelector("#recomendacion");
+        const btnAceptar = raiz.querySelector("#btnAceptar");
+
+        raiz.querySelector("#btnVolver").addEventListener("click", () => modal.remove());
+
+        btnAceptar.addEventListener("click", async () => {
+            const recomendacion = textarea.value.trim();
+
+            if (!recomendacion) {
+                this.notificar("Escribí la recomendación para poder completar", "advertencia");
+                textarea.focus();
+                return;
+            }
+
+            btnAceptar.disabled = true;
+            btnAceptar.textContent = "Completando…";
+
+            try {
+                await this.enviarCierre(recomendacion);
+                modal.remove();
+            } catch (error) {
+                btnAceptar.disabled = false;
+                btnAceptar.textContent = "✓ Completar";
+                this.notificar(error.message, "error");
+            }
+        });
+
+        modal.appendChild(contenido);
+        document.body.appendChild(modal);
+        textarea.focus();
+    }
+  
     // ---------- edición ----------
 
     clienteDesdeServicio(c) {

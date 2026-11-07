@@ -76,7 +76,7 @@ public class ImportadorTextoUtil {
             "Alguicidas", "Clarificador"
         };
         String[] accesoriosNuevo = {
-            "Luces para psicinas", "Controladores"
+            "Luces para piscinas", "Controladores"
         };
         for (String s : quimicoNuevo) SECCION_A_CATEGORIA.put(normalizar(s), CATEGORIA_QUIMICO);
         for (String s : accesoriosNuevo) SECCION_A_CATEGORIA.put(normalizar(s), CATEGORIA_ACCESORIOS);

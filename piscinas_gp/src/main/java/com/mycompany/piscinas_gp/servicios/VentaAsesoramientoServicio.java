@@ -175,26 +175,31 @@ public class VentaAsesoramientoServicio {
     }
 
     public VentaAsesoramiento cancelarAsesoramiento(Long id) throws ServiceException, BusinessException {
-        return cambiarEstado(id, "cancelada");
+        return cambiarEstado(id, "cancelada", null);
     }
 
-    public VentaAsesoramiento cerrarAsesoramiento(Long id) throws ServiceException, BusinessException {
-        VentaAsesoramiento asesoramiento = buscarAsesoramientoPorId(id);
-
-        // Regla de negocio: la recomendacion/diagnostico es obligatoria recien al cerrar.
-        if (asesoramiento.getDiagnostico() == null || asesoramiento.getDiagnostico().isBlank()) {
-            throw new BusinessException("Debe cargar una recomendacion antes de cerrar el asesoramiento");
-        }
-
-        return cambiarEstado(id, "cerrada");
+    public VentaAsesoramiento cerrarAsesoramiento(Long id, String recomendacion) throws ServiceException, BusinessException {
+        return cambiarEstado(id, "cerrada", recomendacion);
     }
 
-    private VentaAsesoramiento cambiarEstado(Long id, String nombreEstado) throws ServiceException, BusinessException {
+    private VentaAsesoramiento cambiarEstado(Long id, String nombreEstado, String recomendacion) throws ServiceException, BusinessException {
         try {
             VentaAsesoramiento asesoramiento = buscarAsesoramientoPorId(id);
 
             if (nombreEstado.equalsIgnoreCase(asesoramiento.getEstadoVenta().getNombre())) {
                 throw new BusinessException("El asesoramiento ya se encuentra en estado " + nombreEstado);
+            }
+
+            if ("cerrada".equalsIgnoreCase(nombreEstado)) {
+                // la modal de "Completar" manda la recomendacion; se guarda junto con el cierre
+                if (recomendacion != null && !recomendacion.isBlank()) {
+                    asesoramiento.setDiagnostico(recomendacion.trim());
+                }
+
+                // Regla de negocio: la recomendacion/diagnostico es obligatoria recien al cerrar.
+                if (asesoramiento.getDiagnostico() == null || asesoramiento.getDiagnostico().isBlank()) {
+                    throw new BusinessException("Debe cargar una recomendacion antes de cerrar el asesoramiento");
+                }
             }
 
             EstadoVenta nuevoEstado = estadoVentaDAO.buscarPorNombre(nombreEstado);
@@ -217,7 +222,7 @@ public class VentaAsesoramientoServicio {
             throw new ServiceException("Error al actualizar el estado del asesoramiento", e);
         }
     }
-
+    
     private void prepararAsesoramiento(
             VentaAsesoramiento asesoramiento,
             Long clienteId,

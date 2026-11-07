@@ -233,7 +233,7 @@ public class VentaServTecnicoServicio {
         }
     }
 
-    public VentaServTecnico cerrarServicio(Long servicioId) throws ServiceException, BusinessException {
+    public VentaServTecnico cerrarServicio(Long servicioId, String recomendacion) throws ServiceException, BusinessException {
         try {
             VentaServTecnico servicio = buscarServicioPorId(servicioId);
 
@@ -242,6 +242,11 @@ public class VentaServTecnicoServicio {
             }
             if ("cerrada".equalsIgnoreCase(servicio.getEstadoVenta().getNombre())) {
                 throw new BusinessException("El servicio ya esta cerrado");
+            }
+
+            // la modal de "Completar" manda la recomendacion; se guarda junto con el cierre
+            if (recomendacion != null && !recomendacion.isBlank()) {
+                servicio.setDiagnostico(recomendacion.trim());
             }
 
             // Regla de negocio: la recomendacion es obligatoria recien al cerrar el servicio.
@@ -268,7 +273,7 @@ public class VentaServTecnicoServicio {
             throw new ServiceException("Error al cerrar el servicio", e);
         }
     }
-
+    
     private void prepararServicio(
             VentaServTecnico servicio,
             Long clienteId,

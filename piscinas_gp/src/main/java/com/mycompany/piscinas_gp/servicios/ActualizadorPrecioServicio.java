@@ -51,19 +51,14 @@ public class ActualizadorPrecioServicio {
                 continue; // fila no parseable, no hay con que buscar
             }
 
-                        String codigo = fila.getCodigoProveedor();
-            Producto producto;
+            String codigo = fila.getCodigoProveedor();
+
+            if (codigo == null || codigo.isBlank()) {
+                continue; // sin código no se puede identificar el producto
+            }
 
             try {
-                if (codigo != null && !codigo.isBlank()) {
-                    producto = productoDAO.buscarPorCodigoProveedorYMarca(codigo, marcaId);
-                } else {
-                    // sin codigo de proveedor: se recurre al mismo criterio de 4 campos
-                    // que ya usa el sistema para detectar duplicados en el importador
-                    producto = productoDAO.buscarPorNombreMarcaContenidoUnidad(
-                            fila.getNombre(), marcaId, fila.getContenido(), fila.getUniMedidaId()
-                    );
-                }
+                Producto producto = productoDAO.buscarPorCodigoProveedorYMarca(codigo, marcaId);
 
                 if (producto == null) {
                     continue; // no existe todavia; eso lo resuelve el importador de altas, no esta pantalla
@@ -81,7 +76,7 @@ public class ActualizadorPrecioServicio {
 
                 resultado.add(new ActualizacionPrecioDTO(
                         producto.getId(),
-                        codigo, // puede ser null si se matcheo por los 4 campos; es normal
+                        codigo,
                         producto.getNombre(),
                         producto.getPrecioActual(),
                         precioNuevo

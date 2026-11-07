@@ -340,6 +340,13 @@ class ImportarProductos extends HTMLElement {
             return nombreCategoria;
         }
 
+        // solo se puede elegir categoría a mano si ese es el único problema de la fila
+        const soloFaltaCategoria = producto.estado === "ADVERTENCIA"
+            && !(producto.motivo || "").startsWith("Ya existe");
+        if (!soloFaltaCategoria) {
+            return "-";
+        }
+
         const opciones = [...this.categoriasPorId.entries()]
             .map(([id, nombre]) => `<option value="${id}">${nombre}</option>`)
             .join("");
@@ -351,7 +358,7 @@ class ImportarProductos extends HTMLElement {
             </select>
         `;
     }
-
+    
     onCategoriaManualElegida(evento) {
         const fila = Number(evento.target.dataset.fila);
         const categoriaId = Number(evento.target.value);

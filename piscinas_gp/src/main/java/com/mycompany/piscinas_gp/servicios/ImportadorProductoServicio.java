@@ -12,6 +12,8 @@ import com.mycompany.piscinas_gp.modelos.UnidadMedida;
 import java.util.List;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import java.util.HashSet;
+import java.util.Set;
 
 /**
  * Orquesta la importacion: recibe los DTOs ya parseados del Excel,
@@ -28,42 +30,51 @@ public class ImportadorProductoServicio {
     }
 
     /**
-     * Recorre los DTOs que vinieron VALIDO o ADVERTENCIA del parseo y chequea
-     * si ya existen en la base (nombre + marca + contenido + unidad de medida).
-     * Los que ya vinieron en ERROR (nombre no parseado) no se tocan.
-     */
+    * Identifica cada producto por codigo de proveedor + marca. Marca como
+    * ADVERTENCIA los codigos que ya existen en la base o que se repiten
+    * dentro del mismo archivo, y como ERROR las filas sin codigo.
+    */
     public List<ProductoImportDTO> validarDuplicados(List<ProductoImportDTO> lista) throws ServiceException {
 
-        for (ProductoImportDTO dto : lista) {
+       Set<String> codigosEnArchivo = new HashSet<>();
 
-            if (dto.getEstado() == EstadoImportacion.ERROR) {
-                continue;
-            }
+       for (ProductoImportDTO dto : lista) {
 
-            try {
-                boolean duplicado = productoDAO.existeProductoDuplicado(
-                        dto.getNombre(),
-                        dto.getMarcaId(),
-                        dto.getContenido(),
-                        dto.getUniMedidaId(),
-                        null
-                );
+           if (dto.getEstado() == EstadoImportacion.ERROR) {
+               continue;
+           }
 
-                if (duplicado) {
-                    dto.setEstado(EstadoImportacion.ADVERTENCIA);
-                    dto.setMotivo("Ya existe un producto con el mismo nombre, marca, contenido y unidad de medida");
-                }
+           String codigo = dto.getCodigoProveedor();
 
-            } catch (PersistenceException e) {
-                logger.error("Error al verificar duplicado en fila {}", dto.getFila(), e);
-                dto.setEstado(EstadoImportacion.ERROR);
-                dto.setMotivo("Error al verificar si el producto ya existe");
-            }
-        }
+           if (codigo == null || codigo.isBlank()) {
+               dto.setEstado(EstadoImportacion.ERROR);
+               dto.setMotivo("La fila no tiene código");
+               continue;
+           }
 
-        return lista;
+           if (!codigosEnArchivo.add(codigo)) {
+               dto.setEstado(EstadoImportacion.ADVERTENCIA);
+               dto.setMotivo("Ya existe un producto con el mismo código en este archivo");
+               continue;
+           }
+
+           try {
+               if (productoDAO.buscarPorCodigoProveedorYMarca(codigo, dto.getMarcaId()) != null) {
+                   dto.setEstado(EstadoImportacion.ADVERTENCIA);
+                   dto.setMotivo("Ya existe un producto con el mismo código");
+               }
+
+           } catch (PersistenceException e) {
+               logger.error("Error al verificar duplicado en fila {}", dto.getFila(), e);
+               dto.setEstado(EstadoImportacion.ERROR);
+               dto.setMotivo("Error al verificar si el producto ya existe");
+           }
+       }
+
+       return lista;
     }
-
+    
+    
     /**
      * Inserta unicamente los productos en estado VALIDO. Los ADVERTENCIA
      * (duplicados) y ERROR se omiten siempre: el usuario ya los vio en el

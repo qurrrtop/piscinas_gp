@@ -20,6 +20,7 @@ import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import java.util.stream.Collectors;
 import java.io.IOException;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -91,12 +92,24 @@ public class VentaAsesoramientoControlador extends HttpServlet {
 
         if (pathInfo != null && pathInfo.endsWith("/cerrar")) {
             try {
+                request.setCharacterEncoding("UTF-8");
                 Long id = Long.parseLong(pathInfo.replace("/cerrar", "").substring(1));
-                VentaAsesoramiento cerrado = ventaAsesoramientoServicio.cerrarAsesoramiento(id);
+
+                // el body es opcional: la modal de "Completar" manda la recomendacion en "diagnostico"
+                String cuerpo = request.getReader().lines().collect(Collectors.joining());
+                String recomendacion = cuerpo.isBlank()
+                        ? null
+                        : crearMapper().readValue(cuerpo, VentaDTO.class).getDiagnostico();
+
+                VentaAsesoramiento cerrado = ventaAsesoramientoServicio.cerrarAsesoramiento(id, recomendacion);
                 sendJsonResponse(cerrado, response, HttpServletResponse.SC_OK);
 
             } catch (NumberFormatException e) {
                 sendJsonResponse(java.util.Map.of("error", "El ID debe ser un numero"),
+                        response, HttpServletResponse.SC_BAD_REQUEST);
+            } catch (IllegalArgumentException e) {
+                // validaciones del modelo sobre el texto de la recomendacion
+                sendJsonResponse(java.util.Map.of("error", e.getMessage()),
                         response, HttpServletResponse.SC_BAD_REQUEST);
             } catch (BusinessException e) {
                 sendJsonResponse(java.util.Map.of("error", e.getMessage()),

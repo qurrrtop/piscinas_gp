@@ -15,6 +15,9 @@ class HistorialPendientes extends HTMLElement {
         this._asesoramientos = [];
         this._tipoSeleccionado = "todos";
         this._busqueda = "";
+        this._entregaSeleccionada = "";
+        this._subrubroSeleccionado = "";
+        this._fechaDesde = "";
         this._alGuardar = () => this.recargar();
     }
 
@@ -166,11 +169,22 @@ class HistorialPendientes extends HTMLElement {
     obtenerTarjetasFiltradas() {
         const busqueda = this._busqueda.trim().toLowerCase();
 
+        const hoy = new Date();
+        hoy.setHours(0, 0, 0, 0);
+        const enUnaSemana = new Date(hoy);
+        enUnaSemana.setDate(hoy.getDate() + 7);
+
+        const desde = this._fechaDesde ? this.aFecha(this._fechaDesde) : null;
+
         return this.obtenerTarjetas()
             .filter(t => this._tipoSeleccionado === "todos" || t.tipo === this._tipoSeleccionado)
             .filter(t => !busqueda
                 || t.cliente.toLowerCase().includes(busqueda)
-                || t.descripcion.toLowerCase().includes(busqueda))
+                || t.descripcion.toLowerCase().includes(busqueda)
+                || t.codigo.toLowerCase().includes(busqueda))
+            .filter(t => !this._subrubroSeleccionado || t.subrubro === this._subrubroSeleccionado)
+            .filter(t => this.cumpleEntrega(t, hoy, enUnaSemana))
+            .filter(t => !desde || this.aFecha(t.creado) >= desde)
             .sort((a, b) => this.fechaClave(a) - this.fechaClave(b));
     }
 
@@ -178,7 +192,39 @@ class HistorialPendientes extends HTMLElement {
 
     actualizar() {
         this.actualizarResumen();
+        this.cargarOpcionesSubrubro();
         this.renderLista();
+    }
+    
+    cargarOpcionesSubrubro() {
+        const select = this.shadowRoot.querySelector("#filtroSubrubro");
+        const nombres = [...new Set(
+            this._tecnicos.map(s => s.subrubroServicio?.nombre).filter(Boolean)
+        )].sort();
+
+        // si el subrubro elegido ya no tiene pendientes (por ejemplo se completó el último), vuelve a "Todos"
+        if (!nombres.includes(this._subrubroSeleccionado)) {
+            this._subrubroSeleccionado = "";
+        }
+
+        select.innerHTML = `
+            <option value="">Todos</option>
+            ${nombres.map(n => `
+                <option value="${this.esc(n)}" ${n === this._subrubroSeleccionado ? "selected" : ""}>${this.esc(n)}</option>
+            `).join("")}
+        `;
+    }
+
+    cumpleEntrega(tarjeta, hoy, enUnaSemana) {
+        if (!this._entregaSeleccionada) return true;
+        if (!tarjeta.entrega) return false; // solo los servicios técnicos tienen fecha de entrega
+
+        const entrega = this.aFecha(tarjeta.entrega);
+
+        if (this._entregaSeleccionada === "vencidas") return entrega < hoy;
+        if (this._entregaSeleccionada === "hoy") return entrega.getTime() === hoy.getTime();
+        if (this._entregaSeleccionada === "semana") return entrega >= hoy && entrega <= enUnaSemana;
+        return true;
     }
 
     actualizarResumen() {
@@ -304,6 +350,21 @@ class HistorialPendientes extends HTMLElement {
             this._busqueda = e.target.value;
             this.renderLista();
         });
+        
+        this.shadowRoot.querySelector("#filtroEntrega").addEventListener("change", (e) => {
+            this._entregaSeleccionada = e.target.value;
+            this.renderLista();
+        });
+
+        this.shadowRoot.querySelector("#filtroSubrubro").addEventListener("change", (e) => {
+            this._subrubroSeleccionado = e.target.value;
+            this.renderLista();
+        });
+
+        this.shadowRoot.querySelector("#filtroFecha").addEventListener("change", (e) => {
+            this._fechaDesde = e.target.value;
+            this.renderLista();
+        });
     }
 
     renderShell() {
@@ -348,20 +409,51 @@ class HistorialPendientes extends HTMLElement {
                     background: rgba(1, 49, 104, 0.5);
                 }
 
-                #filtroBusqueda {
+                .card-filtros {
+                    display: grid;
+                    grid-template-columns: 2fr 1fr 1fr 1fr;
+                    gap: 1rem;
+                    padding: 1rem 1.25rem;
+                    border-radius: 10px;
+                    border: 1px solid rgba(255,255,255,.5);
+                    background: rgba(1, 49, 104, 1);
+                }
+
+                .card-filtros label {
+                    display: block;
+                    font-size: .72rem;
+                    font-weight: 700;
+                    text-transform: uppercase;
+                    color: rgba(255,255,255,.6);
+                    margin-bottom: .3rem;
+                }
+
+                .card-filtros input,
+                .card-filtros select {
                     width: 100%;
                     box-sizing: border-box;
-                    padding: .75rem 1rem;
-                    border-radius: 10px;
-                    border: 1px solid rgba(255,255,255,.35);
-                    background: rgba(1, 49, 104, 1);
+                    padding: .55rem .7rem;
+                    border-radius: 6px;
+                    border: 1px solid rgba(255,255,255,.2);
+                    background: rgba(255,255,255,.08);
                     color: white;
-                    font-size: .95rem;
+                    font-size: .9rem;
                     outline: none;
                 }
 
-                #filtroBusqueda::placeholder {
+                .card-filtros select option {
+                    color: black;
+                    background: white;
+                }
+
+                .card-filtros input::placeholder {
                     color: rgba(255,255,255,.6);
+                }
+
+                @media (max-width: 800px) {
+                    .card-filtros {
+                        grid-template-columns: 1fr 1fr;
+                    }
                 }
 
                 #lista {
@@ -505,8 +597,30 @@ class HistorialPendientes extends HTMLElement {
                     <button type="button" class="tab-tipo" data-tipo="asesoramiento">Asesoramientos</button>
                 </div>
 
-                <input type="text" id="filtroBusqueda" placeholder="Buscar por cliente o descripción" autocomplete="off">
-
+                <div class="card-filtros">
+                    <div>
+                        <label>Buscar</label>
+                        <input type="text" id="filtroBusqueda" placeholder="Cliente, descripción o código..." autocomplete="off">
+                    </div>
+                    <div>
+                        <label>Entrega</label>
+                        <select id="filtroEntrega">
+                            <option value="">Todas</option>
+                            <option value="vencidas">Vencidas</option>
+                            <option value="hoy">Vencen hoy</option>
+                            <option value="semana">Próximos 7 días</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label>Subrubro</label>
+                        <select id="filtroSubrubro"><option value="">Todos</option></select>
+                    </div>
+                    <div>
+                        <label>Creado desde</label>
+                        <input type="date" id="filtroFecha">
+                    </div>
+                </div>
+                
                 <div id="lista"></div>
             </div>
         `;

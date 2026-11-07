@@ -277,19 +277,27 @@ class NuevoServicio extends HTMLElement {
                 c.nombreCompleto.toLowerCase().includes(busqueda) || c.cuitCuil.toLowerCase().includes(busqueda)
             ).slice(0, 8);
 
-            resultados.innerHTML = coincidencias.map(c => `
-                <div class="resultado-cliente" data-id="${c.id}">
-                    <span class="avatar avatar-${c.tipo === 'Empresa' ? 'empresa' : 'particular'}">${this.obtenerIniciales(c.nombreCompleto)}</span>
-                    <div><strong>${c.nombreCompleto} </strong><small>- ${c.email || "Sin email"} - CUIL/CUIT: ${c.cuitCuil}</small></div>
-                </div>
-            `).join("") || `<p class="sin-resultados">Sin coincidencias</p>`;
+            resultados.innerHTML = `
+                ${coincidencias.map(c => `
+                    <div class="resultado-cliente" data-id="${c.id}">
+                        <span class="avatar avatar-${c.tipo === 'Empresa' ? 'empresa' : 'particular'}">${this.obtenerIniciales(c.nombreCompleto)}</span>
+                        <div><strong>${c.nombreCompleto} </strong><small>- ${c.email || "Sin email"} - CUIL/CUIT: ${c.cuitCuil}</small></div>
+                    </div>
+                `).join("")}
+                <div class="resultado-crear" id="btnCrearClienteRapido">+ Crear nuevo cliente "${texto}"</div>
+            `;
 
             resultados.style.display = "block";
+
             resultados.querySelectorAll(".resultado-cliente").forEach(el => {
                 el.addEventListener("click", () => {
                     this._clienteSeleccionado = this._clientes.find(c => c.id == el.dataset.id);
                     this.renderClienteSeleccionado();
                 });
+            });
+
+            resultados.querySelector("#btnCrearClienteRapido").addEventListener("click", () => {
+                this.abrirCreacionRapidaCliente();
             });
         };
 
@@ -310,6 +318,33 @@ class NuevoServicio extends HTMLElement {
             this._clienteSeleccionado = null;
             this.renderSelectorCliente();
         });
+    }
+    
+    abrirCreacionRapidaCliente() {
+        const modal = document.createElement("modal-component");
+        modal.setAttribute("titulo", "Nuevo cliente");
+        modal.setAttribute("subTitulo", "CREAR RÁPIDO");
+
+        const formulario = document.createElement("formulario-cliente");
+        formulario.setAttribute("base-path", this.basePath);
+
+        formulario.addEventListener("cliente-guardado", async (evento) => {
+            const nuevo = evento.detail;
+            if (!nuevo?.id) return;
+
+            // recargo la lista con el mismo filtro de activos que usa cargarDatosIniciales
+            const todos = await fetch(`${this.basePath}/clientes`).then(r => r.json());
+            this._clientes = todos.filter(c => c.activo);
+
+            const seleccionado = this._clientes.find(c => c.id === nuevo.id);
+            if (!seleccionado) return;
+
+            this._clienteSeleccionado = seleccionado;
+            this.renderClienteSeleccionado();
+        });
+
+        modal.appendChild(formulario);
+        document.body.appendChild(modal);
     }
 
     // ---------- productos / repuestos ----------
@@ -884,6 +919,19 @@ class NuevoServicio extends HTMLElement {
 
                 .resultado-cliente:hover {
                     background: rgba(255, 255, 255, .08);
+                }
+        
+                .resultado-crear {
+                    padding: .9rem 1rem;
+                    text-align: center;
+                    font-weight: 700;
+                    color: #B8D7FF;
+                    cursor: pointer;
+                    background: rgba(255,255,255,.05);
+                }
+
+                .resultado-crear:hover {
+                    background: rgba(255,255,255,.1);
                 }
 
                 .avatar {
