@@ -8,7 +8,8 @@
     <div class="page-background"></div>
 
     <div class="page-content">
-
+        <inicio-principal base-path="${pageContext.request.contextPath}"></inicio-principal>
+        <br><br><br><br>
     </div>
 
 </div>

@@ -163,9 +163,14 @@ public class ProductoServicio {
             Producto existente = productoDAO.buscarPorId(producto.getId());
 
             if (existente == null) {
-
                 throw new BusinessException("No existe un producto con ID " + producto.getId());
             }
+
+            // el formulario de edición no envía el código de proveedor ni el estado: se conservan los que ya tenía
+            if (producto.getCodigoProveedor() == null) {
+                producto.setCodigoProveedor(existente.getCodigoProveedor());
+            }
+            producto.setActivo(existente.isActivo());
 
             // Verificar producto duplicado.
             boolean duplicado =

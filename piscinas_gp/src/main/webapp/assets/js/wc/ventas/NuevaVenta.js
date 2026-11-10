@@ -56,7 +56,7 @@ class NuevaVenta extends HTMLElement {
             this._marcas = marcas;
             this._categorias = categorias;
             this._unidades = unidades;
-            this._productos = productos.filter(p => p.activo);
+            this._productos = productos.filter(p => p.activo && Number(p.stock) > 0 && Number(p.precioActual) > 0);
             this._estadosVenta = estadosVenta;
             this._metodosPago = metodosPago;
             

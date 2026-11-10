@@ -77,8 +77,23 @@ class DashboardSection extends HTMLElement {
     async loadContent(path) {
         const response = await fetch(path);
         const html = await response.text();
-        
-        this.shadowRoot.innerHTML = html;
+
+        // el contenido se inserta oculto y se muestra recién cuando sus hojas de estilo terminaron de cargar,
+        // para que no aparezca un instante sin estilos (fondo blanco)
+        this.shadowRoot.innerHTML = `<div id="contenido-pantalla" style="display:contents;visibility:hidden">${html}</div>`;
+
+        const hojas = [...this.shadowRoot.querySelectorAll('link[rel="stylesheet"]')];
+
+        await Promise.all(hojas.map(hoja => hoja.sheet
+            ? Promise.resolve()
+            : new Promise(resolver => {
+                hoja.addEventListener("load", resolver, { once: true });
+                hoja.addEventListener("error", resolver, { once: true });
+            })
+        ));
+
+        const contenido = this.shadowRoot.querySelector("#contenido-pantalla");
+        if (contenido) contenido.style.visibility = "visible";
     }
 }
 

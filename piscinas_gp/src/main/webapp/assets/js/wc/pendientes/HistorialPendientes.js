@@ -26,6 +26,18 @@ class HistorialPendientes extends HTMLElement {
 
         this.renderShell();
         this.setupListeners();
+        
+        // si llegó desde el inicio, abre con el filtro elegido (se lee una sola vez)
+        const filtroInicial = sessionStorage.getItem("pendientes-filtro");
+        sessionStorage.removeItem("pendientes-filtro");
+
+        if (["venta", "servicios"].includes(filtroInicial)) {
+            this._tipoSeleccionado = filtroInicial;
+            this.shadowRoot.querySelectorAll(".tab-tipo").forEach(tab => {
+                tab.classList.toggle("activo", tab.dataset.tipo === filtroInicial);
+            });
+        }
+        
         await this.cargarDatos();
         this.actualizar();
 
@@ -177,7 +189,9 @@ class HistorialPendientes extends HTMLElement {
         const desde = this._fechaDesde ? this.aFecha(this._fechaDesde) : null;
 
         return this.obtenerTarjetas()
-            .filter(t => this._tipoSeleccionado === "todos" || t.tipo === this._tipoSeleccionado)
+            .filter(t => this._tipoSeleccionado === "todos"
+                || t.tipo === this._tipoSeleccionado
+                || (this._tipoSeleccionado === "servicios" && t.tipo !== "venta"))
             .filter(t => !busqueda
                 || t.cliente.toLowerCase().includes(busqueda)
                 || t.descripcion.toLowerCase().includes(busqueda)

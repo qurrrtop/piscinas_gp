@@ -54,7 +54,7 @@ class NuevoServicio extends HTMLElement {
             this._marcas = marcas;
             this._categorias = categorias;
             this._unidades = unidades;
-            this._productos = productos.filter(p => p.activo);
+            this._productos = productos.filter(p => p.activo && Number(p.stock) > 0 && Number(p.precioActual) > 0);
             this._estadosDisponibles = estados.filter(e => e.nombre.toLowerCase() !== "cancelada");
             this._metodosPago = metodosPago;
         } catch (error) {
