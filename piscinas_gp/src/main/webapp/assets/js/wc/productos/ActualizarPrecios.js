@@ -561,8 +561,12 @@ class ActualizarPrecios extends HTMLElement {
             .contador.sel strong { color: var(--verde); }
 
             .sin-cambios {
-                text-align: center; padding: 2rem; color: var(--texto-tenue);
-                border: 1px dashed var(--borde-tenue); border-radius: 12px;
+                text-align: center;
+                padding: 2rem;
+                color: white;
+                border: 1px solid var(--borde-tenue);
+                border-radius: 12px;
+                background-color: rgba(5, 68, 141, .8);
             }
 
             .barra-filtros { display: flex; justify-content: space-between; align-items: center; gap: 1rem; flex-wrap: wrap; }

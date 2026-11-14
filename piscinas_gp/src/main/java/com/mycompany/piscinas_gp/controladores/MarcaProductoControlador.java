@@ -108,9 +108,11 @@ public class MarcaProductoControlador extends HttpServlet {
             
             marca.setId(dto.getId());
             marca.setNombre(dto.getNombre());
-            if (dto.getActivo() != null) {
-                marca.setActivo(dto.getActivo());
-            }
+            
+            // si el formulario no manda el estado, se conserva el que ya tenía la marca
+            marca.setActivo(dto.getActivo() != null
+                    ? dto.getActivo()
+                    : marcaProductoServicio.buscarPorId(dto.getId()).getActivo());
 
             MarcaProducto actualizada = marcaProductoServicio.actualizarMarca(marca);
             sendJsonResponse(actualizada, response, HttpServletResponse.SC_OK);

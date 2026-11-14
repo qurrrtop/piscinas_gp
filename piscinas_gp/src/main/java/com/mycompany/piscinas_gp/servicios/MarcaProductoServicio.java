@@ -69,6 +69,12 @@ public class MarcaProductoServicio {
             if (existente == null) {
                 throw new BusinessException("No existe una marca con ID " + marca.getId());
             }
+            
+            if (!existente.getNombre().equalsIgnoreCase(marca.getNombre())
+                    && marcaProductoDAO.checkExistenceByField("nombre", marca.getNombre())) {
+                throw new BusinessException("Ya existe una marca con el nombre " + marca.getNombre());
+            }
+            
             return marcaProductoDAO.actualizar(marca);
         } catch (PersistenceException e) {
             logger.error("Error al actualizar la marca con ID {}", marca.getId(), e);

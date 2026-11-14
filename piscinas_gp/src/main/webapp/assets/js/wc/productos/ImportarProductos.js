@@ -48,7 +48,7 @@ class ImportarProductos extends HTMLElement {
         this.shadowRoot.innerHTML = `
             <style>${this.estilosComunes()}${this.estilosVacio()}</style>
             <div class="layout-importar">
-                <p class="importar-info">Importe un archivo Excel o CSV con la lista de productos. Asegúrese de que el
+                <p class="importar-info">Importe un archivo Excel con la lista de productos. Asegúrese de que el
                     formato del archivo coincida con la estructura requerida.
                 </p>
 
@@ -59,7 +59,7 @@ class ImportarProductos extends HTMLElement {
                         </div>
                         <p>Arrastre el archivo aquí o haga click para seleccionar</p>
                         <div class="detalle">
-                            <span>Formatos soportados: .xlsx, .xls, .csv</span>
+                            <span>Formatos soportados: .xlsx, .xls</span>
                             <span><img src="${this.basePath}/assets/img/iconos/file.svg">Máximo 10 MB</span>
                         </div>
                     </div>
@@ -73,7 +73,7 @@ class ImportarProductos extends HTMLElement {
                         <button type="button" id="btnQuitarArchivo">✕ Quitar archivo</button>
                     </div>
 
-                    <input type="file" id="inputArchivo" accept=".xlsx,.xls,.csv" hidden>
+                    <input type="file" id="inputArchivo" accept=".xlsx,.xls" hidden>
                 </div>
 
                 <div class="box-marca">
@@ -81,12 +81,10 @@ class ImportarProductos extends HTMLElement {
                     <div class="select-wrapper">
                         <select id="marca" name="marca" required>
                             <option value="">Seleccione una opción</option>
-                            <option value="" disabled>Cualquiera (próximamente)</option>
                             ${this.marcas.map(m => `<option value="${m.id}">${m.nombre}</option>`).join("")}
                         </select>
                     </div>
-                    <p class="ayuda">Seleccione la marca de los productos a importar. Si el archivo contiene
-                        productos de varias marcas, elija "Cualquiera".</p>
+                    <p class="ayuda">Seleccione la marca de los productos a importar.</p>
                 </div>
 
                 <div class="acciones">
@@ -135,7 +133,11 @@ class ImportarProductos extends HTMLElement {
         });
 
         btnImportar.addEventListener("click", () => this.onImportarClick());
-        btnCancelar.addEventListener("click", () => this.dispatchEvent(new CustomEvent("cancelar", { bubbles: true, composed: true })));
+        btnCancelar.addEventListener("click", () => {
+            // cierra esta modal y reabre el formulario de nuevo producto
+            this.closest("modal-component")?.remove();
+            document.dispatchEvent(new CustomEvent("header-action", { detail: { action: "nuevo-producto" } }));
+        });
     }
 
     // alterna entre el estado "sin archivo" y "archivo seleccionado" dentro de la misma zona de carga
@@ -289,7 +291,6 @@ class ImportarProductos extends HTMLElement {
 
                 <div class="acciones">
                     <button type="button" id="btnVolver">← Volver</button>
-                    <button type="button" id="btnReporte">⬇ Descargar reporte</button>
                     <button type="button" id="btnConfirmar"><img class="icon-importar-btn" src="${this.basePath}/assets/img/iconos/import.svg"> Importar productos válidos (${validos})</button>
                 </div>
             </div>
@@ -425,31 +426,8 @@ class ImportarProductos extends HTMLElement {
             this.textoBusqueda = e.target.value;
             this.renderFilasTabla();
         });
-
-        this.shadowRoot.querySelector("#btnReporte").addEventListener("click", () => this.descargarReporte());
+        
         this.shadowRoot.querySelector("#btnConfirmar").addEventListener("click", () => this.confirmarImportacion());
-    }
-
-    descargarReporte() {
-        const encabezado = "Fila,Codigo,Producto,Categoria,Contenido,Unidad,Estado,Observaciones\n";
-        const filas = this.productos.map(p => [
-            p.fila,
-            p.codigoProveedor ?? "",
-            `"${(p.nombre ?? "").replace(/"/g, '""')}"`,
-            this.categoriasPorId.get(p.categoriaId) || "",
-            p.contenido ?? "",
-            this.unidadesPorId.get(p.uniMedidaId) || "",
-            p.estado,
-            `"${(p.motivo ?? "").replace(/"/g, '""')}"`
-        ].join(",")).join("\n");
-
-        const blob = new Blob([encabezado + filas], { type: "text/csv;charset=utf-8;" });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement("a");
-        a.href = url;
-        a.download = "reporte-importacion.csv";
-        a.click();
-        URL.revokeObjectURL(url);
     }
 
     async confirmarImportacion() {
@@ -579,16 +557,14 @@ class ImportarProductos extends HTMLElement {
             }
 
             #btnCancelar,
-            #btnVolver,
-            #btnReporte {
+            #btnVolver {
                 background: transparent;
                 border: 1px solid var(--borde-tenue);
                 color: var(--texto-claro);
             }
 
             #btnCancelar:hover,
-            #btnVolver:hover,
-            #btnReporte:hover {
+            #btnVolver:hover {
                 background: rgba(255,255,255,.06);
             }
 
