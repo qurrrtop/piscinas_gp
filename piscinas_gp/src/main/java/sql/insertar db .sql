@@ -1,5 +1,8 @@
 USE piscinas_gp;
 
+INSERT INTO usuarios (email, password_hash)
+VALUES ('admin@pool.com', '$2a$12$dtUnoK8hPov07GRK0zYNNOdoLnvx7e0a77lIQ3QiTpSq.37A8.SC6');
+
 INSERT INTO categoria_productos (nombre, categoria_producto_padre)
 VALUES
 ('Químico', NULL),

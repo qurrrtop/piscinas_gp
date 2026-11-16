@@ -95,6 +95,7 @@ public class DashboardControlador extends HttpServlet {
         items.add(new MenuItem("Pendientes", "menu", "clipboard-list.svg", "icono pendientes", path + "/dashboard/pendientes/historial", List.of()));
         items.add(new MenuItem("Gestión", "menu", "settings.svg", "icono gestión", null, hijosGestion));
         items.add(new MenuItem("Acerca de", "footer", "info.svg", "icono sugerencia", path + "/dashboard/acercade", List.of()));
+        items.add(new MenuItem("Mi cuenta", "footer", "user.svg", "icono mi cuenta", "#mi-cuenta", List.of()));
         items.add(new MenuItem("Cerrar Sesión", "footer", "log-out.svg", "icono cerrar sesión", path + "/auth/logout", List.of()));
         
         Gson gson = new Gson();

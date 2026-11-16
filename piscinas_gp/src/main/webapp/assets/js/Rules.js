@@ -109,6 +109,13 @@ export default class Rules {
             // regex estricta (pendiente): /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{4,}$/
             regex: /^(?=.*[A-Z])(?=.*\d)[A-Za-z\d@$!%*?&]{4,}$/
         },
+        NUEVA_PASSWORD: {
+            validation: "password",
+            type: "string",
+            min: 8,
+            max: 72, // BCrypt solo usa los primeros 72 bytes de la contraseña
+            regex: /^[A-Za-z\d@$!%*?&]+$/
+        },
         
         // --------------- PRODUCTO ---------------
         NOMBRE_PRODUCTO: {

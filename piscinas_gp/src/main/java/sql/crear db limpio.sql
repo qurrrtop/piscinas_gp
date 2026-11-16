@@ -4,6 +4,14 @@ COLLATE utf8mb4_unicode_ci;
 
 USE piscinas_gp;
 
+CREATE TABLE usuarios (
+    id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    email VARCHAR(150) NOT NULL UNIQUE,
+    password_hash VARCHAR(100) NOT NULL,
+    codigo_recuperacion_hash VARCHAR(100) NULL,
+    activo BOOLEAN NOT NULL DEFAULT TRUE
+);
+
 CREATE TABLE marca_productos (
     id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
     nombre VARCHAR(40) NOT NULL UNIQUE,

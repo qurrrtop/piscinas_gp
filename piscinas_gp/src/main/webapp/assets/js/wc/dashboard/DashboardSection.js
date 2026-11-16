@@ -62,6 +62,18 @@ class DashboardSection extends HTMLElement {
                 modal.appendChild(marcaForm);
                 document.body.appendChild(modal);
             }
+            
+            if (event.detail.action === "mi-cuenta") {
+                const modal = document.createElement("modal-component");
+                modal.setAttribute("subTitulo", "SEGURIDAD");
+                modal.setAttribute("titulo", "MI CUENTA");
+
+                const cuenta = document.createElement("mi-cuenta");
+                cuenta.setAttribute("base-path", this.basePath);
+
+                modal.appendChild(cuenta);
+                document.body.appendChild(modal);
+            }
 
         });
         

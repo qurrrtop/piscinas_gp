@@ -75,6 +75,18 @@ class Auth extends HTMLElement {
             eyeClosed.classList.toggle("hidden", visible);
 
         });
+        
+        this.shadowRoot.querySelector('#link-olvido')?.addEventListener('click', (e) => {
+            e.preventDefault();
+            this.mostrarVista("recuperar");
+        });
+
+        this.shadowRoot.querySelector('#link-volver')?.addEventListener('click', (e) => {
+            e.preventDefault();
+            this.mostrarVista("login");
+        });
+
+        this.shadowRoot.querySelector('#form-recuperar')?.addEventListener('submit', (e) => this.recuperarPassword(e));
     }
     
     checkResult( inputElement, error ) {
@@ -153,6 +165,70 @@ class Auth extends HTMLElement {
         this.shadowRoot.querySelector('#alert-message').textContent = message;
         
         this.shadowRoot.querySelector('#modal-overlay').classList.remove('hidden');
+    }
+    
+    mostrarVista(vista) {
+        const recuperar = vista === "recuperar";
+
+        this.shadowRoot.querySelector('#form-login').classList.toggle('hidden', recuperar);
+        this.shadowRoot.querySelector('#link-olvido').classList.toggle('hidden', recuperar);
+        this.shadowRoot.querySelector('#form-recuperar').classList.toggle('hidden', !recuperar);
+        this.shadowRoot.querySelectorAll('.titulo, .subtitulo').forEach(el => el.classList.toggle('hidden', recuperar));
+    }
+
+    async recuperarPassword(e) {
+        e.preventDefault();
+        if (this._recuperando) return;
+
+        const campo = (selector) => this.shadowRoot.querySelector(selector);
+        const email = campo('#rec-email');
+        const codigo = campo('#rec-codigo');
+        const nueva = campo('#rec-password');
+        const confirmar = campo('#rec-confirmar');
+
+        const resultados = [
+            [email, email.value.trim() === "" ? "Campo vacio" : SetValidator.validate(email.value, Rules.provisions.EMAIL)],
+            [codigo, codigo.value.replace(/[^a-zA-Z0-9]/g, "").length !== 16 ? "El código tiene 16 letras y números" : null],
+            [nueva, SetValidator.validate(nueva.value, Rules.provisions.NUEVA_PASSWORD)],
+            [confirmar, confirmar.value !== nueva.value ? "Las contraseñas no coinciden" : null]
+        ];
+
+        resultados.forEach(([input, error]) => this.checkResult(input, error));
+        if (resultados.some(([, error]) => error)) return;
+
+        const boton = campo('#btn-recuperar');
+        this._recuperando = true;
+        boton.disabled = true;
+
+        try {
+            const respuesta = await fetch(`${this.basePath}/auth/recuperar`, {
+                method: "POST",
+                body: new URLSearchParams({
+                    email: email.value.trim(),
+                    codigo: codigo.value,
+                    passwordNueva: nueva.value
+                })
+            });
+            const data = await respuesta.json();
+
+            if (!respuesta.ok) {
+                throw new Error(data.error || "No se pudo recuperar la contraseña");
+            }
+
+            [email, codigo, nueva, confirmar].forEach(input => input.value = "");
+            this.mostrarVista("login");
+            this.showCustomAlert(
+                "Contraseña actualizada",
+                `Ya podés iniciar sesión con la contraseña nueva.\n\nTu nuevo código de recuperación es:\n${data.codigoNuevo}\n\nAnotalo ahora: no se vuelve a mostrar.`
+            );
+
+        } catch (error) {
+            this.showCustomAlert("Error", error.message);
+
+        } finally {
+            this._recuperando = false;
+            boton.disabled = false;
+        }
     }
     
     render() {
@@ -389,6 +465,36 @@ class Auth extends HTMLElement {
             .hidden{
                 display:none;
             }
+        
+            .link-olvido {
+                color: rgba(255,255,255,.85);
+                font-size: 13px;
+                text-align: center;
+                margin-top: 14px;
+                text-decoration: underline;
+                cursor: pointer;
+            }
+
+            .link-olvido:hover { color: white; }
+
+            .titulo-form {
+                color: white;
+                font-size: 18px;
+                font-weight: bold;
+                margin: 0;
+                text-align: center;
+            }
+
+            .ayuda-form {
+                color: rgba(255,255,255,.85);
+                font-size: 13px;
+                margin: 0;
+                text-align: center;
+            }
+
+            #rec-codigo { text-transform: uppercase; letter-spacing: 1px; }
+
+            #alert-message { white-space: pre-line; }
         </style>
 
         <div id="modal-overlay" class="hidden">
@@ -412,7 +518,7 @@ class Auth extends HTMLElement {
                 <p class="titulo">Iniciar sesión</p>
                 <p class="subtitulo">Inicie sesión y comience a utilizar el sistema!</p>
 
-                <form action="${this.basePath}/auth/login" method="post">
+                <form id="form-login" action="${this.basePath}/auth/login" method="post">
                     <div class="inlet-container">
                         <div class="input-icon">
                             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 4-6 8-6s8 2 8 6"/></svg>
@@ -454,6 +560,36 @@ class Auth extends HTMLElement {
                     </div>
 
                     <button type="submit" class="btn" aria-label="Verificar acceso">INGRESAR</button>
+                </form>
+        
+                <a href="#" class="link-olvido" id="link-olvido">¿Olvidaste tu contraseña?</a>
+
+                <form id="form-recuperar" class="hidden" novalidate>
+                    <p class="titulo-form">Recuperar contraseña</p>
+                    <p class="ayuda-form">Ingrese su correo, el código de recuperación que guardó y elija una contraseña nueva.</p>
+
+                    <div class="inlet-container">
+                        <div class="input-icon"><input type="email" id="rec-email" placeholder="Correo Electrónico" autocomplete="username" /></div>
+                        <small class="error-message hidden"></small>
+                    </div>
+
+                    <div class="inlet-container">
+                        <div class="input-icon"><input type="text" id="rec-codigo" placeholder="Código de recuperación" autocomplete="off" /></div>
+                        <small class="error-message hidden"></small>
+                    </div>
+
+                    <div class="inlet-container">
+                        <div class="input-icon"><input type="password" id="rec-password" placeholder="Contraseña nueva" autocomplete="new-password" /></div>
+                        <small class="error-message hidden"></small>
+                    </div>
+
+                    <div class="inlet-container">
+                        <div class="input-icon"><input type="password" id="rec-confirmar" placeholder="Repetir contraseña nueva" autocomplete="new-password" /></div>
+                        <small class="error-message hidden"></small>
+                    </div>
+
+                    <button type="submit" class="btn" id="btn-recuperar">Cambiar contraseña</button>
+                    <a href="#" class="link-olvido" id="link-volver">Volver a iniciar sesión</a>
                 </form>
             </div>
 

@@ -46,6 +46,12 @@ public class ControladorFrontal implements Filter {
             response.sendRedirect(request.getContextPath() + "/auth/login");
             return;
         }
+        
+        if (!esRutaPublica) {
+            // evita que el botón "Atrás" muestre pantallas guardadas después de cerrar sesión
+            response.setHeader("Cache-Control", "no-store, no-cache, must-revalidate");
+            response.setHeader("Pragma", "no-cache");
+        }
 
         chain.doFilter(req, res);
     }

@@ -20,17 +20,28 @@ class SidebarMenu extends HTMLElement {
 
     setupListeners() {
         this.shadowRoot.querySelectorAll("a").forEach(link => {
-           link.addEventListener("click", (event) => {
-              event.preventDefault();
-              console.log("Click en:", link.getAttribute("href"));
-              
-              const path = link.getAttribute("href");
+            link.addEventListener("click", (event) => {
+               event.preventDefault();
 
-                document.dispatchEvent(new CustomEvent("navigateTo", {
-                    detail: { path }
-                }));
-           });
-        });
+               const path = link.getAttribute("href");
+               
+               // "Mi cuenta" no es una pantalla: abre una modal
+                if (path === "#mi-cuenta") {
+                    document.dispatchEvent(new CustomEvent("header-action", { detail: { action: "mi-cuenta" } }));
+                    return;
+                }
+
+               // las rutas de autenticación (cerrar sesión) salen del dashboard: recarga completa de la página
+               if (path.includes("/auth/")) {
+                   window.location.href = path;
+                   return;
+               }
+
+               document.dispatchEvent(new CustomEvent("navigateTo", {
+                   detail: { path }
+               }));
+            });
+         });
         
         const links = this.shadowRoot.querySelectorAll(".menu-link");
         const buttonsMenu = this.shadowRoot.querySelectorAll(".menu-button");
