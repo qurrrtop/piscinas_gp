@@ -55,6 +55,7 @@ public class AutorizacionControlador extends HttpServlet {
             case "/cambiar-password" -> cambiarPassword(request, response);
             case "/codigo-recuperacion" -> generarCodigoRecuperacion(request, response);
             case "/recuperar" -> recuperarPassword(request, response);
+            case "/cambiar-email" -> cambiarEmail(request, response);
             default -> response.sendError(HttpServletResponse.SC_NOT_FOUND);
         }
     }
@@ -171,6 +172,46 @@ public class AutorizacionControlador extends HttpServlet {
         } catch (ServiceException e) {
             enviarJson(response, HttpServletResponse.SC_INTERNAL_SERVER_ERROR,
                     Map.of("error", "Error interno al generar el código"));
+        }
+    }
+    
+    private void cambiarEmail(HttpServletRequest request, HttpServletResponse response)
+            throws IOException {
+
+        // /auth es público para el filtro, por eso la sesión se verifica acá
+        HttpSession sesion = request.getSession(false);
+        if (sesion == null || sesion.getAttribute("usuarioLogueado") == null) {
+            enviarJson(response, HttpServletResponse.SC_UNAUTHORIZED,
+                    Map.of("error", "Sesión expirada, vuelva a iniciar sesión"));
+            return;
+        }
+
+        request.setCharacterEncoding("UTF-8");
+        String emailActual = (String) sesion.getAttribute("usuarioLogueado");
+        String passwordActual = request.getParameter("passwordActual");
+        String emailNuevo = request.getParameter("emailNuevo");
+
+        if (passwordActual == null || passwordActual.isEmpty()
+                || emailNuevo == null || emailNuevo.isBlank()) {
+            enviarJson(response, HttpServletResponse.SC_BAD_REQUEST,
+                    Map.of("error", "Debe completar todos los campos"));
+            return;
+        }
+
+        try {
+            String emailGuardado = autenticacionServicio.cambiarEmail(emailActual, passwordActual, emailNuevo);
+
+            // la sesión guarda el correo: se actualiza para que "Mi cuenta" siga encontrando al usuario
+            sesion.setAttribute("usuarioLogueado", emailGuardado);
+
+            enviarJson(response, HttpServletResponse.SC_OK,
+                    Map.of("mensaje", "Correo actualizado correctamente", "email", emailGuardado));
+
+        } catch (BusinessException e) {
+            enviarJson(response, HttpServletResponse.SC_BAD_REQUEST, Map.of("error", e.getMessage()));
+        } catch (ServiceException e) {
+            enviarJson(response, HttpServletResponse.SC_INTERNAL_SERVER_ERROR,
+                    Map.of("error", "Error interno al cambiar el correo"));
         }
     }
 

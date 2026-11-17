@@ -22,6 +22,9 @@ public class AutenticacionServicio {
     // misma regla que NUEVA_PASSWORD del front
     private static final Pattern PASSWORD_VALIDA =
             Pattern.compile("^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)[A-Za-z\\d@$!%*?&]{8,72}$");
+    
+    private static final Pattern EMAIL_VALIDO =
+            Pattern.compile("^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$");
 
     // sin 0/O ni 1/I para que el código se pueda leer y anotar sin confusiones
     private static final String ALFABETO_CODIGO = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
@@ -80,6 +83,43 @@ public class AutenticacionServicio {
         } catch (PersistenceException e) {
             logger.error("Error al cambiar la contraseña", e);
             throw new ServiceException("Error al cambiar la contraseña", e);
+        }
+    }
+    
+    /** Cambia el correo de acceso. Devuelve el correo ya normalizado (sin espacios y en minúsculas). */
+    public String cambiarEmail(String emailActual, String passwordActual, String emailNuevo)
+            throws ServiceException {
+        try {
+            Usuario usuario = buscarActivo(emailActual);
+
+            if (!coincide(passwordActual, usuario.getPasswordHash())) {
+                throw new BusinessException("La contraseña actual es incorrecta");
+            }
+
+            String nuevo = emailNuevo == null ? "" : emailNuevo.trim().toLowerCase();
+
+            if (nuevo.length() < 3 || nuevo.length() > 80 || !EMAIL_VALIDO.matcher(nuevo).matches()) {
+                throw new BusinessException("El correo ingresado no es válido");
+            }
+
+            if (nuevo.equals(usuario.getEmail())) {
+                throw new BusinessException("El correo nuevo debe ser distinto del actual");
+            }
+
+            if (usuarioDAO.buscarPorEmail(nuevo) != null) {
+                throw new BusinessException("Ese correo ya está en uso");
+            }
+
+            usuario.setEmail(nuevo);
+            usuarioDAO.actualizar(usuario);
+
+            logger.info("Correo actualizado para el usuario con ID {}", usuario.getId());
+
+            return usuario.getEmail();
+
+        } catch (PersistenceException e) {
+            logger.error("Error al cambiar el correo", e);
+            throw new ServiceException("Error al cambiar el correo", e);
         }
     }
 

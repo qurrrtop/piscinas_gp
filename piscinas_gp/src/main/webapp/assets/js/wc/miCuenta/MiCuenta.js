@@ -31,6 +31,14 @@ class MiCuenta extends HTMLElement {
         } else if (selector === "#passwordConfirmar") {
             if (valor === "") error = "Campo vacio";
             else if (valor !== this.shadowRoot.querySelector("#passwordNueva").value) error = "Las contraseñas no coinciden";
+        } else if (selector === "#emailNuevo") {
+            error = valor.trim() === "" ? "Campo vacio" : SetValidator.validate(valor, Rules.provisions.EMAIL);
+
+        } else if (selector === "#emailConfirmar") {
+            error = valor.trim() !== this.shadowRoot.querySelector("#emailNuevo").value.trim() ? "Los correos no coinciden" : null;
+
+        } else if (selector === "#passwordEmail") {
+            error = valor === "" ? "Campo vacio" : null;
         }
 
         input.closest(".campo").querySelector(".error").textContent = error || "";
@@ -71,6 +79,22 @@ class MiCuenta extends HTMLElement {
         });
 
         this.shadowRoot.querySelector("#btnCopiar").addEventListener("click", () => this.copiarCodigo());
+        
+        const camposEmail = ["#emailNuevo", "#emailConfirmar", "#passwordEmail"];
+
+        camposEmail.forEach(selector => {
+            this.shadowRoot.querySelector(selector).addEventListener("input", () => {
+                this.validarCampo(selector);
+                if (selector === "#emailNuevo" && this.shadowRoot.querySelector("#emailConfirmar").value !== "") {
+                    this.validarCampo("#emailConfirmar");
+                }
+            });
+        });
+
+        this.shadowRoot.querySelector("#formEmail").addEventListener("submit", (e) => {
+            e.preventDefault();
+            this.cambiarEmail(camposEmail);
+        });
     }
 
     notificar(mensaje, tipo) {
@@ -120,6 +144,50 @@ class MiCuenta extends HTMLElement {
 
         } finally {
             this._guardando = false;
+        }
+    }
+    
+    async cambiarEmail(campos) {
+        if (this._cambiandoEmail) return;
+
+        // se validan todos (sin cortar en el primero) para mostrar todos los errores juntos
+        const validos = campos.map(selector => this.validarCampo(selector));
+        if (validos.includes(false)) return;
+
+        const boton = this.shadowRoot.querySelector("#btnEmail");
+        this._cambiandoEmail = true;
+        boton.disabled = true;
+        boton.textContent = "Guardando…";
+
+        try {
+            const respuesta = await fetch(`${this.basePath}/auth/cambiar-email`, {
+                method: "POST",
+                body: new URLSearchParams({
+                    emailNuevo: this.shadowRoot.querySelector("#emailNuevo").value.trim(),
+                    passwordActual: this.shadowRoot.querySelector("#passwordEmail").value
+                })
+            });
+            const data = await respuesta.json();
+
+            if (respuesta.status === 401) {
+                window.location.href = `${this.basePath}/auth/login`;
+                return;
+            }
+
+            if (!respuesta.ok) {
+                throw new Error(data.error || "No se pudo cambiar el correo");
+            }
+
+            this.notificar(`Correo actualizado. Desde ahora inicia sesión con ${data.email}`, "exito");
+            this.closest("modal-component")?.remove();
+
+        } catch (error) {
+            this.notificar(error.message, "error");
+
+        } finally {
+            this._cambiandoEmail = false;
+            boton.disabled = false;
+            boton.textContent = "Cambiar correo";
         }
     }
 
@@ -251,6 +319,10 @@ class MiCuenta extends HTMLElement {
                 #btnGuardar { background: #37E0E0; color: #05448D; border: none; }
                 #btnGuardar:hover:not(:disabled) { background: rgba(55,224,224,.85); }
                 #btnGuardar:disabled { opacity: .5; cursor: default; }
+        
+                #btnEmail { background: #37E0E0; color: #05448D; border: none; }
+                #btnEmail:hover:not(:disabled) { background: rgba(55,224,224,.85); }
+                #btnEmail:disabled { opacity: .5; cursor: default; }
 
                 #btnGenerar { background: transparent; color: #37E0E0; border: 1px solid #37E0E0; }
                 #btnGenerar:hover:not(:disabled) { background: rgba(55,224,224,.15); }
@@ -291,6 +363,36 @@ class MiCuenta extends HTMLElement {
                 #btnCopiar:hover { background: rgba(255,255,255,.12); }
                 .aviso { text-align: center; color: #FCD34D; }
             </style>
+        
+            <form id="formEmail">
+                <h3>Correo de acceso</h3>
+
+                <div class="campo">
+                    <label for="emailNuevo">Correo nuevo</label>
+                    <input type="text" id="emailNuevo" autocomplete="off">
+                    <div class="error"></div>
+                </div>
+
+                <div class="campo">
+                    <label for="emailConfirmar">Repetir correo nuevo</label>
+                    <input type="text" id="emailConfirmar" autocomplete="off">
+                    <div class="error"></div>
+                </div>
+
+                <div class="campo">
+                    <label for="passwordEmail">Contraseña actual</label>
+                    <input type="password" id="passwordEmail" autocomplete="current-password">
+                    <div class="error"></div>
+                </div>
+
+                <p class="ayuda">Es el correo con el que se inicia sesión y con el que se recupera la contraseña. Anotalo junto con el código de recuperación.</p>
+
+                <div class="acciones">
+                    <button type="submit" id="btnEmail">Cambiar correo</button>
+                </div>
+            </form>
+
+            <hr class="separador">
 
             <form id="formPassword">
                 <h3>Cambiar contraseña</h3>

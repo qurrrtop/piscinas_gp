@@ -6,10 +6,10 @@ class AcercaDe extends HTMLElement {
         this.basePath = "";
 
         this._integrantes = [
-            { nombre: "Javier José", apellido: "Maidana", rol: "Desarrollador", telefono: "3773123456", email: "nombre1234@gmail.com" },
-            { nombre: "Román Alberto", apellido: "Maidana", rol: "Desarrollador", telefono: "3773123456", email: "nombre1234@gmail.com" },
-            { nombre: "Matias", apellido: "Avalos", rol: "Desarrollador", telefono: "3773123456", email: "nombre1234@gmail.com" },
-            { nombre: "Máximo", apellido: "Percara", rol: "Desarrollador", telefono: "3773123456", email: "nombre1234@gmail.com" }
+            { nombre: "Javier José", apellido: "Maidana", rol: "Desarrollador Front-end", telefono: "3773-628464", email: "javiermaidana1234@gmail.com" },
+            { nombre: "Román Alberto", apellido: "Maidana", rol: "Desarrollador Back-end", telefono: "3773-446824", email: "romanmaidana757@gmail.com" },
+            { nombre: "Matias Nicolas", apellido: "Avalos", rol: "Desarrollador Back-end", telefono: "3773-509694", email: "gonzalezanto242@gmail.com" },
+            { nombre: "Máximo Ezequiel", apellido: "Percara", rol: "Desarrollador Back-end", telefono: "3773-463357", email: "mpercara3@gmail.com" }
         ];
     }
 
