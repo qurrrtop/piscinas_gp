@@ -3,6 +3,7 @@
 <html>
 <head>
     <meta charset="UTF-8">
+    <link rel="icon" type="image/x-icon" href="${pageContext.request.contextPath}/assets/img/favicon/favicon.ico">
     <title>Iniciar sesión</title>
 
     <script src="${pageContext.request.contextPath}/assets/js/wc/LoginForm.js" type="module" defer></script>
