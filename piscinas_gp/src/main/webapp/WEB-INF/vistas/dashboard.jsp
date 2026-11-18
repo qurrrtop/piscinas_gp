@@ -34,6 +34,7 @@
         <script src="${pageContext.request.contextPath}/assets/js/wc/principal/InicioPrincipal.js" type="module" defer></script>
         <script src="${pageContext.request.contextPath}/assets/js/wc/miCuenta/MiCuenta.js" type="module" defer></script>
         
+        <link rel="icon" type="image/x-icon" href="${pageContext.request.contextPath}/assets/img/favicon/favicon.ico">
         <title>PiscinasGP</title>
     </head>
     <body>
