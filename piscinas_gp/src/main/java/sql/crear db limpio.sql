@@ -157,6 +157,7 @@ CREATE TABLE ventas (
     metodo_pago_id INT UNSIGNED NULL,
     estado_venta_id INT UNSIGNED NOT NULL,
     tipo_venta_id INT UNSIGNED NOT NULL,
+    subrubro_servicio_id INT UNSIGNED NULL,
     cliente_id INT UNSIGNED NOT NULL,
 
     CONSTRAINT fk_ventas_metodo_pago
@@ -174,6 +175,12 @@ CREATE TABLE ventas (
     CONSTRAINT fk_ventas_tipo
         FOREIGN KEY (tipo_venta_id)
         REFERENCES tipo_ventas(id)
+        ON UPDATE CASCADE
+        ON DELETE RESTRICT,
+
+    CONSTRAINT fk_ventas_subrubro_servicio
+        FOREIGN KEY (subrubro_servicio_id)
+        REFERENCES subrubros_servicio_tecnico(id);
         ON UPDATE CASCADE
         ON DELETE RESTRICT,
 
