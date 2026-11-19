@@ -34,6 +34,8 @@ import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
+import java.util.LinkedHashMap;
 
 @WebServlet(
         name = "VentaProductoControlador",
@@ -78,74 +80,89 @@ public class VentaProductoControlador extends HttpServlet {
             HttpServletResponse response
     ) throws ServletException, IOException {
 
+        request.setCharacterEncoding("UTF-8");
         String pathInfo = request.getPathInfo();
 
         try {
+            if ("/resumen".equals(pathInfo)) {
+                sendJsonResponse(ventaProductoServicio.obtenerResumenVentas(),
+                        response, HttpServletResponse.SC_OK);
+                return;
+            }
+
             if (pathInfo == null || pathInfo.equals("/")) {
                 String cliente = request.getParameter("cliente");
                 String estado = request.getParameter("estado");
                 LocalDate fechaDesde = parseFechaOpcional(request.getParameter("fechaDesde"));
                 LocalDate fechaHasta = parseFechaOpcional(request.getParameter("fechaHasta"));
 
-                List<VentaProducto> ventas = ventaProductoServicio.listarVentas(cliente, estado, fechaDesde, fechaHasta);
-
-                List<VentaListadoDTO> listado = new ArrayList<>();
-                for (VentaProducto v : ventas) {
-                    String nombreCliente = (v.getCliente() instanceof ClienteParticular cp)
-                            ? cp.getNombre() + " " + cp.getApellido()
-                            : ((ClienteEmpresa) v.getCliente()).getRazonSocial();
-
-                    listado.add(new VentaListadoDTO(
-                            v.getId(), nombreCliente, v.getEstadoVenta().getNombre(),
-                            v.getFechaInicio(), v.getTotal(), v.getObservacion()
-                    ));
+                // Sin "page": comportamiento anterior (lista completa), por si otra pantalla lo usa
+                if (request.getParameter("page") == null) {
+                    List<VentaProducto> ventas =
+                            ventaProductoServicio.listarVentas(cliente, estado, fechaDesde, fechaHasta);
+                    sendJsonResponse(aListado(ventas), response, HttpServletResponse.SC_OK);
+                    return;
                 }
 
-                sendJsonResponse(listado, response, HttpServletResponse.SC_OK);
+                int page = Math.max(1, parseEntero(request.getParameter("page"), 1));
+                int size = Math.min(50, Math.max(1, parseEntero(request.getParameter("size"), 10)));
+
+                List<VentaProducto> ventas = ventaProductoServicio.listarVentasPaginado(
+                        cliente, estado, fechaDesde, fechaHasta, page, size);
+
+                Map<String, Object> resultado = new LinkedHashMap<>();
+                resultado.put("datos", aListado(ventas));
+                resultado.put("total", ventaProductoServicio.contarVentas(
+                        cliente, estado, fechaDesde, fechaHasta));
+                resultado.put("page", page);
+                resultado.put("size", size);
+
+                sendJsonResponse(resultado, response, HttpServletResponse.SC_OK);
                 return;
-
-            } else {
-                Long id = Long.parseLong(pathInfo.substring(1));
-
-                VentaProducto venta =
-                        ventaProductoServicio.buscarVentaPorId(id);
-
-                sendJsonResponse(
-                        venta,
-                        response,
-                        HttpServletResponse.SC_OK
-                );
             }
+
+            Long id = Long.parseLong(pathInfo.substring(1));
+            VentaProducto venta = ventaProductoServicio.buscarVentaPorId(id);
+            sendJsonResponse(venta, response, HttpServletResponse.SC_OK);
 
         } catch (NumberFormatException | DateTimeParseException e) {
             sendJsonResponse(
-                    java.util.Map.of(
-                            "error",
-                            "El ID o la fecha enviada no tiene un formato válido"
-                    ),
-                    response,
-                    HttpServletResponse.SC_BAD_REQUEST
-            );
+                    java.util.Map.of("error", "El ID o la fecha enviada no tiene un formato válido"),
+                    response, HttpServletResponse.SC_BAD_REQUEST);
 
         } catch (BusinessException e) {
-            sendJsonResponse(
-                    java.util.Map.of("error", e.getMessage()),
-                    response,
-                    HttpServletResponse.SC_NOT_FOUND
-            );
+            sendJsonResponse(java.util.Map.of("error", e.getMessage()),
+                    response, HttpServletResponse.SC_NOT_FOUND);
 
         } catch (ServiceException e) {
             sendJsonResponse(
-                    java.util.Map.of(
-                            "error",
-                            "Error interno al procesar la solicitud"
-                    ),
-                    response,
-                    HttpServletResponse.SC_INTERNAL_SERVER_ERROR
-            );
+                    java.util.Map.of("error", "Error interno al procesar la solicitud"),
+                    response, HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
         }
     }
-    
+
+    private List<VentaListadoDTO> aListado(List<VentaProducto> ventas) {
+        List<VentaListadoDTO> listado = new ArrayList<>();
+        for (VentaProducto v : ventas) {
+            String nombreCliente = (v.getCliente() instanceof ClienteParticular cp)
+                    ? cp.getNombre() + " " + cp.getApellido()
+                    : ((ClienteEmpresa) v.getCliente()).getRazonSocial();
+
+            listado.add(new VentaListadoDTO(
+                    v.getId(), nombreCliente, v.getEstadoVenta().getNombre(),
+                    v.getFechaInicio(), v.getTotal(), v.getObservacion()
+            ));
+        }
+        return listado;
+    }
+
+    private int parseEntero(String valor, int porDefecto) {
+        try {
+            return valor == null ? porDefecto : Integer.parseInt(valor.trim());
+        } catch (NumberFormatException e) {
+            return porDefecto;
+        }
+    }
     //maneja creacion venta (POST /ventas/producto)
     //lee json recibido de peticion y lo mapea a ventaDTO
     //llama service para dar alta, y retorna objeto

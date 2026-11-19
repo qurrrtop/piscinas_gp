@@ -645,6 +645,46 @@ public class VentaProductoServicio {
             }
         }
     }
+    
+    private List<String> estadosFiltro(String estado) {
+        return (estado == null || estado.isBlank())
+                ? ESTADOS_HISTORIAL
+                : List.of(estado.trim().toLowerCase());
+    }
+
+    public List<VentaProducto> listarVentasPaginado(
+            String cliente, String estado, LocalDate fechaDesde, LocalDate fechaHasta,
+            int page, int size
+    ) throws ServiceException {
+        try {
+            return ventaProductoDAO.listarHistorialPaginado(
+                    cliente, estadosFiltro(estado), fechaDesde, fechaHasta, page, size);
+        } catch (PersistenceException e) {
+            logger.error("error al listar ventas de productos paginadas", e);
+            throw new ServiceException("error al recuperar el historial de ventas", e);
+        }
+    }
+
+    public long contarVentas(
+            String cliente, String estado, LocalDate fechaDesde, LocalDate fechaHasta
+    ) throws ServiceException {
+        try {
+            return ventaProductoDAO.contarHistorial(
+                    cliente, estadosFiltro(estado), fechaDesde, fechaHasta);
+        } catch (PersistenceException e) {
+            logger.error("error al contar ventas de productos", e);
+            throw new ServiceException("error al contar las ventas", e);
+        }
+    }
+
+    public Map<String, Long> obtenerResumenVentas() throws ServiceException {
+        try {
+            return ventaProductoDAO.obtenerResumenHistorial();
+        } catch (PersistenceException e) {
+            logger.error("error al obtener el resumen de ventas", e);
+            throw new ServiceException("error al obtener el resumen de ventas", e);
+        }
+    }
         
         
         

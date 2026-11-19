@@ -22,6 +22,8 @@ import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
+import java.util.LinkedHashMap;
 
 
 // DAO exclusivo para las ventas de productos. Los servicios tecnicos y los
@@ -55,6 +57,9 @@ public class VentaProductoDAO extends GenericoDAO<VentaProducto> {
         "monto = ?", "descuento_global = ?", "metodo_pago_id = ?",
         "estado_venta_id = ?", "cliente_id = ?"
     };
+    
+    private static final String ORDEN_HISTORIAL =
+        " ORDER BY COALESCE(v.fecha_cierre, v.fecha_inicio) DESC, v.id DESC";
 
     public VentaProductoDAO(DbConnection dbConn) {
         super(dbConn);
@@ -124,6 +129,150 @@ public class VentaProductoDAO extends GenericoDAO<VentaProducto> {
     public boolean eliminarPorId(Long id) throws PersistenceException {
         return deleteObject(PRIMARY_KEY, id);
     }
+    
+    public List<VentaProducto> listarHistorial(
+            String cliente, List<String> estados, LocalDate fechaDesde, LocalDate fechaHasta
+    ) throws PersistenceException {
+
+        StringBuilder sql = new StringBuilder(getSqlVentasConRelaciones());
+        List<Object> parametros = new ArrayList<>();
+
+        agregarFiltrosHistorial(sql, parametros, cliente, estados, fechaDesde, fechaHasta);
+        sql.append(ORDEN_HISTORIAL);
+
+        return ejecutarConsultaVentas(sql.toString(), parametros);
+    }
+
+    public List<VentaProducto> listarHistorialPaginado(
+            String cliente, List<String> estados, LocalDate fechaDesde, LocalDate fechaHasta,
+            int page, int size
+    ) throws PersistenceException {
+
+        StringBuilder sql = new StringBuilder(getSqlVentasConRelaciones());
+        List<Object> parametros = new ArrayList<>();
+
+        agregarFiltrosHistorial(sql, parametros, cliente, estados, fechaDesde, fechaHasta);
+        sql.append(ORDEN_HISTORIAL).append(" LIMIT ? OFFSET ?");
+        parametros.add(size);
+        parametros.add((page - 1) * size);
+
+        return ejecutarConsultaVentas(sql.toString(), parametros);
+    }
+
+    public long contarHistorial(
+            String cliente, List<String> estados, LocalDate fechaDesde, LocalDate fechaHasta
+    ) throws PersistenceException {
+
+        StringBuilder sql = new StringBuilder(
+                "SELECT COUNT(*) FROM ventas v "
+                + "JOIN tipo_ventas tv ON tv.id = v.tipo_venta_id "
+                + "JOIN estado_ventas ev ON ev.id = v.estado_venta_id "
+                + "LEFT JOIN clientes_particulares cp ON cp.cliente_id = v.cliente_id "
+                + "LEFT JOIN clientes_empresas ce ON ce.cliente_id = v.cliente_id "
+                + "WHERE tv.nombre = 'producto'");
+        List<Object> parametros = new ArrayList<>();
+
+        agregarFiltrosHistorial(sql, parametros, cliente, estados, fechaDesde, fechaHasta);
+
+        try (Connection conn = dbConn.getConnection();
+                PreparedStatement pstmt = conn.prepareStatement(sql.toString())) {
+
+            for (int i = 0; i < parametros.size(); i++) {
+                pstmt.setObject(i + 1, parametros.get(i));
+            }
+
+            try (ResultSet rs = pstmt.executeQuery()) {
+                return rs.next() ? rs.getLong(1) : 0;
+            }
+        } catch (SQLException e) {
+            throw new PersistenceException("Error al contar el historial de ventas de productos", e);
+        }
+    }
+
+    public Map<String, Long> obtenerResumenHistorial() throws PersistenceException {
+        String sql = "SELECT "
+                + "COALESCE(SUM(CASE WHEN LOWER(ev.nombre) = 'cerrada' THEN 1 ELSE 0 END), 0) AS cerradas, "
+                + "COALESCE(SUM(CASE WHEN LOWER(ev.nombre) = 'cancelada' THEN 1 ELSE 0 END), 0) AS canceladas "
+                + "FROM ventas v "
+                + "JOIN tipo_ventas tv ON tv.id = v.tipo_venta_id "
+                + "JOIN estado_ventas ev ON ev.id = v.estado_venta_id "
+                + "WHERE tv.nombre = 'producto'";
+
+        try (Connection conn = dbConn.getConnection();
+                PreparedStatement pstmt = conn.prepareStatement(sql);
+                ResultSet rs = pstmt.executeQuery()) {
+
+            Map<String, Long> resumen = new LinkedHashMap<>();
+            if (rs.next()) {
+                long cerradas = rs.getLong("cerradas");
+                long canceladas = rs.getLong("canceladas");
+                resumen.put("total", cerradas + canceladas);
+                resumen.put("cerradas", cerradas);
+                resumen.put("canceladas", canceladas);
+            }
+            return resumen;
+
+        } catch (SQLException e) {
+            throw new PersistenceException("Error al obtener el resumen de ventas de productos", e);
+        }
+    }
+
+    private void agregarFiltrosHistorial(StringBuilder sql, List<Object> parametros,
+            String cliente, List<String> estados, LocalDate fechaDesde, LocalDate fechaHasta) {
+
+        if (cliente != null && !cliente.isBlank()) {
+            sql.append(" AND (CONCAT(COALESCE(cp.nombre, ''), ' ', COALESCE(cp.apellido, '')) LIKE ? "
+                    + "OR ce.razon_social LIKE ? OR ce.nombre_fantasia LIKE ? "
+                    + "OR cp.cuil LIKE ? OR ce.cuit LIKE ?)");
+            String texto = "%" + cliente.trim() + "%";
+            for (int i = 0; i < 5; i++) {
+                parametros.add(texto);
+            }
+        }
+
+        if (estados != null && !estados.isEmpty()) {
+            sql.append(" AND LOWER(ev.nombre) IN (")
+                    .append(String.join(", ", Collections.nCopies(estados.size(), "?")))
+                    .append(")");
+            for (String estado : estados) {
+                parametros.add(estado.toLowerCase());
+            }
+        }
+
+        if (fechaDesde != null) {
+            sql.append(" AND v.fecha_inicio >= ?");
+            parametros.add(Timestamp.valueOf(fechaDesde.atStartOfDay()));
+        }
+
+        if (fechaHasta != null) {
+            sql.append(" AND v.fecha_inicio < ?");
+            parametros.add(Timestamp.valueOf(fechaHasta.plusDays(1).atStartOfDay()));
+        }
+    }
+
+    private List<VentaProducto> ejecutarConsultaVentas(String sql, List<Object> parametros)
+            throws PersistenceException {
+
+        List<VentaProducto> ventas = new ArrayList<>();
+
+        try (Connection conn = dbConn.getConnection();
+                PreparedStatement pstmt = conn.prepareStatement(sql)) {
+
+            for (int i = 0; i < parametros.size(); i++) {
+                pstmt.setObject(i + 1, parametros.get(i));
+            }
+
+            try (ResultSet rs = pstmt.executeQuery()) {
+                while (rs.next()) {
+                    ventas.add(mapResultSetConRelaciones(rs));
+                }
+            }
+            return ventas;
+        } catch (SQLException e) {
+            throw new PersistenceException("Error al filtrar el historial de ventas de productos", e);
+        }
+    }
+
 
     public VentaProducto buscarPorId(Long id) throws PersistenceException {
         String sql = getSqlVentasConRelaciones() + " AND v.id = ?";
@@ -155,65 +304,6 @@ public class VentaProductoDAO extends GenericoDAO<VentaProducto> {
             return ventas;
         } catch (SQLException e) {
             throw new PersistenceException("Error al recuperar el historial de ventas de productos", e);
-        }
-    }
-//para lsitar el historial de ventas
-// los filtros son opcionales, si no se selecciona un filtro desde la vista, llega como null,
-// entonces no se aplica ese filtro y muestra las ventas que correspondan
-    public List<VentaProducto> listarHistorial(
-            String cliente, List<String> estados, LocalDate fechaDesde, LocalDate fechaHasta
-    ) throws PersistenceException {
-
-        StringBuilder sql = new StringBuilder(getSqlVentasConRelaciones());
-        List<Object> parametros = new ArrayList<>();
-
-        if (cliente != null && !cliente.isBlank()) {
-            sql.append(" AND (CONCAT(COALESCE(cp.nombre, ''), ' ', COALESCE(cp.apellido, '')) LIKE ? "
-                    + "OR ce.razon_social LIKE ? OR ce.nombre_fantasia LIKE ?)");
-            String texto = "%" + cliente.trim() + "%";
-            parametros.add(texto);
-            parametros.add(texto);
-            parametros.add(texto);
-        }
-
-        if (estados != null && !estados.isEmpty()) {
-            sql.append(" AND LOWER(ev.nombre) IN (")
-                    .append(String.join(", ", Collections.nCopies(estados.size(), "?")))
-                    .append(")");
-            for (String estado : estados) {
-                parametros.add(estado.toLowerCase());
-            }
-        }
-
-        if (fechaDesde != null) {
-            sql.append(" AND v.fecha_inicio >= ?");
-            parametros.add(Timestamp.valueOf(fechaDesde.atStartOfDay()));
-        }
-
-        if (fechaHasta != null) {
-            sql.append(" AND v.fecha_inicio < ?");
-            parametros.add(Timestamp.valueOf(fechaHasta.plusDays(1).atStartOfDay()));
-        }
-
-        sql.append(" ORDER BY COALESCE(v.fecha_cierre, v.fecha_inicio) DESC, v.id DESC");
-
-        List<VentaProducto> ventas = new ArrayList<>();
-
-        try (Connection conn = dbConn.getConnection();
-                PreparedStatement pstmt = conn.prepareStatement(sql.toString())) {
-
-            for (int i = 0; i < parametros.size(); i++) {
-                pstmt.setObject(i + 1, parametros.get(i));
-            }
-
-            try (ResultSet rs = pstmt.executeQuery()) {
-                while (rs.next()) {
-                    ventas.add(mapResultSetConRelaciones(rs));
-                }
-            }
-            return ventas;
-        } catch (SQLException e) {
-            throw new PersistenceException("Error al filtrar el historial de ventas de productos", e);
         }
     }
 

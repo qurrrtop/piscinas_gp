@@ -9,6 +9,12 @@ class HistorialVentas extends HTMLElement {
         this._fechaDesde = "";
         this._fechaHasta = "";
         this.basePath = "";
+        this._resumen = { total: 0, cerradas: 0, canceladas: 0 };
+        this._pagina = 1;
+        this._tamano = 10;
+        this._total = 0;
+        this._reqId = 0;
+        this._timerBusqueda = null;
     }
     
     capitalizar(texto) {
@@ -20,71 +26,72 @@ class HistorialVentas extends HTMLElement {
     async connectedCallback() {
         this.basePath = this.getAttribute("base-path") || "";
         this.renderShell();
-        await this.cargarDatos();
+        await Promise.all([this.cargarResumen(), this.cargarDatos()]);
         this.setupListeners();
         this.actualizarTabla();
         this.actualizarTarjetas();
 
-        document.addEventListener("venta-guardada", async () => {
-            await this.cargarDatos();
-            this.actualizarTabla();
-            this.actualizarTarjetas();
-        });
+        this._onCambio = () => this.recargarTodo();
+        document.addEventListener("venta-guardada", this._onCambio);
+    }
+
+    disconnectedCallback() {
+        document.removeEventListener("venta-guardada", this._onCambio);
+    }
+
+    async cargarResumen() {
+        try {
+            this._resumen = await fetch(`${this.basePath}/ventas/productos/resumen`).then(r => r.json());
+        } catch (error) {
+            console.error("Error al cargar el resumen de ventas:", error);
+        }
     }
 
     async cargarDatos() {
-        const params = new URLSearchParams();
-        if (this._busqueda) params.set("cliente", this._busqueda);
+        const id = ++this._reqId; // ignora respuestas viejas si tipeás rápido
+
+        const params = new URLSearchParams({ page: this._pagina, size: this._tamano });
+        if (this._busqueda.trim()) params.set("cliente", this._busqueda.trim());
         if (this._estadoSeleccionado) params.set("estado", this._estadoSeleccionado.toLowerCase());
         if (this._fechaDesde) params.set("fechaDesde", this._fechaDesde);
         if (this._fechaHasta) params.set("fechaHasta", this._fechaHasta);
 
         try {
-            console.log("URL VENTAS:", `${this.basePath}/ventas/productos?${params}`);
-            this._ventas = await fetch(`${this.basePath}/ventas/productos?${params}`).then(r => r.json());
-            
-            console.log("VENTAS RECIBIDAS:", this._ventas);
+            const data = await fetch(`${this.basePath}/ventas/productos?${params}`).then(r => r.json());
+            if (id !== this._reqId) return;
+
+            this._ventas = data.datos;
+            this._total = data.total;
+
+            const totalPaginas = Math.max(1, Math.ceil(this._total / this._tamano));
+            if (this._pagina > totalPaginas) {
+                this._pagina = totalPaginas;
+                await this.cargarDatos();
+            }
         } catch (error) {
             console.error("Error al cargar ventas:", error);
         }
     }
 
-    /*
-    obtenerVentasFiltradas() {
-        const busqueda = this._busqueda.trim().toLowerCase();
-
-        let resultado = this._ventas.filter(venta => {
-            if (this._estadoSeleccionado && venta.estado.toLowerCase() !== this._estadoSeleccionado.toLowerCase()) {
-                return false;
-            }
-
-            if (busqueda) {
-                const coincideNombre = venta.clienteNombre.toLowerCase().includes(busqueda);
-                const coincideCuitCuil = (venta.clienteCuitCuil || "").toLowerCase().includes(busqueda);
-                if (!coincideNombre && !coincideCuitCuil) return false;
-            }
-
-            if (this._fechaDesde && venta.fecha < this._fechaDesde) return false;
-            if (this._fechaHasta && venta.fecha > this._fechaHasta) return false;
-
-            return true;
-        });
-
-        return resultado.sort((a, b) => b.id - a.id);
+    async refrescarTabla() {
+        await this.cargarDatos();
+        this.actualizarTabla();
     }
-    */
+
+    async recargarTodo() {
+        await Promise.all([this.cargarResumen(), this.cargarDatos()]);
+        this.actualizarTabla();
+        this.actualizarTarjetas();
+    }
 
     actualizarTarjetas() {
         const tarjetas = this.shadowRoot.querySelector("tarjetas-resumen");
-
-        const total = this._ventas.length;
-        const cerradas = this._ventas.filter(v => v.estado.toLowerCase() === "cerrada").length;
-        const canceladas = this._ventas.filter(v => v.estado.toLowerCase() === "cancelada").length;
+        const r = this._resumen;
 
         tarjetas.tarjetas = [
-            { titulo: "Total ventas", valor: total },
-            { titulo: "Cerradas", valor: cerradas },
-            { titulo: "Canceladas", valor: canceladas }
+            { titulo: "Total ventas", valor: r.total },
+            { titulo: "Cerradas", valor: r.cerradas },
+            { titulo: "Canceladas", valor: r.canceladas }
         ];
     }
 
@@ -128,34 +135,46 @@ class HistorialVentas extends HTMLElement {
             }
         ];
 
+        tabla.paginacion = { pagina: this._pagina, total: this._total, tamano: this._tamano };
         tabla.datos = this._ventas;
     }
 
     setupListeners() {
-        this.shadowRoot.querySelector("tabla-generica").addEventListener("fila-clickeada", (evento) => {
+        const tabla = this.shadowRoot.querySelector("tabla-generica");
+
+        tabla.addEventListener("fila-clickeada", (evento) => {
             this.abrirDetalleVenta(evento.detail);
         });
 
-        this.shadowRoot.querySelector("#filtroBusqueda").addEventListener("input", async (e) => {
+        tabla.addEventListener("cambiar-pagina", (e) => {
+            this._pagina = e.detail;
+            this.refrescarTabla();
+        });
+
+        // debounce: espera 300 ms sin tipear antes de consultar
+        this.shadowRoot.querySelector("#filtroBusqueda").addEventListener("input", (e) => {
             this._busqueda = e.target.value;
-            await this.cargarDatos();
-            this.actualizarTabla();
+            clearTimeout(this._timerBusqueda);
+            this._timerBusqueda = setTimeout(() => {
+                this._pagina = 1;
+                this.refrescarTabla();
+            }, 300);
         });
 
-        this.shadowRoot.querySelector("#fechaDesde").addEventListener("change", async (e) => {
+        this.shadowRoot.querySelector("#fechaDesde").addEventListener("change", (e) => {
             this._fechaDesde = e.target.value;
-            await this.cargarDatos();
-            this.actualizarTabla();
+            this._pagina = 1;
+            this.refrescarTabla();
         });
 
-        this.shadowRoot.querySelector("#fechaHasta").addEventListener("change", async (e) => {
+        this.shadowRoot.querySelector("#fechaHasta").addEventListener("change", (e) => {
             this._fechaHasta = e.target.value;
-            await this.cargarDatos();
-            this.actualizarTabla();
+            this._pagina = 1;
+            this.refrescarTabla();
         });
 
         this.shadowRoot.querySelectorAll(".tab-estado").forEach(tab => {
-            tab.addEventListener("click", async () => {
+            tab.addEventListener("click", () => {
                 const valor = tab.dataset.estado || null;
                 this._estadoSeleccionado = this._estadoSeleccionado === valor ? null : valor;
 
@@ -163,28 +182,26 @@ class HistorialVentas extends HTMLElement {
                 if (this._estadoSeleccionado) tab.classList.add("activo");
                 else this.shadowRoot.querySelector('.tab-estado[data-estado=""]')?.classList.add("activo");
 
-                await this.cargarDatos();
-                this.actualizarTabla();
+                this._pagina = 1;
+                this.refrescarTabla();
             });
         });
 
-        this.shadowRoot.querySelector("#limpiarFiltros").addEventListener("click", async () => {
+        this.shadowRoot.querySelector("#limpiarFiltros").addEventListener("click", () => {
             this._busqueda = "";
             this._fechaDesde = "";
             this._fechaHasta = "";
             this._estadoSeleccionado = null;
+            this._pagina = 1;
 
             this.shadowRoot.querySelector("#filtroBusqueda").value = "";
             this.shadowRoot.querySelector("#fechaDesde").value = "";
             this.shadowRoot.querySelector("#fechaHasta").value = "";
-          
+
             this.shadowRoot.querySelectorAll(".tab-estado").forEach(t => t.classList.remove("activo"));
+            this.shadowRoot.querySelector('.tab-estado[data-estado=""]')?.classList.add("activo");
 
-            this.shadowRoot.querySelector('.tab-estado[data-estado=""]')
-                ?.classList.add("activo");
-
-            await this.cargarDatos();
-            this.actualizarTabla();
+            this.refrescarTabla();
         });
     }
 
