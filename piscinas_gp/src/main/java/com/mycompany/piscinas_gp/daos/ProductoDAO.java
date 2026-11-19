@@ -107,54 +107,6 @@ public class ProductoDAO extends GenericoDAO<Producto> {
         return deleteObject(PRIMARY_KEY, id);
     }
     
-    public List<Producto> buscarPaginado(String q, String categoria, String marca, String stock,
-            String estado, int page, int size) throws PersistenceException {
-
-        List<Object> params = new ArrayList<>();
-        String sql = "SELECT " + COLUMNAS_CON_NOMBRES + FROM_CON_NOMBRES
-                + construirWhere(params, q, categoria, marca, stock, estado)
-                + " ORDER BY p.nombre, p.id LIMIT ? OFFSET ?";
-        params.add(size);
-        params.add((page - 1) * size);
-
-        List<Producto> productos = new ArrayList<>();
-
-        try (Connection conn = dbConn.getConnection();
-                PreparedStatement pstmt = conn.prepareStatement(sql)) {
-
-            asignarParams(pstmt, params);
-
-            try (ResultSet rs = pstmt.executeQuery()) {
-                while (rs.next()) {
-                    productos.add(mapResultSetConNombres(rs));
-                }
-            }
-        } catch (SQLException e) {
-            throw new PersistenceException("Error al buscar productos paginados", e);
-        }
-        return productos;
-    }
-
-    public long contarFiltrados(String q, String categoria, String marca, String stock, String estado)
-            throws PersistenceException {
-
-        List<Object> params = new ArrayList<>();
-        String sql = "SELECT COUNT(*) " + FROM_CON_NOMBRES
-                + construirWhere(params, q, categoria, marca, stock, estado);
-
-        try (Connection conn = dbConn.getConnection();
-                PreparedStatement pstmt = conn.prepareStatement(sql)) {
-
-            asignarParams(pstmt, params);
-
-            try (ResultSet rs = pstmt.executeQuery()) {
-                return rs.next() ? rs.getLong(1) : 0;
-            }
-        } catch (SQLException e) {
-            throw new PersistenceException("Error al contar productos", e);
-        }
-    }
-
     public Map<String, Long> obtenerResumen() throws PersistenceException {
         String sql = "SELECT COUNT(*) AS total, "
                 + "COALESCE(SUM(CASE WHEN cp.nombre = ? THEN 1 ELSE 0 END), 0) AS quimicos, "
@@ -188,24 +140,102 @@ public class ProductoDAO extends GenericoDAO<Producto> {
         }
     }
 
-    private String construirWhere(List<Object> params, String q, String categoria, String marca,
-            String stock, String estado) {
+    public List<Producto> buscarPaginado(Map<String, String> filtros, int page, int size)
+            throws PersistenceException {
 
+        List<Object> params = new ArrayList<>();
+
+        // con bajoMinimo salen primero los más críticos (menor stock respecto de su mínimo)
+        String orden = filtros.containsKey("bajoMinimo")
+                ? " ORDER BY p.stock / p.umbral_stock, p.nombre, p.id LIMIT ? OFFSET ?"
+                : " ORDER BY p.nombre, p.id LIMIT ? OFFSET ?";
+
+        String sql = "SELECT " + COLUMNAS_CON_NOMBRES + FROM_CON_NOMBRES
+                + construirWhere(params, filtros)
+                + orden;
+        params.add(size);
+        params.add((page - 1) * size);
+
+        List<Producto> productos = new ArrayList<>();
+
+        try (Connection conn = dbConn.getConnection();
+                PreparedStatement pstmt = conn.prepareStatement(sql)) {
+
+            asignarParams(pstmt, params);
+
+            try (ResultSet rs = pstmt.executeQuery()) {
+                while (rs.next()) {
+                    productos.add(mapResultSetConNombres(rs));
+                }
+            }
+        } catch (SQLException e) {
+            throw new PersistenceException("Error al buscar productos paginados", e);
+        }
+        return productos;
+    }
+
+    public long contarFiltrados(Map<String, String> filtros) throws PersistenceException {
+        List<Object> params = new ArrayList<>();
+        String sql = "SELECT COUNT(*) " + FROM_CON_NOMBRES + construirWhere(params, filtros);
+
+        try (Connection conn = dbConn.getConnection();
+                PreparedStatement pstmt = conn.prepareStatement(sql)) {
+
+            asignarParams(pstmt, params);
+
+            try (ResultSet rs = pstmt.executeQuery()) {
+                return rs.next() ? rs.getLong(1) : 0;
+            }
+        } catch (SQLException e) {
+            throw new PersistenceException("Error al contar productos", e);
+        }
+    }
+
+    private String construirWhere(List<Object> params, Map<String, String> f) {
         StringBuilder where = new StringBuilder("WHERE 1=1");
 
+        String estado = f.get("estado");
         if ("activos".equals(estado)) {
             where.append(" AND p.activo = TRUE");
         } else if ("inactivos".equals(estado)) {
             where.append(" AND p.activo = FALSE");
         }
-        if (categoria != null && !categoria.isBlank()) {
+
+        // por nombre (lo usa el listado de productos)
+        if (f.containsKey("categoria")) {
             where.append(" AND cp.nombre = ?");
-            params.add(categoria);
+            params.add(f.get("categoria"));
         }
-        if (marca != null && !marca.isBlank()) {
+        if (f.containsKey("marca")) {
             where.append(" AND mp.nombre = ?");
-            params.add(marca);
+            params.add(f.get("marca"));
         }
+
+        // por id (lo usan los buscadores de venta y servicio)
+        if (f.containsKey("categoriaId")) {
+            where.append(" AND p.categoria_producto_id = ?");
+            params.add(Long.parseLong(f.get("categoriaId")));
+        }
+        if (f.containsKey("marcaId")) {
+            where.append(" AND p.marca_producto_id = ?");
+            params.add(Long.parseLong(f.get("marcaId")));
+        }
+        if (f.containsKey("unidadId")) {
+            where.append(" AND p.unidad_medida_id = ?");
+            params.add(Long.parseLong(f.get("unidadId")));
+        }
+
+        // activo + con stock + con precio (lo que antes filtraba el front al vender)
+        if ("true".equals(f.get("vendibles"))) {
+            where.append(" AND p.activo = TRUE AND p.stock > 0 AND p.precio_actual > 0");
+        }
+
+        // activos con mínimo configurado y stock en o bajo ese mínimo (lo usa el inicio)
+        if ("true".equals(f.get("bajoMinimo"))) {
+            where.append(" AND p.activo = TRUE AND p.umbral_stock > 0 AND p.stock <= p.umbral_stock");
+        }
+
+        String stock = f.get("stock");
         if ("sin_stock".equals(stock)) {
             where.append(" AND p.stock = 0");
         } else if ("stock_bajo".equals(stock)) {
@@ -213,15 +243,16 @@ public class ProductoDAO extends GenericoDAO<Producto> {
         } else if ("disponible".equals(stock)) {
             where.append(" AND p.stock > p.umbral_stock");
         }
-        if (q != null && !q.isBlank()) {
+
+        if (f.containsKey("q")) {
             where.append(" AND (LOWER(p.nombre) LIKE ? OR LOWER(mp.nombre) LIKE ?)");
-            String patron = "%" + q.trim().toLowerCase() + "%";
+            String patron = "%" + f.get("q").toLowerCase() + "%";
             params.add(patron);
             params.add(patron);
         }
         return where.toString();
     }
-
+    
     private void asignarParams(PreparedStatement pstmt, List<Object> params) throws SQLException {
         for (int i = 0; i < params.size(); i++) {
             pstmt.setObject(i + 1, params.get(i));

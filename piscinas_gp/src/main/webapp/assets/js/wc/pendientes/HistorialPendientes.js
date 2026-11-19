@@ -10,15 +10,19 @@ class HistorialPendientes extends HTMLElement {
         super();
         this.attachShadow({ mode: "open" });
         this.basePath = "";
-        this._ventas = [];
-        this._tecnicos = [];
-        this._asesoramientos = [];
         this._tipoSeleccionado = "todos";
         this._busqueda = "";
         this._entregaSeleccionada = "";
         this._subrubroSeleccionado = "";
         this._fechaDesde = "";
         this._alGuardar = () => this.recargar();
+        this._tarjetas = [];
+        this._resumen = { total: 0, ventas: 0, tecnicos: 0, asesoramientos: 0 };
+        this._pagina = 1;
+        this._tamano = 10;
+        this._total = 0;
+        this._reqId = 0;
+        this._timerBusqueda = null;
     }
 
     async connectedCallback() {
@@ -38,10 +42,10 @@ class HistorialPendientes extends HTMLElement {
             });
         }
         
-        await this.cargarDatos();
+        
+        await Promise.all([this.cargarSubrubros(), this.cargarResumen(), this.cargarPendientes()]);
         this.actualizar();
 
-        // cuando se completa o se cancela algo desde el detalle, la lista se vuelve a pedir
         document.addEventListener("servicio-guardado", this._alGuardar);
         document.addEventListener("venta-guardada", this._alGuardar);
     }
@@ -64,18 +68,69 @@ class HistorialPendientes extends HTMLElement {
         return data;
     }
 
-    async cargarDatos() {
+    async cargarSubrubros() {
         try {
-            const [ventas, tecnicos, asesoramientos] = await Promise.all([
-                this.pedir(`${this.basePath}/ventas/productos?estado=pendiente`),
-                this.pedir(`${this.basePath}/servicios/tecnicos?estado=pendiente`),
-                this.pedir(`${this.basePath}/servicios/asesoramientos?estado=pendiente`)
-            ]);
+            const subrubros = await this.pedir(`${this.basePath}/subrubros-servicio-tecnico`);
+            this.shadowRoot.querySelector("#filtroSubrubro").innerHTML = `
+                <option value="">Todos</option>
+                ${subrubros.map(s => `<option value="${s.id}">${this.esc(s.nombre)}</option>`).join("")}
+            `;
+        } catch (error) {
+            console.error("Error al cargar subrubros:", error);
+        }
+    }
 
-            this._ventas = ventas;
-            this._tecnicos = tecnicos;
-            this._asesoramientos = asesoramientos;
+    async cargarResumen() {
+        try {
+            this._resumen = await this.pedir(`${this.basePath}/servicios/pendientes/resumen`);
+        } catch (error) {
+            console.error("Error al cargar el resumen de pendientes:", error);
+        }
+    }
 
+    async cargarPendientes() {
+        const id = ++this._reqId; // ignora respuestas viejas si tipeás rápido
+
+        const params = new URLSearchParams({ page: this._pagina, size: this._tamano });
+        if (this._busqueda.trim()) params.set("q", this._busqueda.trim());
+        if (this._tipoSeleccionado !== "todos") params.set("tipo", this._tipoSeleccionado);
+        if (this._entregaSeleccionada) params.set("entrega", this._entregaSeleccionada);
+        if (this._subrubroSeleccionado) params.set("subrubroId", this._subrubroSeleccionado);
+        if (this._fechaDesde) params.set("desde", this._fechaDesde);
+
+        try {
+            const data = await this.pedir(`${this.basePath}/servicios/pendientes?${params}`);
+            if (id !== this._reqId) return;
+
+            this._tarjetas = data.datos.map(p => {
+                const esVenta = p.tipo === "venta";
+                const pad = esVenta ? 4 : 3;
+                const prefijo = esVenta ? "V" : p.tipo === "tecnico" ? "T" : "A";
+
+                let monto;
+                if (esVenta) monto = this.money(p.total);
+                else if (p.tipo === "tecnico") monto = `${this.money(p.manoObra)} MO`;
+                else monto = p.cobrado ? this.money(p.total) : "Sin cobro";
+
+                return {
+                    tipo: p.tipo,
+                    id: p.id,
+                    codigo: `${prefijo}-${String(p.id).padStart(pad, "0")}`,
+                    subrubro: p.subrubro || "",
+                    cliente: p.cliente || "-",
+                    descripcion: esVenta ? this.textoUtil(p.descripcion) : (p.descripcion || ""),
+                    creado: p.creado,
+                    entrega: p.entrega,
+                    monto
+                };
+            });
+            this._total = data.total;
+
+            const totalPaginas = Math.max(1, Math.ceil(this._total / this._tamano));
+            if (this._pagina > totalPaginas) {
+                this._pagina = totalPaginas;
+                await this.cargarPendientes();
+            }
         } catch (error) {
             console.error("Error al cargar los pendientes:", error);
             document.dispatchEvent(new CustomEvent("mostrar-notificacion", {
@@ -84,8 +139,14 @@ class HistorialPendientes extends HTMLElement {
         }
     }
 
+    async refrescar() {
+        await this.cargarPendientes();
+        this.renderLista();
+        this.actualizarPaginacion();
+    }
+
     async recargar() {
-        await this.cargarDatos();
+        await Promise.all([this.cargarResumen(), this.cargarPendientes()]);
         this.actualizar();
     }
 
@@ -130,131 +191,37 @@ class HistorialPendientes extends HTMLElement {
         return texto && texto !== "Sin observaciones" ? texto : "";
     }
 
-    // ---------- datos de las tarjetas ----------
-
-    obtenerTarjetas() {
-        const ventas = this._ventas.map(v => ({
-            tipo: "venta",
-            id: v.id,
-            codigo: `V-${String(v.id).padStart(4, "0")}`,
-            subrubro: "",
-            cliente: v.cliente || "-",
-            descripcion: this.textoUtil(v.observacion),
-            creado: v.fecha,
-            entrega: null,
-            monto: this.money(v.total)
-        }));
-
-        const tecnicos = this._tecnicos.map(s => ({
-            tipo: "tecnico",
-            id: s.id,
-            codigo: `T-${String(s.id).padStart(3, "0")}`,
-            subrubro: s.subrubroServicio?.nombre || "",
-            cliente: this.nombreCliente(s.cliente),
-            descripcion: s.problema || "",
-            creado: s.fechaInicio,
-            entrega: s.fechaEntrega,
-            // mano de obra, como en el diseño; para mostrar el total en su lugar: this.money(s.total)
-            monto: `${this.money(s.manoObra)} MO`
-        }));
-
-        const asesoramientos = this._asesoramientos.map(s => ({
-            tipo: "asesoramiento",
-            id: s.id,
-            codigo: `A-${String(s.id).padStart(3, "0")}`,
-            subrubro: "",
-            cliente: this.nombreCliente(s.cliente),
-            descripcion: s.problema || "",
-            creado: s.fechaInicio,
-            entrega: null,
-            monto: s.cobrado ? this.money(s.monto) : "Sin cobro"
-        }));
-
-        return [...ventas, ...tecnicos, ...asesoramientos];
-    }
-
-    // lo mas urgente primero: los tecnicos por fecha de entrega y el resto por antiguedad
-    fechaClave(tarjeta) {
-        return this.aFecha(tarjeta.entrega || tarjeta.creado).getTime();
-    }
-
-    obtenerTarjetasFiltradas() {
-        const busqueda = this._busqueda.trim().toLowerCase();
-
-        const hoy = new Date();
-        hoy.setHours(0, 0, 0, 0);
-        const enUnaSemana = new Date(hoy);
-        enUnaSemana.setDate(hoy.getDate() + 7);
-
-        const desde = this._fechaDesde ? this.aFecha(this._fechaDesde) : null;
-
-        return this.obtenerTarjetas()
-            .filter(t => this._tipoSeleccionado === "todos"
-                || t.tipo === this._tipoSeleccionado
-                || (this._tipoSeleccionado === "servicios" && t.tipo !== "venta"))
-            .filter(t => !busqueda
-                || t.cliente.toLowerCase().includes(busqueda)
-                || t.descripcion.toLowerCase().includes(busqueda)
-                || t.codigo.toLowerCase().includes(busqueda))
-            .filter(t => !this._subrubroSeleccionado || t.subrubro === this._subrubroSeleccionado)
-            .filter(t => this.cumpleEntrega(t, hoy, enUnaSemana))
-            .filter(t => !desde || this.aFecha(t.creado) >= desde)
-            .sort((a, b) => this.fechaClave(a) - this.fechaClave(b));
-    }
-
     // ---------- render ----------
 
     actualizar() {
         this.actualizarResumen();
-        this.cargarOpcionesSubrubro();
         this.renderLista();
-    }
-    
-    cargarOpcionesSubrubro() {
-        const select = this.shadowRoot.querySelector("#filtroSubrubro");
-        const nombres = [...new Set(
-            this._tecnicos.map(s => s.subrubroServicio?.nombre).filter(Boolean)
-        )].sort();
-
-        // si el subrubro elegido ya no tiene pendientes (por ejemplo se completó el último), vuelve a "Todos"
-        if (!nombres.includes(this._subrubroSeleccionado)) {
-            this._subrubroSeleccionado = "";
-        }
-
-        select.innerHTML = `
-            <option value="">Todos</option>
-            ${nombres.map(n => `
-                <option value="${this.esc(n)}" ${n === this._subrubroSeleccionado ? "selected" : ""}>${this.esc(n)}</option>
-            `).join("")}
-        `;
-    }
-
-    cumpleEntrega(tarjeta, hoy, enUnaSemana) {
-        if (!this._entregaSeleccionada) return true;
-        if (!tarjeta.entrega) return false; // solo los servicios técnicos tienen fecha de entrega
-
-        const entrega = this.aFecha(tarjeta.entrega);
-
-        if (this._entregaSeleccionada === "vencidas") return entrega < hoy;
-        if (this._entregaSeleccionada === "hoy") return entrega.getTime() === hoy.getTime();
-        if (this._entregaSeleccionada === "semana") return entrega >= hoy && entrega <= enUnaSemana;
-        return true;
+        this.actualizarPaginacion();
     }
 
     actualizarResumen() {
-        const total = this._ventas.length + this._tecnicos.length + this._asesoramientos.length;
+        const r = this._resumen;
 
         this.shadowRoot.querySelector("tarjetas-resumen").tarjetas = [
-            { titulo: "Total", valor: total, subTitulo: "PENDIENTES" },
-            { titulo: "Ventas", valor: this._ventas.length, subTitulo: "PENDIENTES" },
-            { titulo: "Servicio técnico", valor: this._tecnicos.length, subTitulo: "PENDIENTES" },
-            { titulo: "Asesoramiento", valor: this._asesoramientos.length, subTitulo: "PENDIENTES" }
+            { titulo: "Total", valor: r.total, subTitulo: "PENDIENTES" },
+            { titulo: "Ventas", valor: r.ventas, subTitulo: "PENDIENTES" },
+            { titulo: "Servicio técnico", valor: r.tecnicos, subTitulo: "PENDIENTES" },
+            { titulo: "Asesoramiento", valor: r.asesoramientos, subTitulo: "PENDIENTES" }
         ];
+    }
+
+    actualizarPaginacion() {
+        const totalPaginas = Math.max(1, Math.ceil(this._total / this._tamano));
+        this.shadowRoot.querySelector("#paginacion").style.display = totalPaginas > 1 ? "flex" : "none";
+        this.shadowRoot.querySelector("#infoPagina").textContent =
+            `Página ${this._pagina} de ${totalPaginas} (${this._total} pendientes)`;
+        this.shadowRoot.querySelector("#btnAnterior").disabled = this._pagina <= 1;
+        this.shadowRoot.querySelector("#btnSiguiente").disabled = this._pagina >= totalPaginas;
     }
 
     renderLista() {
         const lista = this.shadowRoot.querySelector("#lista");
-        const tarjetas = this.obtenerTarjetasFiltradas();
+        const tarjetas = this._tarjetas;
 
         if (tarjetas.length === 0) {
             lista.innerHTML = `<p class="vacio">No hay pendientes para mostrar.</p>`;
@@ -356,31 +323,50 @@ class HistorialPendientes extends HTMLElement {
                 this.shadowRoot.querySelectorAll(".tab-tipo").forEach(t => t.classList.remove("activo"));
                 tab.classList.add("activo");
                 this._tipoSeleccionado = tab.dataset.tipo;
-                this.renderLista();
+                this._pagina = 1;
+                this.refrescar();
             });
         });
 
+        // debounce: espera 300 ms sin tipear antes de consultar
         this.shadowRoot.querySelector("#filtroBusqueda").addEventListener("input", (e) => {
             this._busqueda = e.target.value;
-            this.renderLista();
+            clearTimeout(this._timerBusqueda);
+            this._timerBusqueda = setTimeout(() => {
+                this._pagina = 1;
+                this.refrescar();
+            }, 300);
         });
-        
+
         this.shadowRoot.querySelector("#filtroEntrega").addEventListener("change", (e) => {
             this._entregaSeleccionada = e.target.value;
-            this.renderLista();
+            this._pagina = 1;
+            this.refrescar();
         });
 
         this.shadowRoot.querySelector("#filtroSubrubro").addEventListener("change", (e) => {
             this._subrubroSeleccionado = e.target.value;
-            this.renderLista();
+            this._pagina = 1;
+            this.refrescar();
         });
 
         this.shadowRoot.querySelector("#filtroFecha").addEventListener("change", (e) => {
             this._fechaDesde = e.target.value;
-            this.renderLista();
+            this._pagina = 1;
+            this.refrescar();
+        });
+
+        this.shadowRoot.querySelector("#btnAnterior").addEventListener("click", () => {
+            this._pagina--;
+            this.refrescar();
+        });
+
+        this.shadowRoot.querySelector("#btnSiguiente").addEventListener("click", () => {
+            this._pagina++;
+            this.refrescar();
         });
     }
-
+    
     renderShell() {
         this.shadowRoot.innerHTML = `
             <style>
@@ -599,6 +585,29 @@ class HistorialPendientes extends HTMLElement {
                         justify-content: flex-start;
                     }
                 }
+        
+                .paginacion {
+                    align-items: center;
+                    justify-content: center;
+                    gap: 1rem;
+                    font-size: .85rem;
+                }
+
+                .paginacion button {
+                    background: rgba(1, 49, 104, 1);
+                    border: 1px solid rgba(255,255,255,.2);
+                    color: white;
+                    width: 2.2rem;
+                    height: 2.2rem;
+                    border-radius: 6px;
+                    cursor: pointer;
+                    font-size: 1rem;
+                }
+
+                .paginacion button:disabled {
+                    opacity: .35;
+                    cursor: default;
+                }
             </style>
 
             <div class="contenedor">
@@ -636,6 +645,12 @@ class HistorialPendientes extends HTMLElement {
                 </div>
                 
                 <div id="lista"></div>
+        
+                <div class="paginacion" id="paginacion" style="display:none">
+                    <button type="button" id="btnAnterior">&larr;</button>
+                    <span id="infoPagina"></span>
+                    <button type="button" id="btnSiguiente">&rarr;</button>
+                </div>
             </div>
         `;
     }

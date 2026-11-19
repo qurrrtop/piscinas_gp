@@ -653,18 +653,11 @@ class DetalleServicio extends HTMLElement {
         this.renderCargando();
 
         try {
-            const [clientes, productos, metodosPago] = await Promise.all([
-                fetch(`${this.prefijo()}clientes`).then(r => r.json()),
-                esTecnico
-                    ? fetch(`${this.prefijo()}productos`).then(r => r.json())
-                    : Promise.resolve([]),
-                esTecnico
-                    ? Promise.resolve([])
-                    : fetch(`${this.prefijo()}metodos-pago`).then(r => r.json())
-            ]);
-            this._clientes = clientes.filter(c => c.activo);
-            this._productos = productos.filter(p => p.activo);
-            this._metodosPago = metodosPago;
+            this._metodosPago = esTecnico
+                ? []
+                : await fetch(`${this.prefijo()}metodos-pago`).then(r => r.json());
+            this._clientes = [];
+            this._productos = [];
 
         } catch (error) {
             this.renderDetalle(s);
@@ -820,18 +813,32 @@ class DetalleServicio extends HTMLElement {
         const resultados = area.querySelector("#resultadosCliente");
         input.focus();
 
-        input.addEventListener("input", () => {
-            const busqueda = input.value.trim().toLowerCase();
+        let reqId = 0;
+        let timer = null;
+
+        const buscar = async () => {
+            const id = ++reqId;
+            const busqueda = input.value.trim();
 
             if (!busqueda) {
                 resultados.innerHTML = "";
                 return;
             }
 
-            const coincidencias = this._clientes.filter(cl =>
-                (cl.nombreCompleto || "").toLowerCase().includes(busqueda) ||
-                (cl.cuitCuil || "").toLowerCase().includes(busqueda)
-            ).slice(0, 8);
+            const params = new URLSearchParams({ page: 1, size: 8, q: busqueda, estado: "activos" });
+
+            let coincidencias;
+            try {
+                const data = await fetch(`${this.prefijo()}clientes?${params}`).then(r => r.json());
+                if (id !== reqId) return;
+                coincidencias = data.datos;
+            } catch (error) {
+                console.error("Error al buscar clientes:", error);
+                return;
+            }
+
+            // el click busca en this._clientes, así que guardo los resultados visibles
+            this._clientes = coincidencias;
 
             resultados.innerHTML = coincidencias.map(cl => `
                 <div class="item-resultado" data-id="${this.esc(cl.id)}">
@@ -850,6 +857,16 @@ class DetalleServicio extends HTMLElement {
                     this.renderAreaCliente();
                 });
             });
+        };
+
+        input.addEventListener("input", () => {
+            clearTimeout(timer);
+            if (!input.value.trim()) {
+                reqId++; // descarta cualquier respuesta en vuelo
+                resultados.innerHTML = "";
+                return;
+            }
+            timer = setTimeout(buscar, 300);
         });
 
         area.querySelector("#btnMantenerCliente").addEventListener("click", () => {
@@ -1070,7 +1087,10 @@ class DetalleServicio extends HTMLElement {
             const input = area.querySelector("#buscarProducto");
             this.renderResultadosProducto("");
 
-            input.addEventListener("input", () => this.renderResultadosProducto(input.value));
+            input.addEventListener("input", () => {
+                clearTimeout(this._timerProducto);
+                this._timerProducto = setTimeout(() => this.renderResultadosProducto(input.value), 300);
+            });
 
             area.querySelector("#btnCerrarBusqueda").addEventListener("click", () => {
                 ed.agregandoProducto = false;
@@ -1079,21 +1099,38 @@ class DetalleServicio extends HTMLElement {
         }
     }
 
-    renderResultadosProducto(texto) {
+    async renderResultadosProducto(texto) {
+        const id = (this._reqProducto = (this._reqProducto || 0) + 1);
+        const busqueda = texto.trim();
         const lista = this.shadowRoot.querySelector("#resultadosProducto");
-        const busqueda = texto.trim().toLowerCase();
+        if (!lista) return;
 
         if (!busqueda) {
             lista.innerHTML = `<p class="texto vacio sin-resultados">Escribí el nombre o la marca del producto</p>`;
             return;
         }
 
-        const coincidencias = this._productos.filter(p =>
-            (p.nombre || "").toLowerCase().includes(busqueda) ||
-            (p.marcaProducto?.nombre || "").toLowerCase().includes(busqueda)
-        ).slice(0, 25);
+        // estado=activos: igual que antes, se pueden elegir productos sin stock
+        // porque el stock que ya tenía este servicio vuelve a estar disponible
+        const params = new URLSearchParams({ page: 1, size: 25, q: busqueda, estado: "activos" });
 
-        lista.innerHTML = coincidencias.map(p => {
+        let coincidencias;
+        try {
+            const data = await fetch(`${this.prefijo()}productos?${params}`).then(r => r.json());
+            if (id !== this._reqProducto) return;
+            coincidencias = data.datos;
+        } catch (error) {
+            console.error("Error al buscar productos:", error);
+            return;
+        }
+
+        const listaActual = this.shadowRoot.querySelector("#resultadosProducto");
+        if (!listaActual) return; // se cerró la búsqueda mientras llegaba la respuesta
+
+        // el click busca en this._productos, así que guardo los resultados visibles
+        this._productos = coincidencias;
+
+        listaActual.innerHTML = coincidencias.map(p => {
             const contenido = [p.contenido, p.unidadMedida?.abreviatura]
                 .filter(v => v != null && v !== "").join(" ");
 
@@ -1111,7 +1148,7 @@ class DetalleServicio extends HTMLElement {
             `;
         }).join("") || `<p class="texto vacio sin-resultados">No se encontraron productos</p>`;
 
-        lista.querySelectorAll(".item-resultado").forEach(el => {
+        listaActual.querySelectorAll(".item-resultado").forEach(el => {
             el.addEventListener("click", () => {
                 const producto = this._productos.find(p => String(p.id) === el.dataset.id);
                 this.agregarProducto(producto);

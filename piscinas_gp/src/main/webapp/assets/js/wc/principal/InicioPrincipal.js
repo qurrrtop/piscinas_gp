@@ -27,7 +27,13 @@ class InicioPrincipal extends HTMLElement {
             hayError = true;
 
             // sin datos: se dibuja todo igual, con valores en cero
-            this._datos = { cerradas: [], ventasPend: [], tecnicos: [], asesoramientos: [], productos: [] };
+            this._datos = {
+                resumen: { total: 0, ventas: 0, tecnicos: 0, asesoramientos: 0 },
+                vencidos: { datos: [], total: 0 },
+                ventasViejas: [],
+                stock: { datos: [], total: 0 },
+                semana: []
+            };
 
             document.dispatchEvent(new CustomEvent("mostrar-notificacion", {
                 detail: { mensaje: "No se pudo cargar el resumen del negocio", tipo: "error" }
@@ -53,19 +59,77 @@ class InicioPrincipal extends HTMLElement {
     }
 
     async cargarDatos() {
-        const inicio = this.inicioDelDia(new Date());
-        inicio.setDate(inicio.getDate() - 6);
-        const desde = this.claveDia(inicio);
+        const bp = this.basePath;
 
-        const [cerradas, ventasPend, tecnicos, asesoramientos, productos] = await Promise.all([
-            this.pedir(`${this.basePath}/ventas/productos?estado=cerrada&fechaDesde=${desde}`),
-            this.pedir(`${this.basePath}/ventas/productos?estado=pendiente`),
-            this.pedir(`${this.basePath}/servicios/tecnicos?estado=pendiente`),
-            this.pedir(`${this.basePath}/servicios/asesoramientos?estado=pendiente`),
-            this.pedir(`${this.basePath}/productos`)
+        const [resumen, vencidos, ventasViejas, stock, semana] = await Promise.all([
+            this.pedir(`${bp}/servicios/pendientes/resumen`),
+            this.pedir(`${bp}/servicios/pendientes?tipo=tecnico&entrega=vencidas&size=50`),
+            this.pedir(`${bp}/servicios/pendientes?tipo=venta&size=50`),
+            this.pedir(`${bp}/productos?page=1&size=5&bajoMinimo=true`),
+            this.pedir(`${bp}/ventas/productos/semana`)
         ]);
 
-        this._datos = { cerradas, ventasPend, tecnicos, asesoramientos, productos };
+        this._datos = { resumen, vencidos, ventasViejas: ventasViejas.datos, stock, semana };
+    }
+
+    // ventas cerradas de los últimos 7 días (el último elemento es hoy)
+    calcularSemana() {
+        const dias = [];
+        for (let i = 6; i >= 0; i--) {
+            const d = this.inicioDelDia(new Date());
+            d.setDate(d.getDate() - i);
+            dias.push({ fecha: d, clave: this.claveDia(d), total: 0, cantidad: 0 });
+        }
+
+        this._datos.semana.forEach(s => {
+            const dia = dias.find(x => x.clave === s.fecha);
+            if (dia) {
+                dia.total = Number(s.total || 0);
+                dia.cantidad = Number(s.cantidad || 0);
+            }
+        });
+
+        return dias;
+    }
+
+    calcularAtencion() {
+        const hoy = this.inicioDelDia(new Date());
+        const items = [];
+
+        this._datos.vencidos.datos.forEach(s => {
+            const dias = this.diasEntre(this.aFecha(s.entrega), hoy);
+            items.push({
+                titulo: `T-${String(s.id).padStart(3, "0")} · ${s.subrubro || "Servicio técnico"}`,
+                detalle: `${s.cliente || "-"} · entrega vencida hace ${this.plural(dias, "día", "días")}`,
+                etiqueta: "Vencido",
+                color: "naranja"
+            });
+        });
+
+        // vienen ordenadas de la más antigua a la más nueva
+        this._datos.ventasViejas
+            .map(v => ({ v, dias: this.diasEntre(this.inicioDelDia(this.aFecha(v.creado)), hoy) }))
+            .filter(x => x.dias >= InicioPrincipal.DIAS_VENTA_ANTIGUA)
+            .forEach(({ v, dias }) => {
+                items.push({
+                    titulo: `V-${String(v.id).padStart(4, "0")} · ${v.cliente}`,
+                    detalle: `Pendiente desde hace ${this.plural(dias, "día", "días")}`,
+                    etiqueta: "Pendiente",
+                    color: "amarillo"
+                });
+            });
+
+        this._datos.stock.datos.forEach(p => {
+            const contenido = [p.contenido, p.unidadMedida?.abreviatura].filter(Boolean).join(" ");
+            items.push({
+                titulo: `${p.nombre}${contenido ? ` ${contenido}` : ""}`,
+                detalle: `Stock ${p.stock} · mínimo ${p.umbralStock}`,
+                etiqueta: Number(p.stock) === 0 ? "Sin stock" : "Stock bajo",
+                color: "rojo"
+            });
+        });
+
+        return items;
     }
 
     cargarChartJs() {
@@ -121,90 +185,6 @@ class InicioPrincipal extends HTMLElement {
         return `${n} ${n === 1 ? singular : plural}`;
     }
 
-    nombreCliente(c) {
-        if (!c) return "-";
-        return c.nombre ? `${c.nombre} ${c.apellido || ""}`.trim() : (c.razonSocial || "-");
-    }
-
-    // ---------- cálculos ----------
-
-    // ventas cerradas de los últimos 7 días (el último elemento es hoy)
-    calcularSemana() {
-        const dias = [];
-        for (let i = 6; i >= 0; i--) {
-            const d = this.inicioDelDia(new Date());
-            d.setDate(d.getDate() - i);
-            dias.push({ fecha: d, clave: this.claveDia(d), total: 0, cantidad: 0 });
-        }
-
-        // criterio a definir con el cliente: hoy solo cuentan las ventas de productos cerradas
-        this._datos.cerradas
-            .filter(v => (v.estado || "").toLowerCase() === "cerrada")
-            .forEach(v => {
-                const dia = dias.find(x => x.clave === this.claveDia(this.aFecha(v.fecha)));
-                if (dia) {
-                    dia.total += Number(v.total || 0);
-                    dia.cantidad++;
-                }
-            });
-
-        return dias;
-    }
-
-    // solo cuentan productos con mínimo configurado: los importados llegan con stock y mínimo en 0
-    productosStockBajo() {
-        return this._datos.productos
-            .filter(p => p.activo && Number(p.umbralStock) > 0 && Number(p.stock) <= Number(p.umbralStock))
-            .sort((a, b) => a.stock / a.umbralStock - b.stock / b.umbralStock);
-    }
-
-    tecnicosVencidos() {
-        const hoy = this.inicioDelDia(new Date());
-        return this._datos.tecnicos
-            .filter(s => s.fechaEntrega && this.aFecha(s.fechaEntrega) < hoy)
-            .sort((a, b) => this.aFecha(a.fechaEntrega) - this.aFecha(b.fechaEntrega));
-    }
-
-    calcularAtencion() {
-        const hoy = this.inicioDelDia(new Date());
-        const items = [];
-
-        this.tecnicosVencidos().forEach(s => {
-            const dias = this.diasEntre(this.aFecha(s.fechaEntrega), hoy);
-            items.push({
-                titulo: `T-${String(s.id).padStart(3, "0")} · ${s.subrubroServicio?.nombre || "Servicio técnico"}`,
-                detalle: `${this.nombreCliente(s.cliente)} · entrega vencida hace ${this.plural(dias, "día", "días")}`,
-                etiqueta: "Vencido",
-                color: "naranja"
-            });
-        });
-
-        this._datos.ventasPend
-            .map(v => ({ v, dias: this.diasEntre(this.inicioDelDia(this.aFecha(v.fecha)), hoy) }))
-            .filter(x => x.dias >= InicioPrincipal.DIAS_VENTA_ANTIGUA)
-            .sort((a, b) => b.dias - a.dias)
-            .forEach(({ v, dias }) => {
-                items.push({
-                    titulo: `V-${String(v.id).padStart(4, "0")} · ${v.cliente}`,
-                    detalle: `Pendiente desde hace ${this.plural(dias, "día", "días")}`,
-                    etiqueta: "Pendiente",
-                    color: "amarillo"
-                });
-            });
-
-        this.productosStockBajo().forEach(p => {
-            const contenido = [p.contenido, p.unidadMedida?.abreviatura].filter(Boolean).join(" ");
-            items.push({
-                titulo: `${p.nombre}${contenido ? ` ${contenido}` : ""}`,
-                detalle: `Stock ${p.stock} · mínimo ${p.umbralStock}`,
-                etiqueta: Number(p.stock) === 0 ? "Sin stock" : "Stock bajo",
-                color: "rojo"
-            });
-        });
-
-        return items;
-    }
-
     // ---------- render ----------
 
     irA(ruta) {
@@ -255,13 +235,16 @@ class InicioPrincipal extends HTMLElement {
         const hoy = this._semana[6];
         const totalSemana = this._semana.reduce((acc, d) => acc + d.total, 0);
 
-        const vencidos = this.tecnicosVencidos().length;
-        const serviciosPend = this._datos.tecnicos.length + this._datos.asesoramientos.length;
-        const stockBajo = this.productosStockBajo().length;
+        const r = this._datos.resumen;
+        const vencidos = this._datos.vencidos.total;
+        const serviciosPend = r.tecnicos + r.asesoramientos;
+        const stockBajo = this._datos.stock.total;
 
         const atencion = this.calcularAtencion();
         const visibles = atencion.slice(0, InicioPrincipal.MAX_ATENCION);
-        const resto = atencion.length - visibles.length;
+        // el servidor manda solo los 5 productos más críticos: el resto se cuenta con el total
+        const stockOculto = this._datos.stock.total - this._datos.stock.datos.length;
+        const resto = atencion.length - visibles.length + stockOculto;
 
         const icono = (trazo) => `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${trazo}</svg>`;
 
@@ -332,7 +315,7 @@ class InicioPrincipal extends HTMLElement {
                     })}
                     ${this.htmlTarjeta({
                         icono: icono(`<rect x="6" y="4" width="12" height="17" rx="2"/><path d="M9 4V3h6v1M9 10h6M9 14h6"/>`),
-                        color: "#FBBF24", titulo: "Ventas pendientes", valor: this._datos.ventasPend.length,
+                        color: "#FBBF24", titulo: "Ventas pendientes", valor: r.ventas,
                         detalle: "Sin completar", ruta: InicioPrincipal.RUTA_PENDIENTES, filtro: "venta"
                     })}
                     ${this.htmlTarjeta({

@@ -89,6 +89,12 @@ public class VentaProductoControlador extends HttpServlet {
                         response, HttpServletResponse.SC_OK);
                 return;
             }
+            
+            if ("/semana".equals(pathInfo)) {
+                sendJsonResponse(ventaProductoServicio.obtenerVentasUltimosDias(),
+                        response, HttpServletResponse.SC_OK);
+                return;
+            }
 
             if (pathInfo == null || pathInfo.equals("/")) {
                 String cliente = request.getParameter("cliente");

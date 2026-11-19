@@ -36,6 +36,7 @@ import java.util.Map;
 import java.util.Set;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import java.util.LinkedHashMap;
 
 public class VentaServTecnicoServicio {
 
@@ -271,6 +272,74 @@ public class VentaServTecnicoServicio {
         } catch (PersistenceException | SQLException e) {
             logger.error("Error al cerrar el servicio tecnico con id {}", servicioId, e);
             throw new ServiceException("Error al cerrar el servicio", e);
+        }
+    }
+    
+    public Map<String, Object> listarHistorialUnificado(String q, String tipo, Long subrubroId,
+            String estado, LocalDate fechaDesde, int page, int size) throws ServiceException {
+
+        if (page < 1) page = 1;
+        if (size < 1) size = 10;
+        if (size > 50) size = 50;
+
+        // solo se aceptan estados del historial; cualquier otro valor cae en "ambos"
+        String estadoNormalizado = estado == null ? "" : estado.trim().toLowerCase();
+        List<String> estados = ESTADOS_HISTORIAL.contains(estadoNormalizado)
+                ? List.of(estadoNormalizado)
+                : ESTADOS_HISTORIAL;
+
+        try {
+            Map<String, Object> resultado = new LinkedHashMap<>();
+            resultado.put("datos", ventaServTecnicoDAO.listarHistorialUnificado(
+                    q, tipo, subrubroId, estados, fechaDesde, page, size));
+            resultado.put("total", ventaServTecnicoDAO.contarHistorialUnificado(
+                    q, tipo, subrubroId, estados, fechaDesde));
+            resultado.put("page", page);
+            resultado.put("size", size);
+            return resultado;
+
+        } catch (PersistenceException e) {
+            logger.error("Error al listar el historial unificado de servicios", e);
+            throw new ServiceException("Error al recuperar el historial de servicios", e);
+        }
+    }
+
+    public Map<String, Object> listarPendientesUnificado(Map<String, String> filtros, int page, int size)
+            throws ServiceException {
+
+        if (page < 1) page = 1;
+        if (size < 1) size = 10;
+        if (size > 50) size = 50;
+
+        try {
+            Map<String, Object> resultado = new LinkedHashMap<>();
+            resultado.put("datos", ventaServTecnicoDAO.listarPendientesUnificado(filtros, page, size));
+            resultado.put("total", ventaServTecnicoDAO.contarPendientesUnificado(filtros));
+            resultado.put("page", page);
+            resultado.put("size", size);
+            return resultado;
+
+        } catch (PersistenceException e) {
+            logger.error("Error al listar los pendientes", e);
+            throw new ServiceException("Error al recuperar los pendientes", e);
+        }
+    }
+
+    public Map<String, Long> resumenPendientes() throws ServiceException {
+        try {
+            return ventaServTecnicoDAO.resumenPendientes();
+        } catch (PersistenceException e) {
+            logger.error("Error al obtener el resumen de pendientes", e);
+            throw new ServiceException("Error al obtener el resumen de pendientes", e);
+        }
+    }
+    
+    public Map<String, Long> resumenHistorialUnificado() throws ServiceException {
+        try {
+            return ventaServTecnicoDAO.resumenHistorialUnificado(ESTADOS_HISTORIAL);
+        } catch (PersistenceException e) {
+            logger.error("Error al obtener el resumen de servicios", e);
+            throw new ServiceException("Error al obtener el resumen de servicios", e);
         }
     }
     

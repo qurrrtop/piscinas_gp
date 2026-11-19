@@ -648,6 +648,7 @@ class NuevaVenta extends HTMLElement {
                     contenido: d.producto.contenido,
                     unidadAbrev: d.producto.unidadMedida?.abreviatura || "",
                     precioUnitario: Number(d.precioUnitario),
+                    stock: Number(d.producto.stock) + d.cantidad, // stock actual + lo que ya reservó esta venta
                     cantidad: d.cantidad
                 };
             });

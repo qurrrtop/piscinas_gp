@@ -217,6 +217,38 @@ public class VentaProductoDAO extends GenericoDAO<VentaProducto> {
         }
     }
 
+    public List<Map<String, Object>> resumenUltimosDias(int dias) throws PersistenceException {
+        String sql = "SELECT DATE(v.fecha_inicio) AS dia, COUNT(*) AS cantidad, "
+                + "COALESCE(SUM(v.monto), 0) AS total "
+                + "FROM ventas v "
+                + "JOIN tipo_ventas tv ON tv.id = v.tipo_venta_id "
+                + "JOIN estado_ventas ev ON ev.id = v.estado_venta_id "
+                + "WHERE tv.nombre = 'producto' AND LOWER(ev.nombre) = 'cerrada' "
+                + "AND v.fecha_inicio >= ? "
+                + "GROUP BY DATE(v.fecha_inicio) ORDER BY dia";
+
+        List<Map<String, Object>> filas = new ArrayList<>();
+
+        try (Connection conn = dbConn.getConnection();
+                PreparedStatement pstmt = conn.prepareStatement(sql)) {
+
+            pstmt.setTimestamp(1, Timestamp.valueOf(LocalDate.now().minusDays(dias - 1).atStartOfDay()));
+
+            try (ResultSet rs = pstmt.executeQuery()) {
+                while (rs.next()) {
+                    Map<String, Object> fila = new LinkedHashMap<>();
+                    fila.put("fecha", rs.getDate("dia").toLocalDate().toString());
+                    fila.put("cantidad", rs.getLong("cantidad"));
+                    fila.put("total", rs.getBigDecimal("total"));
+                    filas.add(fila);
+                }
+            }
+            return filas;
+        } catch (SQLException e) {
+            throw new PersistenceException("Error al obtener las ventas de los últimos días", e);
+        }
+    }
+    
     private void agregarFiltrosHistorial(StringBuilder sql, List<Object> parametros,
             String cliente, List<String> estados, LocalDate fechaDesde, LocalDate fechaHasta) {
 

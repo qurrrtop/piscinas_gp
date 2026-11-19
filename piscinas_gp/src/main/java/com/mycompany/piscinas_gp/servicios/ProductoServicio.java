@@ -77,17 +77,17 @@ public class ProductoServicio {
         }
     }
 
-    public Map<String, Object> buscarProductosPaginado(String q, String categoria, String marca,
-            String stock, String estado, int page, int size) throws ServiceException {
+    public Map<String, Object> buscarProductosPaginado(Map<String, String> filtros, int page, int size)
+            throws ServiceException {
 
         if (page < 1) page = 1;
         if (size < 1) size = 10;
-        if (size > 50) size = 50; // tope para que nadie pida 100000 de una
+        if (size > 50) size = 50;
 
         try {
             Map<String, Object> resultado = new LinkedHashMap<>();
-            resultado.put("datos", productoDAO.buscarPaginado(q, categoria, marca, stock, estado, page, size));
-            resultado.put("total", productoDAO.contarFiltrados(q, categoria, marca, stock, estado));
+            resultado.put("datos", productoDAO.buscarPaginado(filtros, page, size));
+            resultado.put("total", productoDAO.contarFiltrados(filtros));
             resultado.put("page", page);
             resultado.put("size", size);
             return resultado;
@@ -97,7 +97,7 @@ public class ProductoServicio {
             throw new ServiceException("Error al recuperar los productos", e);
         }
     }
-
+    
     public Map<String, Long> obtenerResumenProductos() throws ServiceException {
         try {
             return productoDAO.obtenerResumen();

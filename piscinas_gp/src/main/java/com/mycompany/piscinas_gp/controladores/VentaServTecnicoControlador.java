@@ -33,14 +33,23 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.stream.Collectors;
 import java.util.List;
+import java.time.LocalDate; 
+import java.time.format.DateTimeParseException;
+import java.util.Map;
+import java.util.LinkedHashMap;
+import java.util.HashMap;
 
 @WebServlet(
         name = "VentaServTecnicoControlador",
-        urlPatterns = {"/servicios/tecnicos", "/servicios/tecnicos/*"}
-)
+        urlPatterns = {"/servicios/tecnicos", "/servicios/tecnicos/*",
+                    "/servicios/historial", "/servicios/historial/*",
+                    "/servicios/pendientes", "/servicios/pendientes/*"}
+        )
 public class VentaServTecnicoControlador extends HttpServlet {
 
     private VentaServTecnicoServicio ventaServTecnicoServicio;
+    
+    private static final String[] FILTROS_PENDIENTES = { "q", "tipo", "entrega", "subrubroId", "desde" };
 
     @Override
     public void init() throws ServletException {
@@ -66,6 +75,61 @@ public class VentaServTecnicoControlador extends HttpServlet {
         String pathInfo = request.getPathInfo();
 
         try {
+            if (request.getServletPath().startsWith("/servicios/historial")) {
+                request.setCharacterEncoding("UTF-8");
+
+                if ("/resumen".equals(pathInfo)) {
+                    sendJsonResponse(ventaServTecnicoServicio.resumenHistorialUnificado(),
+                            response, HttpServletResponse.SC_OK);
+                    return;
+                }
+
+                String subrubroTxt = request.getParameter("subrubroId");
+                String fechaTxt = request.getParameter("fechaDesde");
+
+                Long subrubroId = (subrubroTxt == null || subrubroTxt.isBlank()) ? null : Long.parseLong(subrubroTxt.trim());
+                LocalDate fechaDesde = (fechaTxt == null || fechaTxt.isBlank()) ? null : LocalDate.parse(fechaTxt.trim());
+
+                int page = Math.max(1, parseEntero(request.getParameter("page"), 1));
+                int size = Math.min(50, Math.max(1, parseEntero(request.getParameter("size"), 10)));
+
+                sendJsonResponse(
+                        ventaServTecnicoServicio.listarHistorialUnificado(
+                                request.getParameter("q"),
+                                request.getParameter("tipo"),
+                                subrubroId,
+                                request.getParameter("estado"),
+                                fechaDesde, page, size),
+                        response, HttpServletResponse.SC_OK);
+                return;
+            }
+            
+            if (request.getServletPath().startsWith("/servicios/pendientes")) {
+                request.setCharacterEncoding("UTF-8");
+
+                if ("/resumen".equals(pathInfo)) {
+                    sendJsonResponse(ventaServTecnicoServicio.resumenPendientes(),
+                            response, HttpServletResponse.SC_OK);
+                    return;
+                }
+
+                Map<String, String> filtros = new HashMap<>();
+                for (String nombre : FILTROS_PENDIENTES) {
+                    String valor = request.getParameter(nombre);
+                    if (valor != null && !valor.isBlank()) {
+                        filtros.put(nombre, valor.trim());
+                    }
+                }
+
+                int page = Math.max(1, parseEntero(request.getParameter("page"), 1));
+                int size = Math.min(50, Math.max(1, parseEntero(request.getParameter("size"), 10)));
+
+                sendJsonResponse(
+                        ventaServTecnicoServicio.listarPendientesUnificado(filtros, page, size),
+                        response, HttpServletResponse.SC_OK);
+                return;
+            }
+            
             if (pathInfo == null || pathInfo.equals("/")) {
                 // sin parametros: historial (cerradas y canceladas); con ?estado=pendiente: pendientes
                 boolean pendientes = "pendiente".equalsIgnoreCase(request.getParameter("estado"));
@@ -82,7 +146,7 @@ public class VentaServTecnicoControlador extends HttpServlet {
             VentaServTecnico servicio = ventaServTecnicoServicio.buscarServicioPorId(id);
             sendJsonResponse(servicio, response, HttpServletResponse.SC_OK);
 
-        } catch (NumberFormatException e) {
+        } catch (NumberFormatException | DateTimeParseException e) {
             sendJsonResponse(java.util.Map.of("error", "El ID enviado no tiene un formato valido"),
                     response, HttpServletResponse.SC_BAD_REQUEST);
 
@@ -295,6 +359,14 @@ public class VentaServTecnicoControlador extends HttpServlet {
         mapper.registerModule(new JavaTimeModule());
         mapper.disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
         return mapper;
+    }
+    
+    private int parseEntero(String valor, int porDefecto) {
+        try {
+            return valor == null ? porDefecto : Integer.parseInt(valor.trim());
+        } catch (NumberFormatException e) {
+            return porDefecto;
+        }
     }
 
     private void sendJsonResponse(Object value, HttpServletResponse response, int statusCode)

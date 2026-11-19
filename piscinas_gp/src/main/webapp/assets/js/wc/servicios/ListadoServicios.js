@@ -3,51 +3,102 @@ class ListadoServicios extends HTMLElement {
     constructor() {
         super();
         this.attachShadow({ mode: "open" });
-        this._tecnicos = [];
-        this._asesoramientos = [];
         this._subrubros = [];
         this._tipoSeleccionado = "todos";
         this._busqueda = "";
         this._subrubroSeleccionado = "";
         this._estadoSeleccionado = "";
         this._fechaDesde = "";
+        this._filas = [];
+        this._resumen = { total: 0, tecnicos: 0, asesoramientos: 0 };
+        this._pagina = 1;
+        this._tamano = 10;
+        this._total = 0;
+        this._reqId = 0;
+        this._timerBusqueda = null;
     }
 
     async connectedCallback() {
         this.renderShell();
-        await this.cargarDatos();
+        await Promise.all([this.cargarSubrubros(), this.cargarResumen(), this.cargarServicios()]);
         this.setupListeners();
         this.actualizarTabla();
         this.actualizarTarjetas();
 
-        document.addEventListener("servicio-guardado", async () => {
-            await this.cargarDatos();
-            this.actualizarTabla();
-            this.actualizarTarjetas();
-        });
+        this._onCambio = () => this.recargarTodo();
+        document.addEventListener("servicio-guardado", this._onCambio);
     }
 
-    // El historial solo muestra servicios completados y cancelados;
-    // los pendientes se ven en el módulo de pendientes.
-    esHistorial(venta) {
-        const estado = (venta.estadoVenta?.nombre || "").toLowerCase();
-        return estado === "cerrada" || estado === "cancelada";
+    disconnectedCallback() {
+        document.removeEventListener("servicio-guardado", this._onCambio);
     }
 
-    async cargarDatos() {
+    async cargarSubrubros() {
         try {
-            const [tecnicos, asesoramientos, subrubros] = await Promise.all([
-                fetch("servicios/tecnicos").then(r => r.json()),
-                fetch("servicios/asesoramientos").then(r => r.json()),
-                fetch("subrubros-servicio-tecnico").then(r => r.json())
-            ]);
-            this._tecnicos = tecnicos.filter(v => this.esHistorial(v));
-            this._asesoramientos = asesoramientos.filter(v => this.esHistorial(v));
-            this._subrubros = subrubros;
+            this._subrubros = await fetch("subrubros-servicio-tecnico").then(r => r.json());
             this.cargarOpcionesSubrubro();
+        } catch (error) {
+            console.error("Error al cargar subrubros:", error);
+        }
+    }
+
+    async cargarResumen() {
+        try {
+            this._resumen = await fetch("servicios/historial/resumen").then(r => r.json());
+        } catch (error) {
+            console.error("Error al cargar el resumen de servicios:", error);
+        }
+    }
+
+    async cargarServicios() {
+        const id = ++this._reqId; // ignora respuestas viejas si tipeás rápido
+
+        const params = new URLSearchParams({ page: this._pagina, size: this._tamano });
+        if (this._busqueda.trim()) params.set("q", this._busqueda.trim());
+        if (this._tipoSeleccionado !== "todos") params.set("tipo", this._tipoSeleccionado);
+        if (this._subrubroSeleccionado) params.set("subrubroId", this._subrubroSeleccionado);
+        if (this._estadoSeleccionado) params.set("estado", this._estadoSeleccionado);
+        if (this._fechaDesde) params.set("fechaDesde", this._fechaDesde);
+
+        try {
+            const data = await fetch("servicios/historial?" + params).then(r => r.json());
+            if (id !== this._reqId) return;
+
+            // se arman los campos que usan las columnas de la tabla
+            this._filas = data.datos.map(s => ({
+                id: s.id,
+                tipo: s.tipo,
+                codigo: `${s.tipo === "tecnico" ? "T" : "A"}-${String(s.id).padStart(3, "0")}`,
+                cliente: s.cliente,
+                telefono: s.telefono || "",
+                tipoInfo: { tipo: s.tipo, subrubro: s.subrubro || "" },
+                estadoNombre: s.estadoNombre,
+                inicio: s.inicio,
+                cierre: s.cierre,
+                descripcion: s.descripcion || "",
+                total: s.total
+            }));
+            this._total = data.total;
+
+            const totalPaginas = Math.max(1, Math.ceil(this._total / this._tamano));
+            if (this._pagina > totalPaginas) {
+                this._pagina = totalPaginas;
+                await this.cargarServicios();
+            }
         } catch (error) {
             console.error("Error al cargar servicios:", error);
         }
+    }
+
+    async refrescarTabla() {
+        await this.cargarServicios();
+        this.actualizarTabla();
+    }
+
+    async recargarTodo() {
+        await Promise.all([this.cargarResumen(), this.cargarServicios()]);
+        this.actualizarTabla();
+        this.actualizarTarjetas();
     }
 
     cargarOpcionesSubrubro() {
@@ -57,11 +108,7 @@ class ListadoServicios extends HTMLElement {
             ${this._subrubros.map(s => `<option value="${s.id}">${s.nombre}</option>`).join("")}
         `;
     }
-
-    obtenerNombreCliente(c) {
-        return c.nombre ? `${c.nombre} ${c.apellido}` : c.razonSocial;
-    }
-
+    
     etiquetaEstado(nombre) {
         const e = (nombre || "").toLowerCase();
         if (e === "cerrada") return "Completado";
@@ -113,77 +160,14 @@ class ListadoServicios extends HTMLElement {
         return d.toLocaleDateString("es-AR", { day: "2-digit", month: "short", year: "numeric" });
     }
 
-    // combina ambas listas en filas planas con un campo "tipo" discriminador
-    obtenerFilasCombinadas() {
-        const filasTecnicas = this._tecnicos.map(v => ({
-            id: v.id,
-            tipo: "tecnico",
-            codigo: `T-${String(v.id).padStart(3, "0")}`,
-            cliente: this.obtenerNombreCliente(v.cliente),
-            telefono: v.cliente.telefono || "",
-            tipoInfo: { tipo: "tecnico", subrubro: v.subrubroServicio?.nombre || "" },
-            subrubroId: v.subrubroServicio?.id ?? null,
-            estadoNombre: v.estadoVenta.nombre,
-            inicio: v.fechaInicio,
-            cierre: v.fechaCierre,
-            descripcion: v.problema || "",
-            total: v.total
-        }));
-
-        const filasAsesoramiento = this._asesoramientos.map(v => ({
-            id: v.id,
-            tipo: "asesoramiento",
-            codigo: `A-${String(v.id).padStart(3, "0")}`,
-            cliente: this.obtenerNombreCliente(v.cliente),
-            telefono: v.cliente.telefono || "",
-            tipoInfo: { tipo: "asesoramiento", subrubro: "" },
-            subrubroId: null,
-            estadoNombre: v.estadoVenta.nombre,
-            inicio: v.fechaInicio,
-            cierre: v.fechaCierre,
-            descripcion: v.problema || "",
-            total: v.cobrado ? v.monto : null
-        }));
-
-        return [...filasTecnicas, ...filasAsesoramiento];
-    }
-
-    obtenerFilasFiltradas() {
-        const busqueda = this._busqueda.trim().toLowerCase();
-
-        return this.obtenerFilasCombinadas().filter(fila => {
-            if (this._tipoSeleccionado !== "todos" && fila.tipo !== this._tipoSeleccionado) return false;
-
-            if (this._subrubroSeleccionado && String(fila.subrubroId) !== this._subrubroSeleccionado) return false;
-
-            if (this._estadoSeleccionado && fila.estadoNombre.toLowerCase() !== this._estadoSeleccionado) return false;
-
-            if (busqueda) {
-                const coincide = fila.cliente.toLowerCase().includes(busqueda) || fila.telefono.toLowerCase().includes(busqueda);
-                if (!coincide) return false;
-            }
-
-            if (this._fechaDesde) {
-                const inicio = new Date(fila.inicio);
-                const desde = new Date(this._fechaDesde);
-                if (inicio < desde) return false;
-            }
-
-            return true;
-        });
-    }
-
     actualizarTarjetas() {
         const tarjetas = this.shadowRoot.querySelector("tarjetas-resumen");
-        const todas = this.obtenerFilasCombinadas();
-
-        const totalTecnicos = this._tecnicos.length;
-        const totalAsesoramientos = this._asesoramientos.length;
+        const r = this._resumen;
 
         tarjetas.tarjetas = [
-            { titulo: "Total de servicios", valor: todas.length },
-            { titulo: "Servicios Técnicos", valor: totalTecnicos, subTitulo: "REGISTROS" },
-            { titulo: "Asesoramientos", valor: totalAsesoramientos, subTitulo: "REGISTROS" }
+            { titulo: "Total de servicios", valor: r.total },
+            { titulo: "Servicios Técnicos", valor: r.tecnicos, subTitulo: "REGISTROS" },
+            { titulo: "Asesoramientos", valor: r.asesoramientos, subTitulo: "REGISTROS" }
         ];
     }
 
@@ -243,40 +227,57 @@ class ListadoServicios extends HTMLElement {
             }
         ];
 
-        tabla.datos = this.obtenerFilasFiltradas();
+        tabla.paginacion = { pagina: this._pagina, total: this._total, tamano: this._tamano };
+        tabla.datos = this._filas;
     }
 
     setupListeners() {
+        const tabla = this.shadowRoot.querySelector("tabla-generica");
+
+        tabla.addEventListener("cambiar-pagina", (e) => {
+            this._pagina = e.detail;
+            this.refrescarTabla();
+        });
+
         this.shadowRoot.querySelectorAll(".tab-tipo").forEach(tab => {
             tab.addEventListener("click", () => {
                 this.shadowRoot.querySelectorAll(".tab-tipo").forEach(t => t.classList.remove("activo"));
                 tab.classList.add("activo");
                 this._tipoSeleccionado = tab.dataset.tipo;
-                this.actualizarTabla();
+                this._pagina = 1;
+                this.refrescarTabla();
             });
         });
 
+        // debounce: espera 300 ms sin tipear antes de consultar
         this.shadowRoot.querySelector("#filtroBusqueda").addEventListener("input", (e) => {
             this._busqueda = e.target.value;
-            this.actualizarTabla();
+            clearTimeout(this._timerBusqueda);
+            this._timerBusqueda = setTimeout(() => {
+                this._pagina = 1;
+                this.refrescarTabla();
+            }, 300);
         });
 
         this.shadowRoot.querySelector("#filtroSubrubro").addEventListener("change", (e) => {
             this._subrubroSeleccionado = e.target.value;
-            this.actualizarTabla();
+            this._pagina = 1;
+            this.refrescarTabla();
         });
 
         this.shadowRoot.querySelector("#filtroEstado").addEventListener("change", (e) => {
             this._estadoSeleccionado = e.target.value;
-            this.actualizarTabla();
+            this._pagina = 1;
+            this.refrescarTabla();
         });
 
         this.shadowRoot.querySelector("#filtroFecha").addEventListener("change", (e) => {
             this._fechaDesde = e.target.value;
-            this.actualizarTabla();
+            this._pagina = 1;
+            this.refrescarTabla();
         });
 
-        this.shadowRoot.querySelector("tabla-generica").addEventListener("fila-clickeada", (evento) => {
+        tabla.addEventListener("fila-clickeada", (evento) => {
             const { tipo, id, codigo } = evento.detail;
 
             const modal = document.createElement("modal-component");

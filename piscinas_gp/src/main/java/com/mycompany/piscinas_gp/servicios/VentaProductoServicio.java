@@ -122,6 +122,15 @@ public class VentaProductoServicio {
         }
     }
     
+    public List<Map<String, Object>> obtenerVentasUltimosDias() throws ServiceException {
+        try {
+            return ventaProductoDAO.resumenUltimosDias(7);
+        } catch (PersistenceException e) {
+            logger.error("error al obtener las ventas de la semana", e);
+            throw new ServiceException("error al obtener las ventas de la semana", e);
+        }
+    }
+    
     public VentaProducto crearVenta(
             VentaProducto venta,
             Long clienteId,

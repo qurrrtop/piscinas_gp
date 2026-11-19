@@ -21,7 +21,8 @@ import com.mycompany.piscinas_gp.modelos.MarcaProducto;
 import com.mycompany.piscinas_gp.modelos.Producto;
 import com.mycompany.piscinas_gp.modelos.UnidadMedida;
 import com.mycompany.piscinas_gp.servicios.ProductoServicio;
-
+import java.util.Map;
+import java.util.HashMap;
 import java.util.List;
 
 @WebServlet(name = "ProductoControlador", urlPatterns = {"/productos", "/productos/*"})
@@ -39,6 +40,12 @@ public class ProductoControlador extends HttpServlet {
         );
     }
 
+    // lista blanca: solo estos parámetros llegan al DAO
+    private static final String[] FILTROS = {
+        "q", "categoria", "marca", "stock", "estado",
+        "categoriaId", "marcaId", "unidadId", "vendibles", "bajoMinimo"
+    };
+
     @Override
     protected void doGet(HttpServletRequest request, HttpServletResponse response)
                         throws ServletException, IOException {
@@ -52,31 +59,37 @@ public class ProductoControlador extends HttpServlet {
                 return;
             }
 
-            // Sin "page": comportamiento anterior (lista completa), por si otra pantalla lo usa
+            // Sin "page": comportamiento anterior (lista completa)
             if (request.getParameter("page") == null) {
                 sendJsonResponse(productoServicio.buscarTodosLosProductos(), response, HttpServletResponse.SC_OK);
                 return;
             }
 
+            Map<String, String> filtros = new HashMap<>();
+            for (String nombre : FILTROS) {
+                String valor = request.getParameter(nombre);
+                if (valor != null && !valor.isBlank()) {
+                    filtros.put(nombre, valor.trim());
+                }
+            }
+
             sendJsonResponse(
                     productoServicio.buscarProductosPaginado(
-                            request.getParameter("q"),
-                            request.getParameter("categoria"),
-                            request.getParameter("marca"),
-                            request.getParameter("stock"),
-                            request.getParameter("estado"),
+                            filtros,
                             parseEntero(request.getParameter("page"), 1),
                             parseEntero(request.getParameter("size"), 10)),
                     response,
                     HttpServletResponse.SC_OK);
 
+        } catch (NumberFormatException e) {
+            sendJsonResponse(java.util.Map.of("error", "Filtro con formato inválido"),
+                    response, HttpServletResponse.SC_BAD_REQUEST);
         } catch (ServiceException e) {
             sendJsonResponse(java.util.Map.of("error", "Error interno al obtener los productos"),
-                    response,
-                    HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
+                    response, HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
         }
     }
-
+    
     private int parseEntero(String valor, int porDefecto) {
         try {
             return valor == null ? porDefecto : Integer.parseInt(valor.trim());
@@ -85,7 +98,7 @@ public class ProductoControlador extends HttpServlet {
         }
     }
     
-  @Override
+    @Override
     protected void doPost(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
 
