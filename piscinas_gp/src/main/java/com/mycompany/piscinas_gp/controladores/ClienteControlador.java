@@ -20,6 +20,8 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.util.List;
+import java.util.Map;
+import java.util.HashMap;
 
 @WebServlet(name = "ClienteControlador", urlPatterns = {"/clientes", "/clientes/*"})
 public class ClienteControlador extends HttpServlet {
@@ -41,16 +43,43 @@ public class ClienteControlador extends HttpServlet {
             throws ServletException, IOException {
     }
 
+    // lista blanca: solo estos parámetros llegan al DAO
+    private static final String[] FILTROS = { "q", "tipo", "estado", "orden" };
+
     @Override
     protected void doGet(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
 
+        request.setCharacterEncoding("UTF-8");
         String pathInfo = request.getPathInfo();
 
         try {
-            if (pathInfo == null || pathInfo.equals("/")) {
-                List<ClienteListadoDTO> clientes = clienteServicio.listarClientes();
-                this.sendJsonResponse(clientes, response, HttpServletResponse.SC_OK);
+            if ("/resumen".equals(pathInfo)) {
+                sendJsonResponse(clienteServicio.obtenerResumenClientes(), response, HttpServletResponse.SC_OK);
+
+            } else if (pathInfo == null || pathInfo.equals("/")) {
+
+                // Sin "page": comportamiento anterior (lista completa), por si otra pantalla lo usa
+                if (request.getParameter("page") == null) {
+                    sendJsonResponse(clienteServicio.listarClientes(), response, HttpServletResponse.SC_OK);
+                    return;
+                }
+
+                Map<String, String> filtros = new HashMap<>();
+                for (String nombre : FILTROS) {
+                    String valor = request.getParameter(nombre);
+                    if (valor != null && !valor.isBlank()) {
+                        filtros.put(nombre, valor.trim());
+                    }
+                }
+
+                sendJsonResponse(
+                        clienteServicio.listarClientesPaginado(
+                                filtros,
+                                parseEntero(request.getParameter("page"), 1),
+                                parseEntero(request.getParameter("size"), 10)),
+                        response,
+                        HttpServletResponse.SC_OK);
 
             } else {
                 Long id = Long.parseLong(pathInfo.substring(1));
@@ -67,7 +96,6 @@ public class ClienteControlador extends HttpServlet {
                     response,
                     HttpServletResponse.SC_NOT_FOUND
             );
-
         } catch (ServiceException e) {
             sendJsonResponse(java.util.Map.of("error", "Error interno al procesar la solicitud"),
                     response,
@@ -75,7 +103,15 @@ public class ClienteControlador extends HttpServlet {
             );
         }
     }
-    
+
+    private int parseEntero(String valor, int porDefecto) {
+        try {
+            return valor == null ? porDefecto : Integer.parseInt(valor.trim());
+        } catch (NumberFormatException e) {
+            return porDefecto;
+        }
+    }
+
     @Override
     protected void doPost(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {

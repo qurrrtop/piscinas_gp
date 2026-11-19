@@ -43,8 +43,7 @@ class NuevaVenta extends HTMLElement {
 
     async cargarDatosIniciales() {
         try {
-            const [clientes, marcas, categorias, unidades, productos, estadosVenta, metodosPago] = await Promise.all([
-                fetch(`${this.basePath}/clientes`).then(r => r.json()),
+            const [marcas, categorias, unidades, productos, estadosVenta, metodosPago] = await Promise.all([
                 fetch(`${this.basePath}/marcas`).then(r => r.json()),
                 fetch(`${this.basePath}/categorias`).then(r => r.json()),
                 fetch(`${this.basePath}/unidades-medida`).then(r => r.json()),
@@ -52,7 +51,6 @@ class NuevaVenta extends HTMLElement {
                 fetch(`${this.basePath}/estados-venta`).then(r => r.json()),
                 fetch(`${this.basePath}/metodos-pago`).then(r => r.json())
             ]);
-            this._clientes = clientes;
             this._marcas = marcas;
             this._categorias = categorias;
             this._unidades = unidades;
@@ -163,31 +161,40 @@ class NuevaVenta extends HTMLElement {
                 <div class="resultados-cliente" id="resultadosCliente" style="display:none"></div>
             </div>
         `;
-
         const input = this.shadowRoot.querySelector("#buscarCliente");
         const resultados = this.shadowRoot.querySelector("#resultadosCliente");
 
-        const renderResultados = (texto) => {
-            const busqueda = texto.trim().toLowerCase();
+        let reqId = 0;
+        let timer = null;
+
+        const renderResultados = async (texto) => {
+            const id = ++reqId;
+            const busqueda = texto.trim();
 
             if (!busqueda) {
                 resultados.style.display = "none";
                 return;
             }
 
-            const coincidencias = this._clientes.filter(c =>
-                c.nombreCompleto.toLowerCase().includes(busqueda) ||
-                c.cuitCuil.toLowerCase().includes(busqueda)
-            ).slice(0, 8);
+            const params = new URLSearchParams({ page: 1, size: 8, q: busqueda, estado: "activos" });
+
+            let coincidencias;
+            try {
+                const data = await fetch(`${this.basePath}/clientes?${params}`).then(r => r.json());
+                if (id !== reqId) return;
+                coincidencias = data.datos;
+            } catch (error) {
+                console.error("Error al buscar clientes:", error);
+                return;
+            }
+
+            this._clientes = coincidencias;
 
             resultados.innerHTML = `
                 ${coincidencias.map(c => `
                     <div class="resultado-cliente" data-id="${c.id}">
                         <span class="avatar avatar-${c.tipo === 'Empresa' ? 'empresa' : 'particular'}">${this.obtenerIniciales(c.nombreCompleto)}</span>
-                        <div>
-                            <strong>${c.nombreCompleto}</strong>
-                            <small>${c.email || "Sin email"} - CUIL/CUIT: ${c.cuitCuil}</small>
-                        </div>
+                        <div><strong>${c.nombreCompleto} </strong><small>- ${c.email || "Sin email"} - CUIL/CUIT: ${c.cuitCuil}</small></div>
                     </div>
                 `).join("")}
                 <div class="resultado-crear" id="btnCrearClienteRapido">+ Crear nuevo cliente "${texto}"</div>
@@ -207,12 +214,14 @@ class NuevaVenta extends HTMLElement {
             });
         };
 
-        input.addEventListener("input", (e) => renderResultados(e.target.value));
-
-        document.addEventListener("click", (e) => {
-            if (!this.shadowRoot.contains(e.composedPath()[0])) {
+        input.addEventListener("input", (e) => {
+            clearTimeout(timer);
+            if (!e.target.value.trim()) {
+                reqId++;
                 resultados.style.display = "none";
+                return;
             }
+            timer = setTimeout(() => renderResultados(e.target.value), 300);
         });
     }
 
@@ -546,18 +555,25 @@ class NuevaVenta extends HTMLElement {
         formulario.setAttribute("base-path", this.basePath);
 
         formulario.addEventListener("cliente-guardado", async (evento) => {
-            const nuevo = evento.detail;
-            if (!nuevo?.id) return;
+    const nuevo = evento.detail;
+    if (!nuevo?.id) return;
 
-            // recargo la lista para que quede en el mismo formato que usa el buscador
-            this._clientes = await fetch(`${this.basePath}/clientes`).then(r => r.json());
+    try {
+        const c = await fetch(`${this.basePath}/clientes/${nuevo.id}`).then(r => r.json());
+        const esEmpresa = c.tipo === "Empresa";
 
-            const seleccionado = this._clientes.find(c => c.id === nuevo.id);
-            if (!seleccionado) return;
-
-            this._clienteSeleccionado = seleccionado;
-            this.renderClienteSeleccionado();
-        });
+        this._clienteSeleccionado = {
+            id: c.id,
+            nombreCompleto: esEmpresa ? c.razonSocial : `${c.nombre} ${c.apellido}`,
+            tipo: c.tipo,
+            email: c.email,
+            cuitCuil: esEmpresa ? c.cuit : c.cuil
+        };
+        this.renderClienteSeleccionado();
+    } catch (error) {
+        console.error("Error al cargar el cliente creado:", error);
+    }
+});
 
         modal.appendChild(formulario);
         document.body.appendChild(modal);

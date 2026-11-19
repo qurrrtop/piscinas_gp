@@ -11,6 +11,9 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import java.util.LinkedHashMap;
+import com.mycompany.piscinas_gp.dtos.ClienteListadoDTO;
 
 public class ClienteParticularDAO extends GenericoDAO<ClienteParticular> {
 
@@ -28,6 +31,16 @@ public class ClienteParticularDAO extends GenericoDAO<ClienteParticular> {
             + "FROM clientes c "
             + "JOIN clientes_particulares cp ON c.id = cp.cliente_id "
             + "LEFT JOIN localidades l ON c.localidad_id = l.id ";
+    
+    private static final String FROM_LISTADO =
+            "FROM ( "
+            + "SELECT c.id, CONCAT(cp.nombre, ' ', cp.apellido) AS nombre_completo, 'Particular' AS tipo, "
+            + "cp.cuil AS documento, c.telefono, c.email, c.activo "
+            + "FROM clientes c JOIN clientes_particulares cp ON c.id = cp.cliente_id "
+            + "UNION ALL "
+            + "SELECT c.id, ce.razon_social, 'Empresa', ce.cuit, c.telefono, c.email, c.activo "
+            + "FROM clientes c JOIN clientes_empresas ce ON c.id = ce.cliente_id "
+            + ") t ";
 
     public ClienteParticularDAO(DbConnection dbConn) {
         super(dbConn);
@@ -172,6 +185,119 @@ public class ClienteParticularDAO extends GenericoDAO<ClienteParticular> {
         }
     }
 
+    public List<ClienteListadoDTO> buscarListadoPaginado(Map<String, String> filtros, int page, int size)
+            throws PersistenceException {
+
+        List<Object> params = new ArrayList<>();
+        String sql = "SELECT t.id, t.nombre_completo, t.tipo, t.documento, t.telefono, t.email, t.activo, "
+                + "(SELECT COUNT(*) FROM ventas v WHERE v.cliente_id = t.id) AS cantidad_ventas "
+                + FROM_LISTADO
+                + construirWhereListado(params, filtros)
+                + " ORDER BY t.nombre_completo " + ("desc".equals(filtros.get("orden")) ? "DESC" : "ASC") + ", t.id"
+                + " LIMIT ? OFFSET ?";
+        params.add(size);
+        params.add((page - 1) * size);
+
+        List<ClienteListadoDTO> resultado = new ArrayList<>();
+
+        try (Connection conn = dbConn.getConnection();
+                PreparedStatement pstmt = conn.prepareStatement(sql)) {
+
+            asignarParamsListado(pstmt, params);
+
+            try (ResultSet rs = pstmt.executeQuery()) {
+                while (rs.next()) {
+                    resultado.add(new ClienteListadoDTO(
+                            rs.getLong("id"),
+                            rs.getString("nombre_completo"),
+                            rs.getString("tipo"),
+                            rs.getString("documento"),
+                            rs.getString("telefono"),
+                            rs.getString("email"),
+                            rs.getBoolean("activo"),
+                            rs.getInt("cantidad_ventas")
+                    ));
+                }
+            }
+        } catch (SQLException e) {
+            throw new PersistenceException("Error al buscar clientes paginados", e);
+        }
+        return resultado;
+    }
+
+    public long contarListado(Map<String, String> filtros) throws PersistenceException {
+        List<Object> params = new ArrayList<>();
+        String sql = "SELECT COUNT(*) " + FROM_LISTADO + construirWhereListado(params, filtros);
+
+        try (Connection conn = dbConn.getConnection();
+                PreparedStatement pstmt = conn.prepareStatement(sql)) {
+
+            asignarParamsListado(pstmt, params);
+
+            try (ResultSet rs = pstmt.executeQuery()) {
+                return rs.next() ? rs.getLong(1) : 0;
+            }
+        } catch (SQLException e) {
+            throw new PersistenceException("Error al contar clientes", e);
+        }
+    }
+
+    public Map<String, Long> obtenerResumen() throws PersistenceException {
+        String sql = "SELECT (SELECT COUNT(*) FROM clientes_particulares) AS particulares, "
+                + "(SELECT COUNT(*) FROM clientes_empresas) AS empresas";
+
+        try (Connection conn = dbConn.getConnection();
+                PreparedStatement pstmt = conn.prepareStatement(sql);
+                ResultSet rs = pstmt.executeQuery()) {
+
+            Map<String, Long> resumen = new LinkedHashMap<>();
+            if (rs.next()) {
+                long particulares = rs.getLong("particulares");
+                long empresas = rs.getLong("empresas");
+                resumen.put("total", particulares + empresas);
+                resumen.put("particulares", particulares);
+                resumen.put("empresas", empresas);
+            }
+            return resumen;
+
+        } catch (SQLException e) {
+            throw new PersistenceException("Error al obtener el resumen de clientes", e);
+        }
+    }
+
+    private String construirWhereListado(List<Object> params, Map<String, String> f) {
+        StringBuilder where = new StringBuilder("WHERE 1=1");
+
+        String estado = f.get("estado");
+        if ("activos".equals(estado)) {
+            where.append(" AND t.activo = TRUE");
+        } else if ("inactivos".equals(estado)) {
+            where.append(" AND t.activo = FALSE");
+        }
+
+        if (f.containsKey("tipo")) {
+            where.append(" AND t.tipo = ?");
+            params.add(f.get("tipo"));
+        }
+
+        if (f.containsKey("q")) {
+            where.append(" AND (LOWER(t.nombre_completo) LIKE ? OR LOWER(t.documento) LIKE ? "
+                    + "OR LOWER(COALESCE(t.email, '')) LIKE ?)");
+            String patron = "%" + f.get("q").toLowerCase() + "%";
+            params.add(patron);
+            params.add(patron);
+            params.add(patron);
+        }
+        return where.toString();
+    }
+
+    private void asignarParamsListado(PreparedStatement pstmt, List<Object> params) throws SQLException {
+        for (int i = 0; i < params.size(); i++) {
+            pstmt.setObject(i + 1, params.get(i));
+        }
+    }
+
+    
     @Override
     protected String getTableName() { return TABLE_NAME; }
     @Override

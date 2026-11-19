@@ -8,71 +8,82 @@ class ListadoClientes extends HTMLElement {
         this._tipoSeleccionado = "";
         this._filtroEstado = "todos";
         this._orden = "nombre_desc";
-        
+        this._resumen = { total: 0, particulares: 0, empresas: 0 };
+        this._pagina = 1;
+        this._tamano = 10;
+        this._total = 0;
+        this._reqId = 0;
+        this._timerBusqueda = null;
     }
 
     async connectedCallback() {
         this.renderShell();
-        await this.cargarDatos();
+        await Promise.all([this.cargarResumen(), this.cargarClientes()]);
         this.setupListeners();
         this.actualizarTabla();
         this.actualizarTarjetas();
-        
-        document.addEventListener("cliente-guardado", async () => {
-            await this.cargarDatos();
-            this.actualizarTabla();
-            this.actualizarTarjetas();
-        });
+
+        this._onCambio = () => this.recargarTodo();
+        document.addEventListener("cliente-guardado", this._onCambio);
     }
-    
-    async cargarDatos() {
+
+    disconnectedCallback() {
+        document.removeEventListener("cliente-guardado", this._onCambio);
+    }
+
+    async cargarResumen() {
         try {
-            this._clientes = await fetch("clientes").then(r => r.json());
+            this._resumen = await fetch("clientes/resumen").then(r => r.json());
+        } catch (error) {
+            console.error("Error al cargar el resumen:", error);
+        }
+    }
+
+    async cargarClientes() {
+        const id = ++this._reqId; // ignora respuestas viejas si tipeás rápido
+
+        const params = new URLSearchParams({ page: this._pagina, size: this._tamano });
+        if (this._busqueda.trim()) params.set("q", this._busqueda.trim());
+        if (this._tipoSeleccionado) params.set("tipo", this._tipoSeleccionado);
+        if (this._filtroEstado !== "todos") params.set("estado", this._filtroEstado);
+        params.set("orden", this._orden === "nombre_desc" ? "desc" : "asc");
+
+        try {
+            const data = await fetch("clientes?" + params).then(r => r.json());
+            if (id !== this._reqId) return;
+
+            this._clientes = data.datos;
+            this._total = data.total;
+
+            const totalPaginas = Math.max(1, Math.ceil(this._total / this._tamano));
+            if (this._pagina > totalPaginas) {
+                this._pagina = totalPaginas;
+                await this.cargarClientes();
+            }
         } catch (error) {
             console.error("Error al cargar clientes: ", error);
         }
     }
-    
-    obtenerClientesFiltrados() {
-        const busqueda = this._busqueda.trim().toLowerCase();
-        
-        let resultado = this._clientes.filter(cliente => {
-            if (this._filtroEstado === "activos" && !cliente.activo) return false;
-            
-            if (this._filtroEstado === "inactivos" && cliente.activo) return false;
-            
-           if (this._tipoSeleccionado && cliente.tipo !== this._tipoSeleccionado) {
-               return false;
-           }
-           
-           if (busqueda) {
-               const coincideNombre = cliente.nombreCompleto.toLowerCase().includes(busqueda);
-               const coincideCuitCuil = cliente.cuitCuil.toLowerCase().includes(busqueda);
-               const coincideEmail = (cliente.email || "").toLowerCase().includes(busqueda);
-               if (!coincideNombre && !coincideCuitCuil && !coincideEmail) return false;
 
-           }
-           return true;
-        });
-        
-         if (this._orden === "nombre_desc") {
-            resultado = resultado.sort((a, b) => b.nombreCompleto.localeCompare(a.nombreCompleto));
-        }
+    async refrescarTabla() {
+        await this.cargarClientes();
+        this.actualizarTabla();
+    }
 
-        return resultado;
+    async recargarTodo() {
+        await Promise.all([this.cargarResumen(), this.cargarClientes()]);
+        this.actualizarTabla();
+        this.actualizarTarjetas();
     }
     
     actualizarTarjetas() {
         const tarjetas = this.shadowRoot.querySelector("tarjetas-resumen");
-
-        const total = this._clientes.length;
-        const particulares = this._clientes.filter(c => c.tipo === "Particular").length;
-        const empresas = this._clientes.filter(c => c.tipo === "Empresa").length;
+        const r = this._resumen;
 
         tarjetas.tarjetas = [
-            { titulo: "Total clientes registrados", valor: total },
-            { titulo: "Particulares", valor: particulares, subTitulo: "PERSONAS FÍSICAS" },
-            { titulo: "Empresas", valor: empresas, subTitulo: "PERSONAS JURÍDICAS" }
+            { titulo: "Total clientes registrados", valor: r.total },
+            { titulo: "Particulares", valor: r.particulares, subTitulo: "PERSONAS FÍSICAS" },
+            { titulo: "Empresas", valor: r.empresas, subTitulo: "PERSONAS JURÍDICAS" }
         ];
     }
 
@@ -115,7 +126,8 @@ class ListadoClientes extends HTMLElement {
             { clave: "cantidadVentas", titulo: "Ventas", ancho: "7%" }
         ];
 
-        tabla.datos = this.obtenerClientesFiltrados();
+        tabla.paginacion = { pagina: this._pagina, total: this._total, tamano: this._tamano };
+        tabla.datos = this._clientes;
     }
 
     setupListeners() {
@@ -123,25 +135,37 @@ class ListadoClientes extends HTMLElement {
             this.abrirDetalleCliente(evento.detail);
         });
 
+        this.shadowRoot.querySelector("tabla-generica").addEventListener("cambiar-pagina", (e) => {
+            this._pagina = e.detail;
+            this.refrescarTabla();
+        });
+
+        // debounce: espera 300 ms sin tipear antes de consultar
         this.shadowRoot.querySelector("#filtroBusqueda").addEventListener("input", (e) => {
             this._busqueda = e.target.value;
-            this.actualizarTabla();
+            clearTimeout(this._timerBusqueda);
+            this._timerBusqueda = setTimeout(() => {
+                this._pagina = 1;
+                this.refrescarTabla();
+            }, 300);
         });
 
         this.shadowRoot.querySelector("#filtroTipo").addEventListener("change", (e) => {
             this._tipoSeleccionado = e.target.value;
-            this.actualizarTabla();
-        });
-        
-        this.shadowRoot.querySelector("#filtroEstado").addEventListener("change", (e) => {
-            this._filtroEstado = e.target.value;
-            this.actualizarTabla();
+            this._pagina = 1;
+            this.refrescarTabla();
         });
 
+        this.shadowRoot.querySelector("#filtroEstado").addEventListener("change", (e) => {
+            this._filtroEstado = e.target.value;
+            this._pagina = 1;
+            this.refrescarTabla();
+        });
 
         this.shadowRoot.querySelector("#filtroOrden").addEventListener("change", (e) => {
             this._orden = e.target.value;
-            this.actualizarTabla();
+            this._pagina = 1;
+            this.refrescarTabla();
         });
     }
     

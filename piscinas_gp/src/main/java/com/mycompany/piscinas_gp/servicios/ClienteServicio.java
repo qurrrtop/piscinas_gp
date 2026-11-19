@@ -18,6 +18,8 @@ import java.util.ArrayList;
 import java.util.List;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import java.util.Map;
+import java.util.LinkedHashMap;
 
 public class ClienteServicio {
 
@@ -203,6 +205,36 @@ public class ClienteServicio {
         }
     }
 
+    public Map<String, Object> listarClientesPaginado(Map<String, String> filtros, int page, int size)
+            throws ServiceException {
+
+        if (page < 1) page = 1;
+        if (size < 1) size = 10;
+        if (size > 50) size = 50;
+
+        try {
+            Map<String, Object> resultado = new LinkedHashMap<>();
+            resultado.put("datos", clienteParticularDAO.buscarListadoPaginado(filtros, page, size));
+            resultado.put("total", clienteParticularDAO.contarListado(filtros));
+            resultado.put("page", page);
+            resultado.put("size", size);
+            return resultado;
+
+        } catch (PersistenceException e) {
+            logger.error("Error al listar clientes paginados", e);
+            throw new ServiceException("Error al listar los clientes", e);
+        }
+    }
+
+    public Map<String, Long> obtenerResumenClientes() throws ServiceException {
+        try {
+            return clienteParticularDAO.obtenerResumen();
+        } catch (PersistenceException e) {
+            logger.error("Error al obtener el resumen de clientes", e);
+            throw new ServiceException("Error al obtener el resumen de clientes", e);
+        }
+    }
+    
     public void darDeBajaCliente(Long id) throws ServiceException, BusinessException {
         try {
             boolean exito = helperClienteDAO.darDeBaja(id);
