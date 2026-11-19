@@ -7,10 +7,16 @@ class TablaGenerica extends HTMLElement {
         this._datos = [];
         this._porPagina = 10;
         this._paginaActual = 0;
+        this._paginacion = null; // { pagina, total, tamano } cuando pagina el servidor
     }
 
     set columnas(valor) {
         this._columnas = valor || [];
+        this.render();
+    }
+    
+    set paginacion(valor) {
+        this._paginacion = valor || null;
         this.render();
     }
 
@@ -49,16 +55,35 @@ class TablaGenerica extends HTMLElement {
     }
 
     get totalPaginas() {
+        if (this._paginacion) {
+            return Math.max(1, Math.ceil(this._paginacion.total / this._paginacion.tamano));
+        }
         return Math.max(1, Math.ceil(this._datos.length / this._porPagina));
     }
 
+    get paginaActualIndice() {
+        return this._paginacion ? this._paginacion.pagina - 1 : this._paginaActual;
+    }
+
     get datosPaginaActual() {
+        if (this._paginacion) return this._datos; // el servidor ya mandó solo esta página
         const inicio = this._paginaActual * this._porPagina;
         return this._datos.slice(inicio, inicio + this._porPagina);
     }
 
     irAPagina(numero) {
         if (numero < 0 || numero >= this.totalPaginas) return;
+
+        if (this._paginacion) {
+            // la tabla no pide datos: avisa y el que la usa recarga
+            this.dispatchEvent(new CustomEvent("cambiar-pagina", {
+                detail: numero + 1,
+                bubbles: true,
+                composed: true
+            }));
+            return;
+        }
+
         this._paginaActual = numero;
         this.render();
     }
@@ -188,11 +213,11 @@ class TablaGenerica extends HTMLElement {
                 </tbody>
             </table>
 
-            ${this._datos.length > this._porPagina ? `
+            ${this.totalPaginas > 1 ? `
                 <div class="paginacion">
-                    <button class="btn-anterior" ${this._paginaActual === 0 ? "disabled" : ""}>&larr;</button>
-                    <span>Página ${this._paginaActual + 1} de ${this.totalPaginas}</span>
-                    <button class="btn-siguiente" ${this._paginaActual >= this.totalPaginas - 1 ? "disabled" : ""}>&rarr;</button>
+                    <button class="btn-anterior" ${this.paginaActualIndice === 0 ? "disabled" : ""}>&larr;</button>
+                    <span>Página ${this.paginaActualIndice + 1} de ${this.totalPaginas}</span>
+                    <button class="btn-siguiente" ${this.paginaActualIndice >= this.totalPaginas - 1 ? "disabled" : ""}>&rarr;</button>
                 </div>
             ` : ""}
         `;
@@ -213,11 +238,11 @@ class TablaGenerica extends HTMLElement {
         });
 
         this.shadowRoot.querySelector(".btn-anterior")?.addEventListener("click", () => {
-            this.irAPagina(this._paginaActual - 1);
+            this.irAPagina(this.paginaActualIndice - 1);
         });
 
         this.shadowRoot.querySelector(".btn-siguiente")?.addEventListener("click", () => {
-            this.irAPagina(this._paginaActual + 1);
+            this.irAPagina(this.paginaActualIndice + 1);
         });
     }
 }

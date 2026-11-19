@@ -10,7 +10,12 @@ class ListadoProductos extends HTMLElement {
         this._busqueda = "";
         this._estadoStock = "";
         this._filtroEstado = "todos";
-        this._orden = "nombre_asc";
+        this._resumen = { total: 0, quimicos: 0, repuestos: 0, accesorios: 0, sinStock: 0, stockBajo: 0 };
+        this._pagina = 1;
+        this._tamano = 10;
+        this._total = 0;
+        this._reqId = 0;
+        this._timerBusqueda = null;
     }
 
     // Etiqueta visible en la UI -> valor real guardado en la base
@@ -22,104 +27,95 @@ class ListadoProductos extends HTMLElement {
 
     async connectedCallback() {
         this.renderShell();
-        await this.cargarDatos();
+        await Promise.all([this.cargarMarcas(), this.cargarResumen(), this.cargarProductos()]);
         this.setupListeners();
         this.actualizarTabla();
         this.actualizarTarjetas();
-        
-        document.addEventListener("producto-guardado", async () => {
-            await this.cargarDatos();
-            this.actualizarTabla();
-            this.actualizarTarjetas();
-        });
-        
-        document.addEventListener("producto-actualizado", async () => {
-            await this.cargarDatos();
-            this.actualizarTabla();
-            this.actualizarTarjetas();
-        });
+
+        document.addEventListener("producto-guardado", () => this.recargarTodo());
+        document.addEventListener("producto-actualizado", () => this.recargarTodo());
     }
 
-    async cargarDatos() {
+    async cargarMarcas() {
         try {
-            const [productos, marcas] = await Promise.all([
-                fetch("productos").then(r => r.json()),
-                fetch("marcas").then(r => r.json())
-            ]);
-            this._productos = productos;
-            this._marcas = marcas;
-            this.poblarSelectMarcas();
+            this._marcas = await fetch("marcas").then(r => r.json());
+            const select = this.shadowRoot.querySelector("#filtroMarca");
+            this._marcas.forEach(marca => {
+                const option = document.createElement("option");
+                option.value = marca.nombre;
+                option.textContent = marca.nombre;
+                select.appendChild(option);
+            });
         } catch (error) {
-            console.error("Error al cargar productos/marcas:", error);
+            console.error("Error al cargar marcas:", error);
         }
+    }
+
+    async cargarResumen() {
+        try {
+            this._resumen = await fetch("productos/resumen").then(r => r.json());
+        } catch (error) {
+            console.error("Error al cargar el resumen:", error);
+        }
+    }
+
+    async cargarProductos() {
+        const id = ++this._reqId; // para ignorar respuestas viejas si tipeás rápido
+
+        const params = new URLSearchParams({ page: this._pagina, size: this._tamano });
+        if (this._busqueda.trim()) params.set("q", this._busqueda.trim());
+        if (this._categoriaSeleccionada) params.set("categoria", this._categoriaSeleccionada);
+        if (this._marcaSeleccionada) params.set("marca", this._marcaSeleccionada);
+        if (this._estadoStock) params.set("stock", this._estadoStock);
+        if (this._filtroEstado !== "todos") params.set("estado", this._filtroEstado);
+
+        try {
+            const data = await fetch("productos?" + params).then(r => r.json());
+            if (id !== this._reqId) return;
+
+            this._productos = data.datos;
+            this._total = data.total;
+
+            // si la página actual quedó vacía (ej. se filtró o se borró algo), volver a la última válida
+            const totalPaginas = Math.max(1, Math.ceil(this._total / this._tamano));
+            if (this._pagina > totalPaginas) {
+                this._pagina = totalPaginas;
+                await this.cargarProductos();
+            }
+        } catch (error) {
+            console.error("Error al cargar productos:", error);
+        }
+    }
+
+    async refrescarTabla() {
+        await this.cargarProductos();
+        this.actualizarTabla();
+    }
+
+    async recargarTodo() {
+        await Promise.all([this.cargarResumen(), this.cargarProductos()]);
+        this.actualizarTabla();
+        this.actualizarTarjetas();
     }
     
     actualizarTarjetas() {
         const tarjetas = this.shadowRoot.querySelector("tarjetas-resumen");
-
-        const total = this._productos.length;
-        const quimicos = this._productos.filter(p => p.categoriaProducto.nombre === "Químico").length;
-        const repuestos = this._productos.filter(p => p.categoriaProducto.nombre === "Repuesto").length;
-        const accesorios = this._productos.filter(p => p.categoriaProducto.nombre === "Accesorios de Instalación").length;
-        const sinStock = this._productos.filter(p => this.estadoStockDe(p) === "sin_stock").length;
-        const stockBajo = this._productos.filter(p => this.estadoStockDe(p) === "stock_bajo").length;
+        const r = this._resumen;
 
         tarjetas.tarjetas = [
-            { titulo: "Total productos", valor: total },
-            { titulo: "Químicos", valor: quimicos },
-            { titulo: "Repuestos", valor: repuestos },
-            { titulo: "Accesorios", valor: accesorios },
-            { titulo: "Sin stock", valor: sinStock },
-            { titulo: "Stock bajo", valor: stockBajo }
+            { titulo: "Total productos", valor: r.total },
+            { titulo: "Químicos", valor: r.quimicos },
+            { titulo: "Repuestos", valor: r.repuestos },
+            { titulo: "Accesorios", valor: r.accesorios },
+            { titulo: "Sin stock", valor: r.sinStock },
+            { titulo: "Stock bajo", valor: r.stockBajo }
         ];
-    }
-
-    poblarSelectMarcas() {
-        const select = this.shadowRoot.querySelector("#filtroMarca");
-        this._marcas.forEach(marca => {
-            const option = document.createElement("option");
-            option.value = marca.nombre;
-            option.textContent = marca.nombre;
-            select.appendChild(option);
-        });
     }
 
     estadoStockDe(producto) {
         if (producto.stock === 0) return "sin_stock";
         if (producto.stock <= producto.umbralStock) return "stock_bajo";
         return "disponible";
-    }
-
-    obtenerProductosFiltrados() {
-        const busqueda = this._busqueda.trim().toLowerCase();
-
-        let resultado = this._productos.filter(producto => {
-            if (this._filtroEstado === "activos" && !producto.activo) return false;
-            
-            if (this._filtroEstado === "inactivos" && producto.activo) return false;
-            
-            if (this._categoriaSeleccionada && producto.categoriaProducto.nombre !== this._categoriaSeleccionada) {
-                return false;
-            }
-            if (this._marcaSeleccionada && producto.marcaProducto.nombre !== this._marcaSeleccionada) {
-                return false;
-            }
-            if (this._estadoStock && this.estadoStockDe(producto) !== this._estadoStock) {
-                return false;
-            }
-            if (busqueda) {
-                const coincideNombre = producto.nombre.toLowerCase().includes(busqueda);
-                const coincideMarca = producto.marcaProducto.nombre.toLowerCase().includes(busqueda);
-                if (!coincideNombre && !coincideMarca) return false;
-            }
-            return true;
-        });
-
-        if (this._orden === "nombre_asc") {
-            resultado = resultado.sort((a, b) => a.nombre.localeCompare(b.nombre));
-        }
-
-        return resultado;
     }
 
     actualizarTabla() {
@@ -199,13 +195,18 @@ class ListadoProductos extends HTMLElement {
                 formato: valor => `$${Number(valor).toLocaleString("es-AR")}`
             }
         ];
-
-    tabla.datos = this.obtenerProductosFiltrados();
-}
+        tabla.paginacion = { pagina: this._pagina, total: this._total, tamano: this._tamano };
+        tabla.datos = this._productos;
+    }
 
     setupListeners() {
         this.shadowRoot.querySelector("tabla-generica").addEventListener("fila-clickeada", (evento) => {
             this.abrirDetalleProducto(evento.detail);
+        });
+        
+        this.shadowRoot.querySelector("tabla-generica").addEventListener("cambiar-pagina", (e) => {
+            this._pagina = e.detail;
+            this.refrescarTabla();
         });
         
         this.shadowRoot.querySelectorAll(".tab-categoria").forEach(tab => {
@@ -216,33 +217,47 @@ class ListadoProductos extends HTMLElement {
                 this.shadowRoot.querySelectorAll(".tab-categoria").forEach(t => t.classList.remove("activo"));
                 if (this._categoriaSeleccionada) tab.classList.add("activo");
 
-                this.actualizarTabla();
+                this._pagina = 1;
+                this.refrescarTabla();
             });
         });
 
+        // debounce: espera 300 ms sin tipear antes de consultar
         this.shadowRoot.querySelector("#filtroBusqueda").addEventListener("input", (e) => {
             this._busqueda = e.target.value;
-            this.actualizarTabla();
+            clearTimeout(this._timerBusqueda);
+            this._timerBusqueda = setTimeout(() => {
+                this._pagina = 1;
+                this.refrescarTabla();
+            }, 300);
         });
 
         this.shadowRoot.querySelector("#filtroMarca").addEventListener("change", (e) => {
             this._marcaSeleccionada = e.target.value;
-            this.actualizarTabla();
+            this._pagina = 1;
+            this.refrescarTabla();
         });
 
         this.shadowRoot.querySelector("#filtroStock").addEventListener("change", (e) => {
             this._estadoStock = e.target.value;
-            this.actualizarTabla();
-        });
-        
-        this.shadowRoot.querySelector("#filtroEstado").addEventListener("input", (e) => {
-            this._filtroEstado = e.target.value;
-            this.actualizarTabla();
+            this._pagina = 1;
+            this.refrescarTabla();
         });
 
-        this.shadowRoot.querySelector("#filtroOrden").addEventListener("change", (e) => {
-            this._orden = e.target.value;
-            this.actualizarTabla();
+        this.shadowRoot.querySelector("#filtroEstado").addEventListener("change", (e) => {
+            this._filtroEstado = e.target.value;
+            this._pagina = 1;
+            this.refrescarTabla();
+        });
+
+        this.shadowRoot.querySelector("#btnAnterior").addEventListener("click", () => {
+            this._pagina--;
+            this.refrescarTabla();
+        });
+
+        this.shadowRoot.querySelector("#btnSiguiente").addEventListener("click", () => {
+            this._pagina++;
+            this.refrescarTabla();
         });
     }
     
@@ -257,12 +272,8 @@ class ListadoProductos extends HTMLElement {
         // Configurar en modo edición
         formulario.setModoEdicion(producto);
     
-        // Escuchar cuando se actualice el producto
         formulario.addEventListener("producto-actualizado", () => {
-            // Recargar datos
-            this.cargarDatos();
-            this.actualizarTabla();
-            this.actualizarTarjetas();
+            this.recargarTodo();
         });
     
         formulario.addEventListener("cerrar-modal", () => {

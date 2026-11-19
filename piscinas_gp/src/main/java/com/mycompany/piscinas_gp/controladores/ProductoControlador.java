@@ -43,20 +43,48 @@ public class ProductoControlador extends HttpServlet {
     protected void doGet(HttpServletRequest request, HttpServletResponse response)
                         throws ServletException, IOException {
 
-        try {
-            List<Producto> productos = productoServicio.buscarTodosLosProductos();
+        request.setCharacterEncoding("UTF-8");
+        String pathInfo = request.getPathInfo();
 
-            sendJsonResponse(productos, response, HttpServletResponse.SC_OK);
+        try {
+            if ("/resumen".equals(pathInfo)) {
+                sendJsonResponse(productoServicio.obtenerResumenProductos(), response, HttpServletResponse.SC_OK);
+                return;
+            }
+
+            // Sin "page": comportamiento anterior (lista completa), por si otra pantalla lo usa
+            if (request.getParameter("page") == null) {
+                sendJsonResponse(productoServicio.buscarTodosLosProductos(), response, HttpServletResponse.SC_OK);
+                return;
+            }
+
+            sendJsonResponse(
+                    productoServicio.buscarProductosPaginado(
+                            request.getParameter("q"),
+                            request.getParameter("categoria"),
+                            request.getParameter("marca"),
+                            request.getParameter("stock"),
+                            request.getParameter("estado"),
+                            parseEntero(request.getParameter("page"), 1),
+                            parseEntero(request.getParameter("size"), 10)),
+                    response,
+                    HttpServletResponse.SC_OK);
 
         } catch (ServiceException e) {
-
             sendJsonResponse(java.util.Map.of("error", "Error interno al obtener los productos"),
                     response,
-                    HttpServletResponse.SC_INTERNAL_SERVER_ERROR
-            );
+                    HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
         }
     }
 
+    private int parseEntero(String valor, int porDefecto) {
+        try {
+            return valor == null ? porDefecto : Integer.parseInt(valor.trim());
+        } catch (NumberFormatException e) {
+            return porDefecto;
+        }
+    }
+    
   @Override
     protected void doPost(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {

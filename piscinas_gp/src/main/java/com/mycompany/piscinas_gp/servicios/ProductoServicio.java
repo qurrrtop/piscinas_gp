@@ -11,6 +11,8 @@ import com.mycompany.piscinas_gp.modelos.Producto;
 import java.util.List;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import java.util.Map;
+import java.util.LinkedHashMap;
 
 public class ProductoServicio {
     private static final Logger logger = LoggerFactory.getLogger(ProductoServicio.class);
@@ -75,6 +77,36 @@ public class ProductoServicio {
         }
     }
 
+    public Map<String, Object> buscarProductosPaginado(String q, String categoria, String marca,
+            String stock, String estado, int page, int size) throws ServiceException {
+
+        if (page < 1) page = 1;
+        if (size < 1) size = 10;
+        if (size > 50) size = 50; // tope para que nadie pida 100000 de una
+
+        try {
+            Map<String, Object> resultado = new LinkedHashMap<>();
+            resultado.put("datos", productoDAO.buscarPaginado(q, categoria, marca, stock, estado, page, size));
+            resultado.put("total", productoDAO.contarFiltrados(q, categoria, marca, stock, estado));
+            resultado.put("page", page);
+            resultado.put("size", size);
+            return resultado;
+
+        } catch (PersistenceException e) {
+            logger.error("Error al buscar productos paginados", e);
+            throw new ServiceException("Error al recuperar los productos", e);
+        }
+    }
+
+    public Map<String, Long> obtenerResumenProductos() throws ServiceException {
+        try {
+            return productoDAO.obtenerResumen();
+        } catch (PersistenceException e) {
+            logger.error("Error al obtener el resumen de productos", e);
+            throw new ServiceException("Error al obtener el resumen de productos", e);
+        }
+    }
+    
     // Crea un nuevo producto.
     public Producto crearProducto(Producto producto)
             throws ServiceException {

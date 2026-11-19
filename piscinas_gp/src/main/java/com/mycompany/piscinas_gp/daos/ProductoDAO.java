@@ -14,6 +14,8 @@ import java.sql.SQLException;
 import java.util.List;
 import java.sql.Connection;
 import java.util.ArrayList;
+import java.util.Map;
+import java.util.LinkedHashMap;
 
 public class ProductoDAO extends GenericoDAO<Producto> {
 
@@ -72,6 +74,18 @@ public class ProductoDAO extends GenericoDAO<Producto> {
         "categoria_producto_id = ?",
         "activo = ?"
     };
+    
+    private static final String COLUMNAS_CON_NOMBRES =
+            "p.id, p.codigo_proveedor, p.nombre, p.descripcion, p.stock, p.umbral_stock, p.precio_actual, p.contenido, p.activo, "
+            + "p.marca_producto_id, mp.nombre AS marca_nombre, "
+            + "p.categoria_producto_id, cp.nombre AS categoria_nombre, "
+            + "p.unidad_medida_id, um.nombre AS unidad_nombre, um.abreviatura AS unidad_abreviatura ";
+
+    private static final String FROM_CON_NOMBRES =
+            "FROM productos p "
+            + "JOIN marca_productos mp ON p.marca_producto_id = mp.id "
+            + "JOIN categoria_productos cp ON p.categoria_producto_id = cp.id "
+            + "JOIN unidades_medida um ON p.unidad_medida_id = um.id ";
 
     public ProductoDAO(DbConnection dbConn) {
         super(dbConn);
@@ -92,6 +106,128 @@ public class ProductoDAO extends GenericoDAO<Producto> {
     public boolean eliminarPorId(Long id) throws PersistenceException {
         return deleteObject(PRIMARY_KEY, id);
     }
+    
+    public List<Producto> buscarPaginado(String q, String categoria, String marca, String stock,
+            String estado, int page, int size) throws PersistenceException {
+
+        List<Object> params = new ArrayList<>();
+        String sql = "SELECT " + COLUMNAS_CON_NOMBRES + FROM_CON_NOMBRES
+                + construirWhere(params, q, categoria, marca, stock, estado)
+                + " ORDER BY p.nombre, p.id LIMIT ? OFFSET ?";
+        params.add(size);
+        params.add((page - 1) * size);
+
+        List<Producto> productos = new ArrayList<>();
+
+        try (Connection conn = dbConn.getConnection();
+                PreparedStatement pstmt = conn.prepareStatement(sql)) {
+
+            asignarParams(pstmt, params);
+
+            try (ResultSet rs = pstmt.executeQuery()) {
+                while (rs.next()) {
+                    productos.add(mapResultSetConNombres(rs));
+                }
+            }
+        } catch (SQLException e) {
+            throw new PersistenceException("Error al buscar productos paginados", e);
+        }
+        return productos;
+    }
+
+    public long contarFiltrados(String q, String categoria, String marca, String stock, String estado)
+            throws PersistenceException {
+
+        List<Object> params = new ArrayList<>();
+        String sql = "SELECT COUNT(*) " + FROM_CON_NOMBRES
+                + construirWhere(params, q, categoria, marca, stock, estado);
+
+        try (Connection conn = dbConn.getConnection();
+                PreparedStatement pstmt = conn.prepareStatement(sql)) {
+
+            asignarParams(pstmt, params);
+
+            try (ResultSet rs = pstmt.executeQuery()) {
+                return rs.next() ? rs.getLong(1) : 0;
+            }
+        } catch (SQLException e) {
+            throw new PersistenceException("Error al contar productos", e);
+        }
+    }
+
+    public Map<String, Long> obtenerResumen() throws PersistenceException {
+        String sql = "SELECT COUNT(*) AS total, "
+                + "COALESCE(SUM(CASE WHEN cp.nombre = ? THEN 1 ELSE 0 END), 0) AS quimicos, "
+                + "COALESCE(SUM(CASE WHEN cp.nombre = ? THEN 1 ELSE 0 END), 0) AS repuestos, "
+                + "COALESCE(SUM(CASE WHEN cp.nombre = ? THEN 1 ELSE 0 END), 0) AS accesorios, "
+                + "COALESCE(SUM(CASE WHEN p.stock = 0 THEN 1 ELSE 0 END), 0) AS sin_stock, "
+                + "COALESCE(SUM(CASE WHEN p.stock > 0 AND p.stock <= p.umbral_stock THEN 1 ELSE 0 END), 0) AS stock_bajo "
+                + "FROM productos p JOIN categoria_productos cp ON p.categoria_producto_id = cp.id";
+
+        try (Connection conn = dbConn.getConnection();
+                PreparedStatement pstmt = conn.prepareStatement(sql)) {
+
+            pstmt.setString(1, "Químico");
+            pstmt.setString(2, "Repuesto");
+            pstmt.setString(3, "Accesorios de Instalación");
+
+            try (ResultSet rs = pstmt.executeQuery()) {
+                Map<String, Long> resumen = new LinkedHashMap<>();
+                if (rs.next()) {
+                    resumen.put("total", rs.getLong("total"));
+                    resumen.put("quimicos", rs.getLong("quimicos"));
+                    resumen.put("repuestos", rs.getLong("repuestos"));
+                    resumen.put("accesorios", rs.getLong("accesorios"));
+                    resumen.put("sinStock", rs.getLong("sin_stock"));
+                    resumen.put("stockBajo", rs.getLong("stock_bajo"));
+                }
+                return resumen;
+            }
+        } catch (SQLException e) {
+            throw new PersistenceException("Error al obtener el resumen de productos", e);
+        }
+    }
+
+    private String construirWhere(List<Object> params, String q, String categoria, String marca,
+            String stock, String estado) {
+
+        StringBuilder where = new StringBuilder("WHERE 1=1");
+
+        if ("activos".equals(estado)) {
+            where.append(" AND p.activo = TRUE");
+        } else if ("inactivos".equals(estado)) {
+            where.append(" AND p.activo = FALSE");
+        }
+        if (categoria != null && !categoria.isBlank()) {
+            where.append(" AND cp.nombre = ?");
+            params.add(categoria);
+        }
+        if (marca != null && !marca.isBlank()) {
+            where.append(" AND mp.nombre = ?");
+            params.add(marca);
+        }
+        if ("sin_stock".equals(stock)) {
+            where.append(" AND p.stock = 0");
+        } else if ("stock_bajo".equals(stock)) {
+            where.append(" AND p.stock > 0 AND p.stock <= p.umbral_stock");
+        } else if ("disponible".equals(stock)) {
+            where.append(" AND p.stock > p.umbral_stock");
+        }
+        if (q != null && !q.isBlank()) {
+            where.append(" AND (LOWER(p.nombre) LIKE ? OR LOWER(mp.nombre) LIKE ?)");
+            String patron = "%" + q.trim().toLowerCase() + "%";
+            params.add(patron);
+            params.add(patron);
+        }
+        return where.toString();
+    }
+
+    private void asignarParams(PreparedStatement pstmt, List<Object> params) throws SQLException {
+        for (int i = 0; i < params.size(); i++) {
+            pstmt.setObject(i + 1, params.get(i));
+        }
+    }
+
     
     /** Busca un producto exacto por los 4 campos que definen "mismo producto" cuando no hay codigo de proveedor. */
     public Producto buscarPorNombreMarcaContenidoUnidad(String nombre, Long marcaId, BigDecimal contenido, Long unidadMedidaId)
