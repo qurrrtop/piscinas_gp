@@ -249,16 +249,6 @@ class ListadoProductos extends HTMLElement {
             this._pagina = 1;
             this.refrescarTabla();
         });
-
-        this.shadowRoot.querySelector("#btnAnterior").addEventListener("click", () => {
-            this._pagina--;
-            this.refrescarTabla();
-        });
-
-        this.shadowRoot.querySelector("#btnSiguiente").addEventListener("click", () => {
-            this._pagina++;
-            this.refrescarTabla();
-        });
     }
     
     // En ListadoProductos, agregar método para abrir edición
