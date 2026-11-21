@@ -352,7 +352,7 @@ class DetalleServicio extends HTMLElement {
         const nombre = this.nombreCliente(c);
         const esEmpresa = !c.nombre;
 
-        const documento = c.cuil ? `CUIL: ${c.cuil}` : (c.cuit ? `CUIT: ${c.cuit}` : "");
+        const documento = (c.cuil || c.cuit) ? `CUIL/CUIT: ${c.cuil || c.cuit}` : "";
         const contacto = [c.email, c.telefono, documento].filter(Boolean).join(" · ");
         const direccion = [c.calleYnumero, c.localidad?.nombre].filter(Boolean).join(", ");
 
@@ -633,6 +633,7 @@ class DetalleServicio extends HTMLElement {
             nombreCompleto: this.nombreCliente(c),
             cuitCuil: c.cuil || c.cuit || "",
             email: c.email || "",
+            telefono: c.telefono || "",
             esEmpresa: !c.nombre
         };
     }
@@ -643,6 +644,7 @@ class DetalleServicio extends HTMLElement {
             nombreCompleto: c.nombreCompleto,
             cuitCuil: c.cuitCuil || "",
             email: c.email || "",
+            telefono: c.telefono || "",
             esEmpresa: c.tipo === "Empresa"
         };
     }
@@ -677,6 +679,7 @@ class DetalleServicio extends HTMLElement {
             cambiandoCliente: false,
             problema: s.problema || "",
             diagnostico: s.diagnostico || "",
+            manoObra: s.manoObra ?? 0,
             cobro: {
                 cobrado: !!s.cobrado,
                 monto: s.monto ?? "",
@@ -741,6 +744,12 @@ class DetalleServicio extends HTMLElement {
                     <h3>Repuestos</h3>
                     <div id="areaRepuestos"></div>
                 </section>
+        
+                <section>
+                    <h3>Mano de obra</h3>
+                    <label class="campo" for="editManoObra">Monto ($)</label>
+                    <input type="number" id="editManoObra" min="0" step="any" value="${this.esc(ed.manoObra)}">
+                </section>
 
                 <section>
                     <div class="tarjeta-totales" id="resumenEdicion"></div>
@@ -759,10 +768,15 @@ class DetalleServicio extends HTMLElement {
         if (esTecnico) {
             this.renderAreaRepuestos();
             this.renderResumenEdicion();
+            
+            this.shadowRoot.querySelector("#editManoObra").addEventListener("input", (e) => {
+                this._edicion.manoObra = e.target.value;
+                this.renderResumenEdicion();
+            });
         } else {
             this.renderAreaCobro();
         }
-
+        
         this.shadowRoot.querySelector("#btnDescartar").addEventListener("click", () => {
             this.liberarPreviews();
             this._edicion = null;
@@ -840,14 +854,18 @@ class DetalleServicio extends HTMLElement {
             // el click busca en this._clientes, así que guardo los resultados visibles
             this._clientes = coincidencias;
 
-            resultados.innerHTML = coincidencias.map(cl => `
-                <div class="item-resultado" data-id="${this.esc(cl.id)}">
-                    <div>
-                        <div class="prod-nombre">${this.esc(cl.nombreCompleto)}</div>
-                        <div class="prod-detalle">${this.esc([cl.cuitCuil, cl.email].filter(Boolean).join(", "))}</div>
+            resultados.innerHTML = coincidencias.map(cl => {
+                const esEmpresa = cl.tipo === "Empresa";
+                return `
+                    <div class="item-resultado" data-id="${this.esc(cl.id)}">
+                        <span class="avatar avatar-chico ${esEmpresa ? "avatar-empresa" : "avatar-particular"}">${this.esc(this.iniciales(cl.nombreCompleto))}</span>
+                        <div class="resultado-info">
+                            <div class="prod-nombre">${this.esc(cl.nombreCompleto)}</div>
+                            <div class="prod-detalle">${this.esc([cl.email, cl.telefono, cl.cuitCuil ? `CUIL/CUIT: ${cl.cuitCuil}` : ""].filter(Boolean).join(" · "))}</div>
+                        </div>
                     </div>
-                </div>
-            `).join("") || `<p class="texto vacio sin-resultados">Sin coincidencias</p>`;
+                `;
+            }).join("") || `<p class="texto vacio sin-resultados">Sin coincidencias</p>`;
 
             resultados.querySelectorAll(".item-resultado").forEach(el => {
                 el.addEventListener("click", () => {
@@ -1212,7 +1230,7 @@ class DetalleServicio extends HTMLElement {
         const repuestos = this._edicion.carrito.reduce(
             (acc, i) => acc + i.precioUnitario * i.cantidad, 0
         );
-        const manoObra = Number(s.manoObra || 0);
+        const manoObra = Number(this._edicion.manoObra || 0);
         const porcentaje = Number(s.descuentoGlobal || 0);
         const subtotal = repuestos + manoObra;
         const total = subtotal - subtotal * porcentaje / 100;
@@ -1253,6 +1271,11 @@ class DetalleServicio extends HTMLElement {
 
         if (!problema) {
             this.mostrarErrorEdicion(esTecnico ? "Describí el problema del servicio" : "Indicá el motivo de la consulta");
+            return;
+        }
+        
+        if (esTecnico && !(Number(ed.manoObra || 0) >= 0)) {
+            this.mostrarErrorEdicion("La mano de obra no puede ser negativa");
             return;
         }
         
@@ -1301,7 +1324,7 @@ class DetalleServicio extends HTMLElement {
                     metodoPagoId: s.metodoPago.id,
                     subrubroServicioId: s.subrubroServicio.id,
                     fechaEntrega: s.fechaEntrega,
-                    manoObra: s.manoObra,
+                    manoObra: Number(ed.manoObra || 0),
                     descuentoGlobal: s.descuentoGlobal,
                     detallesVenta: ed.carrito.map(i => ({
                         id: i.detalleId,
@@ -1895,10 +1918,22 @@ class DetalleServicio extends HTMLElement {
                 textarea {
                     resize: vertical;
                 }
+        
+                textarea:focus,
+                input[type="text"]:focus,
+                input[type="number"]:focus,
+                select:focus {
+                    outline: none;
+                    border-color: #37E0E0;
+                }
 
                 textarea::placeholder,
                 input::placeholder {
                     color: rgba(255, 255, 255, .6);
+                }
+        
+                #btnMantenerCliente {
+                    margin-top: .8rem;
                 }
 
                 .resultados {
@@ -1980,6 +2015,17 @@ class DetalleServicio extends HTMLElement {
 
                 .btn-quitar:hover {
                     color: #F87171;
+                }
+        
+                .avatar-chico {
+                    width: 36px;
+                    height: 36px;
+                    font-size: .8rem;
+                }
+
+                .resultado-info {
+                    flex: 1;
+                    min-width: 0;
                 }
             </style>
 

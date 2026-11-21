@@ -161,6 +161,12 @@ public class ClienteServicio {
             Localidad localidad = resolverLocalidad(dto.getLocalidadId());
 
             if ("Particular".equalsIgnoreCase(dto.getTipo())) {
+                ClienteParticular existente = clienteParticularDAO.buscarPorId(dto.getId());
+                if (existente == null) {
+                    throw new BusinessException("No existe un cliente con ID " + dto.getId());
+                }
+                boolean activo = dto.isActivo() != null ? dto.isActivo() : existente.isActivo();
+
                 ClienteParticular actualizado = new ClienteParticular(
                         dto.getId(),
                         dto.getNombre(),
@@ -171,13 +177,19 @@ public class ClienteServicio {
                         dto.getCalleYnumero(),
                         localidad,
                         dto.getObservaciones(),
-                        dto.isActivo()
+                        activo
                 );
                 ClienteParticular guardado = clienteParticularDAO.actualizar(actualizado);
                 logger.info("Cliente particular actualizado correctamente");
                 return mapearADetalle(guardado);
 
             } else if ("Empresa".equalsIgnoreCase(dto.getTipo())) {
+                ClienteEmpresa existente = clienteEmpresaDAO.buscarPorId(dto.getId());
+                if (existente == null) {
+                    throw new BusinessException("No existe un cliente con ID " + dto.getId());
+                }
+                boolean activo = dto.isActivo() != null ? dto.isActivo() : existente.isActivo();
+
                 ClienteEmpresa actualizado = new ClienteEmpresa(
                         dto.getId(),
                         dto.getRazonSocial(),
@@ -189,7 +201,7 @@ public class ClienteServicio {
                         dto.getCalleYnumero(),
                         localidad,
                         dto.getObservaciones(),
-                        dto.isActivo()
+                        activo
                 );
                 ClienteEmpresa guardado = clienteEmpresaDAO.actualizar(actualizado);
                 logger.info("Cliente empresa actualizado correctamente");

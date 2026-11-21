@@ -315,14 +315,19 @@ class NuevoServicio extends HTMLElement {
             });
         };
 
-        input.addEventListener("input", (e) => {
+        
+        input.addEventListener("input", () => {
+            const texto = input.value;
+
             clearTimeout(timer);
-            if (!e.target.value.trim()) {
+
+            if (!texto.trim()) {
                 reqId++;
                 resultados.style.display = "none";
                 return;
             }
-            timer = setTimeout(() => renderResultados(e.target.value), 300);
+
+            timer = setTimeout(() => renderResultados(texto), 300);
         });
     }
 

@@ -227,6 +227,11 @@ class ConfirmacionVenta extends HTMLElement {
                 .btn-registrar:hover {
                     background: rgba(55,224,224,.85);
                 }
+        
+                .acciones button:disabled {
+                    opacity: .5;
+                    cursor: default;
+                }
             </style>
 
             <div class="contenedor">
@@ -280,11 +285,21 @@ class ConfirmacionVenta extends HTMLElement {
             </div>
         `;
 
-        this.shadowRoot.querySelector(".btn-cancelar").addEventListener("click", () => {
+        const btnCancelar = this.shadowRoot.querySelector(".btn-cancelar");
+        const btnRegistrar = this.shadowRoot.querySelector(".btn-registrar");
+
+        btnCancelar.addEventListener("click", () => {
             this.closest("modal-component")?.remove();
         });
 
-        this.shadowRoot.querySelector(".btn-registrar").addEventListener("click", () => {
+        btnRegistrar.addEventListener("click", () => {
+            if (btnRegistrar.disabled) return;
+
+            // se bloquea ni bien se hace clic; la modal se cierra sola al terminar el guardado
+            btnRegistrar.disabled = true;
+            btnCancelar.disabled = true;
+            btnRegistrar.textContent = "Registrando…";
+
             this.dispatchEvent(new CustomEvent("venta-confirmada", {
                 bubbles: true,
                 composed: true,

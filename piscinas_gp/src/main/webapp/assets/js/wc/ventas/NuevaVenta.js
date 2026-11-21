@@ -20,6 +20,7 @@ class NuevaVenta extends HTMLElement {
         this._modo = "crear";
         this._ventaId = null;
         this._detalleIdPorProducto = new Map();
+        this._guardando = false;
     }
 
     async connectedCallback() {
@@ -214,14 +215,18 @@ class NuevaVenta extends HTMLElement {
             });
         };
 
-        input.addEventListener("input", (e) => {
+        input.addEventListener("input", () => {
+            const texto = input.value;
+
             clearTimeout(timer);
-            if (!e.target.value.trim()) {
+
+            if (!texto.trim()) {
                 reqId++;
                 resultados.style.display = "none";
                 return;
             }
-            timer = setTimeout(() => renderResultados(e.target.value), 300);
+
+            timer = setTimeout(() => renderResultados(texto), 300);
         });
     }
 
@@ -584,18 +589,23 @@ class NuevaVenta extends HTMLElement {
         this.shadowRoot.querySelector("#resumenDescuento").textContent = `-$${this.montoDescuento.toLocaleString("es-AR")}`;
         this.shadowRoot.querySelector("#resumenTotal").textContent = `$${this.total.toLocaleString("es-AR")}`;
     }
+    
+    validarVenta() {
+        if (!this._clienteSeleccionado) return "Seleccioná un cliente antes de confirmar";
+        if (this._carrito.length === 0) return "Agregá al menos un producto a la venta";
+        return null;
+    }
+
+    notificar(mensaje, tipo) {
+        document.dispatchEvent(new CustomEvent("mostrar-notificacion", {
+            detail: { mensaje, tipo }
+        }));
+    }
 
     abrirConfirmacion() {
-        if (!this._clienteSeleccionado) {
-            document.dispatchEvent(new CustomEvent("mostrar-notificacion", {
-                detail: { mensaje: "Seleccioná un cliente antes de confirmar", tipo: "error" }
-            }));
-            return;
-        }
-        if (this._carrito.length === 0) {
-            document.dispatchEvent(new CustomEvent("mostrar-notificacion", {
-                detail: { mensaje: "Agregá al menos un producto a la venta", tipo: "error" }
-            }));
+        const error = this.validarVenta();
+        if (error) {
+            this.notificar(error, "error");
             return;
         }
 
@@ -683,6 +693,22 @@ class NuevaVenta extends HTMLElement {
     }
 
     async registrarVenta(generarFactura) {
+        if (this._guardando) return;   // ya hay un guardado en curso
+
+        const errorValidacion = this.validarVenta();
+        if (errorValidacion) {
+            this.notificar(errorValidacion, "error");
+            return;
+        }
+
+        const boton = this.shadowRoot.querySelector("#btnConfirmarVenta");
+        const textoOriginal = boton.textContent;
+        let guardado = false;
+
+        this._guardando = true;
+        boton.disabled = true;
+        boton.textContent = "Guardando…";
+
         try {
             const estadoElegido = this._estadosVenta.find(e => e.nombre.toLowerCase() === this._estadoVenta.toLowerCase());
             const metodoElegido = this._metodosPago.find(m => m.nombre.toLowerCase() === this._metodoPago.toLowerCase());
@@ -714,9 +740,9 @@ class NuevaVenta extends HTMLElement {
             const data = await response.json();
             if (!response.ok) throw new Error(data.error || "Error al guardar la venta");
 
-            document.dispatchEvent(new CustomEvent("mostrar-notificacion", {
-                detail: { mensaje: esEdicion ? "Venta actualizada correctamente" : "Venta registrada correctamente", tipo: "exito" }
-            }));
+            guardado = true;
+
+            this.notificar(esEdicion ? "Venta actualizada correctamente" : "Venta registrada correctamente", "exito");
 
             document.dispatchEvent(new CustomEvent("venta-guardada", { bubbles: true, composed: true }));
 
@@ -726,9 +752,15 @@ class NuevaVenta extends HTMLElement {
             }));
 
         } catch (error) {
-            document.dispatchEvent(new CustomEvent("mostrar-notificacion", {
-                detail: { mensaje: error.message, tipo: "error" }
-            }));
+            this.notificar(error.message, "error");
+
+        } finally {
+            // si se guardó bien, queda bloqueado hasta que la pantalla navegue
+            if (!guardado) {
+                this._guardando = false;
+                boton.disabled = false;
+                boton.textContent = textoOriginal;
+            }
         }
     }
 
