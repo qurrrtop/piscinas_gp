@@ -44,21 +44,19 @@ class NuevaVenta extends HTMLElement {
 
     async cargarDatosIniciales() {
         try {
-            const [marcas, categorias, unidades, productos, estadosVenta, metodosPago] = await Promise.all([
+            const [marcas, categorias, unidades, estadosVenta, metodosPago] = await Promise.all([
                 fetch(`${this.basePath}/marcas`).then(r => r.json()),
                 fetch(`${this.basePath}/categorias`).then(r => r.json()),
                 fetch(`${this.basePath}/unidades-medida`).then(r => r.json()),
-                fetch(`${this.basePath}/productos`).then(r => r.json()),
                 fetch(`${this.basePath}/estados-venta`).then(r => r.json()),
                 fetch(`${this.basePath}/metodos-pago`).then(r => r.json())
             ]);
             this._marcas = marcas;
             this._categorias = categorias;
             this._unidades = unidades;
-            this._productos = productos.filter(p => p.activo && Number(p.stock) > 0 && Number(p.precioActual) > 0);
             this._estadosVenta = estadosVenta;
             this._metodosPago = metodosPago;
-            
+
             this.cargarEstadosVenta();
             this.cargarMetodosPago();
         } catch (error) {
@@ -257,7 +255,7 @@ class NuevaVenta extends HTMLElement {
 
     renderFormProducto() {
         const contenedor = this.shadowRoot.querySelector("#areaProductos");
-        
+
         const coloresEstado = {
             disponible: "rgba(15, 209, 73,.80)",
             stock_bajo: "rgba(226, 140, 21,.80)",
@@ -303,75 +301,65 @@ class NuevaVenta extends HTMLElement {
         `;
 
         let categoriaId = "";
+        let reqId = 0;
+        let timer = null;
         const listaEl = this.shadowRoot.querySelector("#listaProductosFiltrados");
 
-        const renderLista = () => {
+        const renderLista = async () => {
+            const id = ++reqId;
             const marcaId = this.shadowRoot.querySelector("#selectMarca").value;
             const unidadId = this.shadowRoot.querySelector("#selectUnidad").value;
-            const texto = this.shadowRoot.querySelector("#buscarProducto").value.trim().toLowerCase();
+            const texto = this.shadowRoot.querySelector("#buscarProducto").value.trim();
 
-            // Punto 2: no mostrar nada hasta que haya al menos un filtro activo
+            // no mostrar nada hasta que haya al menos un filtro activo
             if (!categoriaId && !marcaId && !unidadId && !texto) {
                 listaEl.innerHTML = `<p class="sin-resultados">Elegí al menos una categoría, marca o unidad para ver productos</p>`;
                 return;
             }
 
-            const disponibles = this._productos.filter(p =>
-                (!categoriaId || p.categoriaProducto.id == categoriaId) &&
-                (!marcaId || p.marcaProducto.id == marcaId) &&
-                (!unidadId || p.unidadMedida.id == unidadId) &&
-                (!texto || p.nombre.toLowerCase().includes(texto))
-            ).slice(0, 25);
+            const params = new URLSearchParams({ page: 1, size: 25, vendibles: "true" });
+            if (categoriaId) params.set("categoriaId", categoriaId);
+            if (marcaId) params.set("marcaId", marcaId);
+            if (unidadId) params.set("unidadId", unidadId);
+            if (texto) params.set("q", texto);
+
+            let disponibles;
+            try {
+                const data = await fetch(`${this.basePath}/productos?${params}`).then(r => r.json());
+                if (id !== reqId) return;   // llegó tarde una respuesta vieja: se descarta
+                disponibles = data.datos;
+            } catch (error) {
+                console.error("Error al buscar productos:", error);
+                return;
+            }
+
+            // el click de cada item busca en this._productos, así que guardo los resultados visibles
+            this._productos = disponibles;
 
             listaEl.innerHTML = disponibles.length
-            ? disponibles.map(p => {
+                ? disponibles.map(p => {
+                    const estado = this.estadoStockDe(p);
+                    const color = coloresEstado[estado];
+                    const referencia = p.umbralStock > 0 ? p.umbralStock * 4 : 50;
+                    const porcentaje = Math.min(100, Math.round((p.stock / referencia) * 100));
 
-                const estado = this.estadoStockDe(p);
-                const color = coloresEstado[estado];
-
-                const referencia = p.umbralStock > 0
-                    ? p.umbralStock * 4
-                    : 50;
-
-                const porcentaje = Math.min(
-                    100,
-                    Math.round((p.stock / referencia) * 100)
-                );
-
-                return `
-                    <div class="item-producto-lista" data-id="${p.id}">
-
-                        <div class="info-producto">
-                            <span>
-                                ${p.nombre} - ${p.contenido} ${p.unidadMedida.abreviatura}
-                            </span>
-
-                            <small>
-                                ${p.marcaProducto.nombre} 
-                            </small>
-
-                            <div class="stock-producto">
-                                <span style="color:white;">
-                                    Stock: ${p.stock} / min ${p.umbralStock}
-                                </span>
-
-                                <div class="barra-stock">
-                                    <div 
-                                        class="barra-stock-progreso"
-                                        style="background:${color}; width:${porcentaje}%">
+                    return `
+                        <div class="item-producto-lista" data-id="${p.id}">
+                            <div class="info-producto">
+                                <span>${p.nombre} - ${p.contenido} ${p.unidadMedida.abreviatura}</span>
+                                <small>${p.marcaProducto.nombre}</small>
+                                <div class="stock-producto">
+                                    <span style="color:white;">Stock: ${p.stock} / min ${p.umbralStock}</span>
+                                    <div class="barra-stock">
+                                        <div class="barra-stock-progreso" style="background:${color}; width:${porcentaje}%"></div>
                                     </div>
                                 </div>
                             </div>
+                            <span>$${Number(p.precioActual).toLocaleString("es-AR")}</span>
                         </div>
-
-                        <span>
-                            $${Number(p.precioActual).toLocaleString("es-AR")}
-                        </span>
-
-                    </div>
-                `;
-            }).join("")
-            : `<p class="sin-resultados">No se encontraron productos</p>`;
+                    `;
+                }).join("")
+                : `<p class="sin-resultados">No se encontraron productos</p>`;
 
             listaEl.querySelectorAll(".item-producto-lista").forEach(el => {
                 el.addEventListener("click", () => {
@@ -392,7 +380,12 @@ class NuevaVenta extends HTMLElement {
 
         this.shadowRoot.querySelector("#selectMarca").addEventListener("change", renderLista);
         this.shadowRoot.querySelector("#selectUnidad").addEventListener("change", renderLista);
-        this.shadowRoot.querySelector("#buscarProducto").addEventListener("input", renderLista);
+
+        // con debounce: no dispara un pedido por cada tecla
+        this.shadowRoot.querySelector("#buscarProducto").addEventListener("input", () => {
+            clearTimeout(timer);
+            timer = setTimeout(renderLista, 300);
+        });
 
         this.shadowRoot.querySelector("#btnCancelarProducto").addEventListener("click", () => {
             this._mostrandoFormProducto = false;

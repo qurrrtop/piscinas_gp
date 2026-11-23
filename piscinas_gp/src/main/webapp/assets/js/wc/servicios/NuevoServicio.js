@@ -23,6 +23,7 @@ class NuevoServicio extends HTMLElement {
         this._mostrandoFormProducto = false;
         this._imagenes = { tecnico: [], asesoramiento: [] };
         this._maxImagenes = 5;
+        this._guardando = false;
     }
 
     async connectedCallback() {
@@ -702,31 +703,40 @@ class NuevoServicio extends HTMLElement {
     // ---------- envío ----------
 
     async registrarServicio() {
+        if (this._guardando) return;   // ya hay un guardado en curso
+
         if (!this._clienteSeleccionado) {
-            document.dispatchEvent(new CustomEvent("mostrar-notificacion", { detail: { mensaje: "Seleccioná un cliente", tipo: "error" } }));
+            this.notificar("Seleccioná un cliente", "error");
             return;
         }
 
         // metodo de pago solo es obligatorio si hay un cobro real
         const requiereMetodoPago = this._tipo === "tecnico" || this._cobradoAsesoramiento;
         const metodoElegido = requiereMetodoPago
-                ? this._metodosPago.find(m => m.nombre.toLowerCase() === this._metodoPago.toLowerCase())
-                : null;
+            ? this._metodosPago.find(m => m.nombre.toLowerCase() === this._metodoPago.toLowerCase())
+            : null;
 
         if (requiereMetodoPago && !metodoElegido) {
-            document.dispatchEvent(new CustomEvent("mostrar-notificacion", { detail: { mensaje: "Seleccioná un método de pago", tipo: "error" } }));
+            this.notificar("Seleccioná un método de pago", "error");
             return;
         }
 
-        try {
-            let body, url;
+        const boton = this.shadowRoot.querySelector("#btnRegistrarServicio");
+        const textoOriginal = boton.textContent;
+        let guardado = false;
 
-            // sube las imagenes del tipo elegido (si hay) antes de crear el registro
+        this._guardando = true;
+        boton.disabled = true;
+        boton.textContent = "Guardando…";
+
+        try {
+            // sube las imagenes del tipo elegido antes de crear el registro.
+            // Si el guardado falla y se reintenta, no se vuelve a subir lo que ya se subio.
             const imagenesElegidas = this._imagenes[this._tipo === "tecnico" ? "tecnico" : "asesoramiento"];
             const nombresImagenes = [];
 
-            try {
-                for (const imagen of imagenesElegidas) {
+            for (const imagen of imagenesElegidas) {
+                if (!imagen.archivoSubido) {
                     const formData = new FormData();
                     formData.append("archivo", imagen.file);
 
@@ -738,12 +748,12 @@ class NuevoServicio extends HTMLElement {
                     const dataImagen = await resImagen.json();
                     if (!resImagen.ok) throw new Error(dataImagen.error || "No se pudo subir la imagen");
 
-                    nombresImagenes.push(dataImagen.archivo);
+                    imagen.archivoSubido = dataImagen.archivo;
                 }
-            } catch (error) {
-                document.dispatchEvent(new CustomEvent("mostrar-notificacion", { detail: { mensaje: error.message, tipo: "error" } }));
-                return;
+                nombresImagenes.push(imagen.archivoSubido);
             }
+
+            let body, url;
 
             if (this._tipo === "tecnico") {
                 body = {
@@ -785,12 +795,25 @@ class NuevoServicio extends HTMLElement {
             const data = await response.json();
             if (!response.ok) throw new Error(data.error || "Error al registrar el servicio");
 
-            document.dispatchEvent(new CustomEvent("mostrar-notificacion", { detail: { mensaje: "Servicio registrado correctamente", tipo: "exito" } }));
+            guardado = true;
+
+            this.notificar("Servicio registrado correctamente", "exito");
             document.dispatchEvent(new CustomEvent("servicio-guardado", { bubbles: true, composed: true }));
-            document.dispatchEvent(new CustomEvent("navigateTo", { bubbles: true, composed: true, detail: { path: `${this.basePath}/dashboard/servicios/historial` } }));
+            document.dispatchEvent(new CustomEvent("navigateTo", {
+                bubbles: true, composed: true,
+                detail: { path: `${this.basePath}/dashboard/servicios/historial` }
+            }));
 
         } catch (error) {
-            document.dispatchEvent(new CustomEvent("mostrar-notificacion", { detail: { mensaje: error.message, tipo: "error" } }));
+            this.notificar(error.message, "error");
+
+        } finally {
+            // si se guardó bien, queda bloqueado hasta que la pantalla navegue
+            if (!guardado) {
+                this._guardando = false;
+                boton.disabled = false;
+                boton.textContent = textoOriginal;
+            }
         }
     }
 
@@ -1505,6 +1528,11 @@ class NuevoServicio extends HTMLElement {
 
                 .btn-x:hover {
                     background: #B91C1C;
+                }
+        
+                .btn-confirmar:disabled {
+                    opacity: .5;
+                    cursor: default;
                 }
             </style>
 
