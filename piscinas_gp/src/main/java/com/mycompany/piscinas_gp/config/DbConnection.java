@@ -6,8 +6,8 @@ import java.sql.SQLException;
 public final class DbConnection {
     
     private static final String URL = "jdbc:mysql://localhost:3306/piscinas_gp";
-    private static final String USER = "root";
-    private static final String PASSWORD = "";
+    private static final String USER = "piscinas_gp";
+    private static final String PASSWORD = "cuenta_usuario_piscinas_gp2026";
     private static DbConnection instance;
     
     //bloque estatico: se ejecuta una unica vez, cuando la clase se carga por primera vez
